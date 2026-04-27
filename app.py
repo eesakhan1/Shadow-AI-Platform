@@ -8,7 +8,6 @@ import requests
 import time
 
 # --- CONFIGURATION ---
-# These are pulled from your Streamlit Cloud Secrets
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
 RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
@@ -25,33 +24,69 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CUSTOM CSS ---
+# --- CUSTOM CSS - LUXURY EDITION ---
 st.markdown("""
     <style>
     .main {
-        background: radial-gradient(circle at top left, #1e3a8a 0%, #0e1117 40%, #000000 100%);
+        background: radial-gradient(circle at top left, #1a1a2e 0%, #000000 50%, #000000 100%);
     }
     .stButton>button {
         width: 100%;
-        border-radius: 10px;
+        border-radius: 8px;
         height: 55px;
         font-size: 18px;
         font-weight: bold;
         border: none;
-        transition: all 0.3s;
+        transition: all 0.4s ease;
+        background: linear-gradient(135deg, #d4af37 0%, #f0e68c 50%, #d4af37 100%);
+        color: #000 !important;
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
     .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 255, 200, 0.2);
+        transform: translateY(-3px);
+        box-shadow: 0 0 35px rgba(212, 175, 55, 0.8);
     }
     .login-card {
-        background-color: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        background-color: rgba(10, 10, 25, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         padding: 40px;
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        border-radius: 15px;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        box-shadow: 0 10px 50px rgba(0,0,0,0.7);
+    }
+    h1, h2, h3, h4, h5, h6, .stMarkdown p {
+        color: #f0e68c !important;
+        font-family: 'Helvetica Neue', sans-serif;
+    }
+    .stTextInput input, .stTextInput label {
+        color: #e0e0e0 !important;
+    }
+    .stTextInput>div>div>input {
+        background-color: rgba(255,255,255,0.05);
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        border-radius: 8px;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: transparent;
+        border-radius: 8px;
+        color: #d4af37 !important;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #d4af37 0%, #f0e68c 100%);
+        color: #000000 !important;
+        font-weight: bold;
+    }
+    .stInfo {
+        background-color: rgba(212, 175, 55, 0.1) !important;
+        color: #f0e68c !important;
+        border: 1px solid #d4af37 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -78,9 +113,9 @@ def send_verification_email(to_email, code):
                 "subject": "🔐 Shadow AI Security Code",
                 "html": f"""
                 <div style="font-family: 'Arial', sans-serif; background:#0a0a0a; padding:30px; color:white;">
-                    <h1 style="color:#00ffcc;">🛡️ Shadow AI</h1>
+                    <h1 style="color:#d4af37;">🛡️ Shadow AI</h1>
                     <p>Your verification code is:</p>
-                    <h2 style="font-size:50px; letter-spacing:10px; color:#2563eb;">{code}</h2>
+                    <h2 style="font-size:50px; letter-spacing:10px; color:#f0e68c;">{code}</h2>
                     <p>Enter this to access your security dashboard.</p>
                 </div>
                 """
@@ -111,7 +146,6 @@ def show_login():
                 if st.button("🚀 Authenticate", type="primary"):
                     try:
                         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
-                        # FIX: Store user object in session state so it persists to the next stage
                         st.session_state.temp_user_obj = res.user 
                         
                         code = str(random.randint(100000, 999999))
@@ -130,7 +164,6 @@ def show_login():
                 
                 if st.button("✅ Verify"):
                     if user_code == st.session_state.temp_code:
-                        # Success: Transfer temp user to main session
                         st.session_state.user = st.session_state.temp_user_obj
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.auth_stage = "login"
