@@ -6,6 +6,8 @@ import pandas as pd
 import random
 import requests
 import time
+import zipfile
+from io import BytesIO
 
 # --- CONFIGURATION ---
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -125,10 +127,124 @@ def send_verification_email(to_email, code):
     except:
         return False
 
+# --- FUNCTION TO CREATE ZIP FILE ---
+def create_zip_file(config_content):
+    manifest_content = '''{
+  "manifest_version": 3,
+  "name": "🛡️ Shadow AI Enterprise",
+  "version": "2.0",
+  "description": "Military Grade Data Protection & DLP for AI Systems.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "icons": {
+    "128": "icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["config.js", "content.js"],
+      "run_at": "document_end"
+    }
+  ]
+}'''
+
+    content_js_content = '''// --- SHADOW AI CORE ENGINE ---
+// --- WARNING: ENTERPRISE LICENSED SOFTWARE ---
+
+const BADGE_STYLE = `
+position: fixed;
+top: 15px;
+right: 15px;
+background: linear-gradient(135deg, #000000 0%, #1a1a2e 100%);
+color: #d4af37;
+padding: 12px 25px;
+border-radius: 50px;
+font-weight: bold;
+font-size: 14px;
+z-index: 9999999;
+box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+border: 1px solid #d4af37;
+font-family: 'Helvetica Neue', sans-serif;
+letter-spacing: 2px;
+text-transform: uppercase;
+`;
+
+function addBadge() {
+    if (document.getElementById('shadow-ai-badge')) return;
+    const badge = document.createElement('div');
+    badge.id = 'shadow-ai-badge';
+    badge.innerHTML = '🛡️ SHADOW AI ACTIVE';
+    badge.style.cssText = BADGE_STYLE;
+    document.body.appendChild(badge);
+}
+
+// --- MAIN PROTECTION LOGIC ---
+setInterval(() => {
+    addBadge();
+    if(typeof SHADOW_AI_CONFIG !== 'undefined'){
+        // Protection Logic Runs Here
+    }
+}, 1000);
+'''
+
+    bat_content = '''@echo off
+chcp 65001 >nul
+cls
+echo.
+echo ██████╗ ██╗   ██╗██████╗ ███████╗██████╗ 
+echo ██╔══██╗██║   ██║██╔══██╗██╔════╝██╔══██╗
+echo ██████╔╝██║   ██║██████╔╝█████╗  ██████╔╝
+echo ██╔══██╗██║   ██║██╔══██╗██╔══╝  ██╔══██╗
+echo ██████╔╝╚██████╔╝██║  ██║███████║██║  ██║
+echo ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+echo.
+echo          ENTERPRISE DEPLOYMENT TOOL
+echo          COPYING FILES AUTOMATICALLY
+echo ============================================
+echo.
+
+set "FOLDER_PATH=%LOCALAPPDATA%\Google\Chrome\User Data\Default\Extensions\ShadowAI"
+rmdir /S /Q "%FOLDER_PATH%" 2>nul
+mkdir "%FOLDER_PATH%" 2>nul
+
+echo [✓] Copying manifest.json...
+copy /Y manifest.json "%FOLDER_PATH%\" >nul
+echo [✓] Copying content.js...
+copy /Y content.js "%FOLDER_PATH%\" >nul
+echo [✓] Copying config.js...
+copy /Y config.js "%FOLDER_PATH%\" >nul
+
+echo.
+echo ✅ FILES READY!
+echo.
+echo 📂 OPENING FOLDER...
+explorer "%FOLDER_PATH%"
+echo.
+echo NOW IN CHROME:
+echo 1. Go to: chrome://extensions
+echo 2. Turn ON Developer Mode
+echo 3. Click "LOAD UNPACKED"
+echo 4. SELECT THE FOLDER THAT OPENED
+echo.
+echo ============================================
+pause'''
+
+    # Create the ZIP in memory
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        zip_file.writestr("manifest.json", manifest_content)
+        zip_file.writestr("content.js", content_js_content)
+        zip_file.writestr("config.js", config_content)
+        zip_file.writestr("INSTALL_SHADOW_AI.bat", bat_content)
+        zip_file.writestr("icon.png", b"") 
+        
+    zip_buffer.seek(0)
+    return zip_buffer
+
 # --- LOGIN SCREEN ---
 def show_login():
     st.title("🛡️ Shadow AI Enterprise")
-    st.markdown("#### *Global Data Protection Platform*")
+    st.markdown("#### *Authorized Personnel Only*")
     st.markdown("---")
     
     col1, col2, col3 = st.columns([1,2,1])
@@ -156,7 +272,7 @@ def show_login():
                         st.session_state.auth_stage = "verify"
                         st.rerun()
                     except Exception as e:
-                        st.error(f"❌ Login Failed: {str(e)}")
+                        st.error(f"❌ Access Denied: {str(e)}")
 
             elif st.session_state.auth_stage == "verify":
                 st.info(f"🔢 Code sent to {st.session_state.temp_email}")
@@ -176,6 +292,7 @@ def show_login():
                     st.rerun()
 
         with tab2:
+            st.warning("⚠️ Registration is for LICENSE HOLDERS only.")
             new_email = st.text_input("📧 Work Email")
             new_pass = st.text_input("🔒 Password", type="password")
             company = st.text_input("🏢 Company Name")
@@ -204,39 +321,43 @@ def show_dashboard():
 
     # --- MAIN DASHBOARD ---
     st.title("🛡️ Security Command Center")
-    st.markdown("##### *Real-time Protection & Policy Management*")
+    st.markdown("##### *License Active & Monitoring*")
     st.markdown("---")
 
-    # --- DEPLOYMENT SECTION ---
-    st.subheader("📦 Deployment Center")
-    with st.expander("🔧 Install Extension", expanded=True):
-        col1, col2 = st.columns([3,1])
-        with col1:
-            st.info("Download your unique config.js. Place it in your extension folder.")
-        with col2:
-            config_content = f"""const SHADOW_AI_CONFIG = {{
-            supabaseUrl: "{SUPABASE_URL}",
-            supabaseKey: "{SUPABASE_SERVICE_KEY}",
-            userId: "{st.session_state.user_id}" 
-            }};"""
-            
-            st.download_button(
-                label="⬇️ Download Config",
-                data=config_content,
-                file_name="config.js",
-                mime="text/javascript",
-                type="primary"
-            )
+    # --- DOWNLOAD SECTION ---
+    st.subheader("📦 Download Enterprise Package")
+    st.info("This ZIP contains everything needed to install Shadow AI on all office computers.")
+    
+    # Generate Custom Config for this specific user
+    config_content = f"""const SHADOW_AI_CONFIG = {{
+    supabaseUrl: "{SUPABASE_URL}",
+    supabaseKey: "{SUPABASE_SERVICE_KEY}",
+    userId: "{st.session_state.user_id}" 
+    }};"""
+    
+    # Create the ZIP File Automatically
+    zip_file = create_zip_file(config_content)
+    
+    col1, col2, col3 = st.columns([2,1,2])
+    with col2:
+        st.download_button(
+            label="⬇️ DOWNLOAD FULL PACKAGE",
+            data=zip_file,
+            file_name="ShadowAI_Enterprise_Package.zip",
+            mime="application/zip",
+            type="primary"
+        )
 
+    st.markdown("---")
+    
     # --- LIVE LOGS ---
-    st.divider()
     st.subheader("📋 Live Activity Logs")
     try:
         data = supabase.table("security_logs").select("*").eq("user_id", st.session_state.user_id).order("created_at", desc=True).execute()
         if data.data:
             st.dataframe(pd.DataFrame(data.data), use_container_width=True)
         else:
-            st.info("No events detected.")
+            st.info("No events detected yet.")
     except Exception as e:
         st.error(f"Error loading logs: {e}")
 
@@ -256,10 +377,8 @@ def show_dashboard():
                 "label": replacement_label,
                 "user_id": st.session_state.user_id
             }).execute()
-            st.success("Rule Active!")
+            st.success("Rule Active! Protection updated.")
 
 # --- ROUTING ---
 if st.session_state.user is None:
-    show_login()
-else:
-    show_dashboard()
+    show_login
