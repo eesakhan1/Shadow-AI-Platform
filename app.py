@@ -12,6 +12,7 @@ from io import BytesIO
 # --- CONFIGURATION ---
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
+SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
 RESEND_FROM_EMAIL = "onboarding@resend.dev"
 
@@ -98,6 +99,8 @@ if 'user' not in st.session_state:
     st.session_state.user = None
 if 'user_id' not in st.session_state:
     st.session_state.user_id = None
+if 'company_id' not in st.session_state:
+    st.session_state.company_id = None
 if 'auth_stage' not in st.session_state:
     st.session_state.auth_stage = "login"
 if 'temp_user_obj' not in st.session_state:
@@ -187,7 +190,7 @@ setInterval(() => {
 }, 1000);
 '''
 
-    # Use r''' to tell Python this is a RAW string (ignores backslashes)
+    # NOTE THE 'r' BEFORE THE QUOTES TO FIX THE UNICODE ERROR
     bat_content = r'''@echo off
 chcp 65001 >nul
 cls
@@ -229,6 +232,7 @@ echo 4. SELECT THE FOLDER THAT OPENED
 echo.
 echo ============================================
 pause'''
+
     # Create the ZIP in memory
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
@@ -256,13 +260,22 @@ def show_login():
         
         with tab1:
             if st.session_state.auth_stage == "login":
+                # --- NEW FIELD: COMPANY ID ---
+                company_code = st.text_input("🏢 Company ID / License Key", placeholder="Enter your unique company code")
                 email = st.text_input("📧 Email", key="login_email")
                 password = st.text_input("🔒 Password", type="password", key="login_pass")
                 
                 if st.button("🚀 Authenticate", type="primary"):
+                    if not company_code:
+                        st.error("⚠️ Please enter your Company ID")
+                        return
+                        
                     try:
                         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                         st.session_state.temp_user_obj = res.user 
+                        
+                        # Save Company ID to session
+                        st.session_state.temp_company_id = company_code
                         
                         code = str(random.randint(100000, 999999))
                         send_verification_email(email, code)
@@ -276,12 +289,15 @@ def show_login():
 
             elif st.session_state.auth_stage == "verify":
                 st.info(f"🔢 Code sent to {st.session_state.temp_email}")
+                st.info(f"🏢 Company: {st.session_state.temp_company_id}")
                 user_code = st.text_input("Enter 6-Digit Code", max_chars=6)
                 
                 if st.button("✅ Verify"):
                     if user_code == st.session_state.temp_code:
                         st.session_state.user = st.session_state.temp_user_obj
                         st.session_state.user_id = st.session_state.temp_user_obj.id
+                        # Save Company ID permanently for this session
+                        st.session_state.company_id = st.session_state.temp_company_id
                         st.session_state.auth_stage = "login"
                         st.rerun()
                     else:
@@ -311,29 +327,32 @@ def show_dashboard():
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/809/809934.png", width=80)
     st.sidebar.title("🛡️ Shadow AI")
     st.sidebar.markdown(f"**👤 {st.session_state.user.email}**")
+    # Display Company ID in Sidebar
+    st.sidebar.markdown(f"**🏢 Company ID: `{st.session_state.company_id}`**")
     st.sidebar.markdown("---")
     
     if st.sidebar.button("🚪 Logout", type="secondary"):
         supabase.auth.sign_out()
         st.session_state.user = None
         st.session_state.user_id = None
+        st.session_state.company_id = None
         st.rerun()
 
     # --- MAIN DASHBOARD ---
     st.title("🛡️ Security Command Center")
-    st.markdown("##### *License Active & Monitoring*")
+    st.markdown(f"##### *License Active | ID: {st.session_state.company_id}*")
     st.markdown("---")
 
     # --- DOWNLOAD SECTION ---
     st.subheader("📦 Download Enterprise Package")
     st.info("This ZIP contains everything needed to install Shadow AI on all office computers.")
     
-    # Generate Custom Config for this specific user
+    # Generate Custom Config - USING PUBLIC ANON KEY
     config_content = f"""const SHADOW_AI_CONFIG = {{
     supabaseUrl: "{SUPABASE_URL}",
-    supabaseKey: "{SUPABASE_SERVICE_KEY}",
-    userId: "{st.session_state.user_id}" 
-    }};"""
+    supabaseKey: "{SUPABASE_ANON_KEY}",
+    companyId: "{st.session_state.company_id}" 
+}};"""
     
     # Create the ZIP File Automatically
     zip_file = create_zip_file(config_content)
@@ -353,11 +372,12 @@ def show_dashboard():
     # --- LIVE LOGS ---
     st.subheader("📋 Live Activity Logs")
     try:
-        data = supabase.table("security_logs").select("*").eq("user_id", st.session_state.user_id).order("created_at", desc=True).execute()
+        # Filter logs specifically for THIS COMPANY ID
+        data = supabase.table("security_logs").select("*").eq("company_id", st.session_state.company_id).order("created_at", desc=True).execute()
         if data.data:
             st.dataframe(pd.DataFrame(data.data), use_container_width=True)
         else:
-            st.info("No events detected yet.")
+            st.info("No events detected yet for this company.")
     except Exception as e:
         st.error(f"Error loading logs: {e}")
 
@@ -375,7 +395,7 @@ def show_dashboard():
             supabase.table("company_secrets").insert({
                 "secret_word": secret_word,
                 "label": replacement_label,
-                "user_id": st.session_state.user_id
+                "company_id": st.session_state.company_id
             }).execute()
             st.success("Rule Active! Protection updated.")
 
