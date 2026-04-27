@@ -187,7 +187,8 @@ setInterval(() => {
 }, 1000);
 '''
 
-    bat_content = '''@echo off
+    # Use r''' to tell Python this is a RAW string (ignores backslashes)
+    bat_content = r'''@echo off
 chcp 65001 >nul
 cls
 echo.
@@ -228,7 +229,6 @@ echo 4. SELECT THE FOLDER THAT OPENED
 echo.
 echo ============================================
 pause'''
-
     # Create the ZIP in memory
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
