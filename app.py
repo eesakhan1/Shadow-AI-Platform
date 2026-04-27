@@ -381,4 +381,6 @@ def show_dashboard():
 
 # --- ROUTING ---
 if st.session_state.user is None:
-    show_login
+    show_login()
+else:
+    show_dashboard()
