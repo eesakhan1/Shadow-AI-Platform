@@ -110,9 +110,12 @@ if 'temp_user_obj' not in st.session_state:
 # --- EMAIL FUNCTION ---
 def send_verification_email(to_email, code):
     try:
-        requests.post(
+        response = requests.post(
             "https://api.resend.com/emails",
-            headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json"
+            },
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": to_email,
@@ -127,10 +130,20 @@ def send_verification_email(to_email, code):
                 """
             }
         )
-        return True
-    except:
+        
+        # Check if it worked
+        if response.status_code == 200:
+            print("✅ Email sent successfully!")
+            return True
+        else:
+            # THIS IS THE IMPORTANT PART - Show error on screen
+            st.error(f"❌ Email Failed: {response.text}")
+            print(f"Failed: {response.text}")
+            return False
+            
+    except Exception as e:
+        st.error(f"❌ Connection Error: {e}")
         return False
-
 # --- FUNCTION TO CREATE ZIP FILE ---
 def create_zip_file(config_content):
     manifest_content = '''{
