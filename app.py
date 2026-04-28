@@ -269,6 +269,7 @@ def show_login():
                         return
                         
                     try:
+                        # --- FIXED LINE HERE ---
                         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                         st.session_state.temp_user_obj = res.user 
                         st.session_state.temp_company_id = company_code
@@ -311,12 +312,16 @@ def show_login():
             if st.button("✅ Create Account & Generate Key"):
                 try:
                     res = supabase.auth.sign_up({"email": new_email, "password": new_pass})
+                    
+                    # Generate ID
                     company_id = "company_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
                     
+                    # --- SAVE TO DATABASE (KEPT THIS PART) ---
                     supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
-                        "email": new_email
+                        "email": new_email,
+                        "is_active": False # Make sure they start inactive
                     }).execute()
                     
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY!")
