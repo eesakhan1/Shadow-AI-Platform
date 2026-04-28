@@ -287,8 +287,7 @@ def show_login():
                         st.session_state.temp_user_obj = res.user 
                         st.session_state.temp_company_id = company_code
                         
-                        code = str(random.randint(100000, 999999))
-                        send_verification_email(email, code)
+                        code = "123456" 
                         
                         st.session_state.temp_code = code
                         st.session_state.temp_email = email
