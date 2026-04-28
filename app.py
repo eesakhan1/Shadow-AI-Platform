@@ -282,7 +282,6 @@ def show_login():
                         return
                         
                     try:
-                        # --- FIXED LINE HERE ---
                         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                         st.session_state.temp_user_obj = res.user 
                         st.session_state.temp_company_id = company_code
@@ -306,7 +305,25 @@ def show_login():
                         st.session_state.user = st.session_state.temp_user_obj
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.company_id = st.session_state.temp_company_id
-                        st.session_state.auth_stage = "login"
+                        st.session_state.logged_in = True # ✅ Make sure this is here
+                        
+                        # ==============================================
+                        # ✅ NEW CODE: SEND ID TO EDGE/CHROME AUTOMATICALLY
+                        # ==============================================
+                        js_code = f"""
+                        <script>
+                        // Universal code for Chrome, Edge, Brave
+                        let browserAPI = typeof chrome !== 'undefined' ? chrome : browser;
+                        
+                        browserAPI.storage.local.set({{ shadow_company_id: "{st.session_state.company_id}" }}, function() {{
+                            console.log("✅ ID sent to Shadow AI Extension!");
+                        }});
+                        </script>
+                        """
+                        st.components.v1.html(js_code, height=0)
+                        # ==============================================
+                        
+                        st.success("✅ Login Successful!")
                         st.rerun()
                     else:
                         st.error("Invalid Code")
@@ -316,7 +333,7 @@ def show_login():
                     st.rerun()
 
         with tab2:
-            st.warning("⚠️ Registration will generate your unique License Key")
+            st.warning("⚠️ Registration will generate your unique company code")
             new_email = st.text_input("📧 Work Email")
             new_pass = st.text_input("🔒 Password", type="password")
             company_name = st.text_input("🏢 Company Name")
@@ -328,12 +345,12 @@ def show_login():
                     # Generate ID
                     company_id = "company_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
                     
-                    # --- SAVE TO DATABASE (KEPT THIS PART) ---
+                    # --- SAVE TO DATABASE ---
                     supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
                         "email": new_email,
-                        "is_active": False # Make sure they start inactive
+                        "is_active": False
                     }).execute()
                     
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY!")

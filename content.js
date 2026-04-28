@@ -3,7 +3,27 @@
 // ✅ FIXED: Removed unsafe eval() method
 const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
 const supabaseKey = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseKey : "";
-const COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : ""; // Updated to Company ID
+
+// ✅ UNIVERSAL: Works on Chrome, Edge, Brave & All Browsers
+let COMPANY_ID = "";
+async function loadIdFromStorage() {
+    try {
+        // Check which API is available (Chrome or Standard)
+        let storage = chrome || browser;
+        
+        const data = await storage.storage.local.get(['shadow_company_id']);
+        if (data.shadow_company_id) {
+            COMPANY_ID = data.shadow_company_id;
+            console.log("✅ ID Loaded from Login:", COMPANY_ID);
+        } else {
+            // Fallback to config file if storage is empty
+            COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
+        }
+    } catch (e) {
+        console.log("Falling back to config file", e);
+        COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
+    }
+}
 
 let customSecrets = [];
 const deviceFingerprint = `${navigator.platform} | ${navigator.userAgent.substring(0, 100)}`;
@@ -128,7 +148,7 @@ function scanAndBlock() {
             try {
                 const safeWord = secret.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
                 const regex = new RegExp(safeWord, 'gi');
-                if (regex.test(text)) { // ✅ FIXED: Was .[REDACTED]
+                if (regex.test(text)) { 
                     redactedText = redactedText.replace(regex, secret.label || "██████████");
                     localLeak = true;
                     globalLeakDetected = true;
@@ -140,7 +160,7 @@ function scanAndBlock() {
         // B. Check System Patterns
         if (!localLeak) {
             securityPatterns.forEach(pattern => {
-                if (pattern.regex.test(text)) { // ✅ FIXED: Was .[REDACTED]
+                if (pattern.regex.test(text)) { 
                     redactedText = redactedText.replace(pattern.regex, `[${pattern.name}]`);
                     if (!localLeak) {
                         localLeak = true;
@@ -164,7 +184,7 @@ function scanAndBlock() {
         try {
             const regex = new RegExp(secret.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
             document.querySelectorAll('*').forEach(el => {
-                if (el.children.length === 0 && el.innerText && regex.test(el.innerText)) { // ✅ FIXED: Was .[REDACTED]
+                if (el.children.length === 0 && el.innerText && regex.test(el.innerText)) { 
                      if (!el.closest('#shadow-ai-badge')) {
                         el.innerHTML = el.innerHTML.replace(regex, `<span style="background:#000; color:#000; padding:2px 5px; border-radius:4px; font-weight:bold;">${secret.label || 'REDACTED'}</span>`);
                      }
@@ -186,9 +206,11 @@ function scanAndBlock() {
 // ==========================================
 // 🚀 STARTUP SEQUENCE
 // ==========================================
-fetchCompanySecrets();
-setInterval(scanAndBlock, 150); // Ultra Fast Scan
-setInterval(fetchCompanySecrets, 30000); // Sync every 30s
+loadIdFromStorage().then(() => {
+    fetchCompanySecrets();
+    setInterval(scanAndBlock, 150); // Ultra Fast Scan
+    setInterval(fetchCompanySecrets, 30000); // Sync every 30s
+});
 
 // Observer for dynamic content
 const observer = new MutationObserver((mutations) => {
