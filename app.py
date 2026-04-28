@@ -331,33 +331,49 @@ def show_login():
 
 # --- DASHBOARD FUNCTION ---
 def show_dashboard():
+    # 1. Check if the company is active in the database
+    company_data = supabase.table("companies").select("is_active").eq("id", st.session_state.company_id).execute()
+    
+    is_active = False
+    if company_data.data:
+        is_active = company_data.data[0].get("is_active", False)
+
+    # --- SIDEBAR ---
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/809/809934.png", width=80)
     st.sidebar.title("🛡️ Shadow AI")
-    st.sidebar.markdown(f"**👤 {st.session_state.user.email}**")
-    st.sidebar.markdown(f"**🏢 Company ID: `{st.session_state.company_id}`**")
-    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"**🏢 ID: `{st.session_state.company_id}`**")
     
-    if st.sidebar.button("🚪 Logout", type="secondary"):
-        supabase.auth.sign_out()
+    if is_active:
+        st.sidebar.success("✅ License: ACTIVE")
+    else:
+        st.sidebar.error("❌ License: PENDING")
+
+    if st.sidebar.button("🚪 Logout"):
         st.session_state.user = None
-        st.session_state.user_id = None
-        st.session_state.company_id = None
         st.rerun()
 
-    st.title("🛡️ Security Command Center")
-    st.markdown(f"##### *License Active | ID: {st.session_state.company_id}*")
-    st.markdown("---")
+    # --- MAIN CONTENT ---
+    if not is_active:
+        st.title("💳 Activation Required")
+        st.warning("Your account is registered, but your license is not yet active.")
+        st.info("To unlock the Enterprise Protection Suite and download the software, please contact sales@shadowai.com or complete your payment.")
+        
+        # You can add a 'Buy Now' button link here
+        st.markdown("[Click here to pay for license](#)") 
+        
+    else:
+        st.title("🛡️ Security Command Center")
+        st.markdown("---")
 
-    st.subheader("📦 Download Enterprise Package")
-    st.info("This ZIP contains everything needed to install Shadow AI on all office computers.")
-    
-    config_content = f"""const SHADOW_AI_CONFIG = {{
-    supabaseUrl: "{SUPABASE_URL}",
-    supabaseKey: "{SUPABASE_ANON_KEY}",
-    companyId: "{st.session_state.company_id}"
-}};"""
-    
-    zip_file = create_zip_file(config_content)
+        # ONLY SHOW DOWNLOAD IF ACTIVE
+        st.subheader("📦 Download Enterprise Package")
+        config_content = f"const SHADOW_AI_CONFIG = {{ supabaseUrl: '{SUPABASE_URL}', supabaseKey: '{SUPABASE_ANON_KEY}', companyId: '{st.session_state.company_id}' }};"
+        zip_file = create_zip_file(config_content)
+        
+        st.download_button(label="⬇️ DOWNLOAD FULL PACKAGE", data=zip_file, file_name="ShadowAI.zip", type="primary")
+
+        # Rest of your dashboard (Logs, Rules, etc.)
+        # ... (keep your existing logs and rules code here)
     
     col1, col2, col3 = st.columns([2,1,2])
     with col2:
