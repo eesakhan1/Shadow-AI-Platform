@@ -17,11 +17,8 @@ SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
 RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"
 
-# ✅ TWO CONNECTIONS:
-# - public: for login/auth (uses anon key)
-# - admin: for database writes (uses service key, bypasses RLS safely)
-supabase_public = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
-supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# ✅ Use the service key for all operations (this is what worked before)
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # --- PAGE SETUP ---
 st.set_page_config(
@@ -170,7 +167,9 @@ def send_verification_email(to_email, code):
                 """
             }
         )
+        
         return response.status_code == 200
+            
     except Exception as e:
         st.error(f"❌ Email Error: {e}")
         return False
@@ -280,6 +279,7 @@ pause'''
         zip_file.writestr("config.js", config_content)
         zip_file.writestr("INSTALL_SHADOW_AI.bat", bat_content)
         zip_file.writestr("icon.png", b"") 
+        
     zip_buffer.seek(0)
     return zip_buffer
 
@@ -305,19 +305,25 @@ def show_login():
                 
                 if st.button("🚀 Login", type="primary"):
                     try:
-                        res = supabase_public.auth.sign_in_with_password({"email": email, "password": password})
+                        # Sign in user
+                        res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                         st.session_state.temp_user_obj = res.user
                         
-                        company_data = supabase_public.table("companies").select("id").eq("email", email).execute()
+                        # Get their company ID automatically
+                        company_data = supabase.table("companies").select("id").eq("email", email).execute()
                         if company_data.data:
                             st.session_state.company_id = company_data.data[0]["id"]
+                            
+                            # Send verification code
                             code = str(random.randint(100000, 999999))
                             st.session_state.verification_code = code
+                            
                             if send_verification_email(email, code):
                                 st.session_state.auth_stage = "verify"
                                 st.rerun()
                         else:
                             st.error("❌ Account not found — please register first")
+                            
                     except Exception as e:
                         st.error(f"❌ Access Denied: {str(e)}")
 
@@ -327,16 +333,12 @@ def show_login():
                 
                 if st.button("✅ Verify & Access Dashboard"):
                     if user_code == st.session_state.verification_code:
+                        # Login success
                         st.session_state.user = st.session_state.temp_user_obj
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.logged_in = True
                         
-                        # Set RLS context
-                        try:
-                            supabase_admin.rpc('set_config', {'name': 'app.company_id', 'value': st.session_state.company_id})
-                        except:
-                            pass
-                        
+                        # Send ID to extension
                         js_code = f"""
                         <script>
                         let browserAPI = typeof chrome !== 'undefined' ? chrome : browser;
@@ -356,7 +358,7 @@ def show_login():
                     st.session_state.auth_stage = "login"
                     st.rerun()
 
-        # --- ✅ FIXED REGISTER FLOW ---
+        # --- ✅ FIXED REGISTER FLOW — works like before, no key errors ---
         with tab2:
             st.warning("⚠️ For paying customers only — access is granted after registration & verification")
             new_email = st.text_input("📧 Official Work Email", key="reg_email")
@@ -365,15 +367,17 @@ def show_login():
             
             if st.button("✅ Create Account"):
                 try:
-                    # 1. Create user using PUBLIC client (correct key for auth)
-                    res = supabase_public.auth.sign_up({
+                    # Create auth user
+                    res = supabase.auth.sign_up({
                         "email": new_email,
                         "password": new_pass
                     })
                     
-                    # 2. Create company record using ADMIN client (bypasses RLS)
+                    # Generate unique Company ID
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
-                    supabase_admin.table("companies").insert({
+                    
+                    # Insert company record — service key bypasses RLS automatically
+                    supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
                         "email": new_email,
@@ -391,14 +395,16 @@ def show_login():
 
 # --- DASHBOARD FUNCTION ---
 def show_dashboard():
+    # Fetch company details
     try:
-        company_data = supabase_public.table("companies").select("is_active, name").eq("id", st.session_state.company_id).execute()
+        company_data = supabase.table("companies").select("is_active, name").eq("id", st.session_state.company_id).execute()
         is_active = True
         org_name = company_data.data[0].get("name", "Your Organisation") if company_data.data else "Your Organisation"
     except:
         is_active = True
         org_name = "Your Organisation"
 
+    # --- SIDEBAR ---
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/809/809934.png", width=80)
     st.sidebar.title("🛡️ Shadow AI")
     st.sidebar.markdown(f"**🏢 {org_name}**")
@@ -414,6 +420,7 @@ def show_dashboard():
         st.session_state.auth_stage = "login"
         st.rerun()
 
+    # --- MAIN CONTENT ---
     st.title("🛡️ Security Command Center")
     st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
     st.markdown("---")
@@ -436,10 +443,11 @@ def show_dashboard():
     )
     st.markdown("*Includes extension, deployment tool, and configuration files — works on Chrome, Edge, and Brave*")
 
+    # --- LOGS SECTION ---
     st.markdown("---")
     st.subheader("📋 Security Audit Logs")
     try:
-        data = supabase_public.table("security_logs").select("*").eq("company_id", st.session_state.company_id).order("created_at", desc=True).execute()
+        data = supabase.table("security_logs").select("*").eq("company_id", st.session_state.company_id).order("created_at", desc=True).execute()
         if data.data:
             st.dataframe(pd.DataFrame(data.data), use_container_width=True)
         else:
@@ -448,6 +456,7 @@ def show_dashboard():
         st.error(f"Error loading logs: {e}")
 
     st.markdown("---")
+    
     st.subheader("🎛️ Custom Security Rules")
     st.markdown("*Add words, codes, or identifiers specific to your organisation (e.g. local patient codes, project names)*")
     col1, col2 = st.columns(2)
@@ -459,7 +468,7 @@ def show_dashboard():
     if st.button("✅ Deploy Rule Immediately"):
         if secret_word:
             try:
-                supabase_admin.table("company_secrets").insert({
+                supabase.table("company_secrets").insert({
                     "secret_word": secret_word,
                     "label": replacement_label,
                     "company_id": st.session_state.company_id
