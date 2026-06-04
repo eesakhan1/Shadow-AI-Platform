@@ -15,7 +15,7 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
 SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
-RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"  # ✅ YOUR CORRECT EMAIL
+RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"  # Your branded email
 
 # Initialize Supabase
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -367,13 +367,16 @@ def show_login():
             
             if st.button("✅ Create Account"):
                 try:
-                    # Create auth user
-                    res = supabase.auth.sign_up({"email": new_email, "password": new_pass})
+                    # Create user
+                    res = supabase.auth.sign_up({
+                        "email": new_email,
+                        "password": new_pass
+                    })
                     
                     # Generate unique Company ID automatically
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
                     
-                    # ✅ FIXED: Removed compliance_status column
+                    # Save company record — NO compliance_status field
                     supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
@@ -382,7 +385,7 @@ def show_login():
                     }).execute()
                     
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
-                    st.info("📧 Please check your email — you can now login")
+                    st.info("📧 You can now login with your email and password — a security code will be sent to you")
                     st.balloons()
                     
                 except Exception as e:
