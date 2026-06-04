@@ -17,10 +17,10 @@ SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
 RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"
 
-# ✅ Set your admin email here
+# ✅ Admin email restriction
 ADMIN_EMAIL = "security.shadowai@gmail.com"
 
-# ✅ Use service key for all operations
+# ✅ Supabase client
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # --- PAGE SETUP ---
@@ -315,16 +315,13 @@ def show_login():
                 
                 if st.button("🚀 Login", type="primary"):
                     try:
-                        # Sign in user
                         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                         st.session_state.temp_user_obj = res.user
                         
-                        # Get their company ID automatically
                         company_data = supabase.table("companies").select("id").eq("email", email).execute()
                         if company_data.data:
                             st.session_state.company_id = company_data.data[0]["id"]
                             
-                            # Send verification code
                             code = str(random.randint(100000, 999999))
                             st.session_state.verification_code = code
                             
@@ -343,12 +340,10 @@ def show_login():
                 
                 if st.button("✅ Verify & Access Dashboard"):
                     if user_code == st.session_state.verification_code:
-                        # Login success
                         st.session_state.user = st.session_state.temp_user_obj
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.logged_in = True
                         
-                        # Send ID to extension
                         js_code = f"""
                         <script>
                         let browserAPI = typeof chrome !== 'undefined' ? chrome : browser;
@@ -377,16 +372,13 @@ def show_login():
             
             if st.button("✅ Create Account"):
                 try:
-                    # Create auth user
                     res = supabase.auth.sign_up({
                         "email": new_email,
                         "password": new_pass
                     })
                     
-                    # Generate unique Company ID
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
                     
-                    # Insert company record
                     supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
@@ -404,7 +396,6 @@ def show_login():
 
 # --- DASHBOARD FUNCTION ---
 def show_dashboard():
-    # Fetch company details
     try:
         company_data = supabase.table("companies").select("is_active, name, email").eq("id", st.session_state.company_id).execute()
         is_active = True
@@ -432,7 +423,6 @@ def show_dashboard():
         st.rerun()
 
     # --- MAIN CONTENT TABS ---
-    # Only show Admin tab if logged in as admin
     if user_email == ADMIN_EMAIL:
         tab1, tab2, tab3 = st.tabs(["📦 Deployment", "📋 Security Logs", "👤 Admin Users"])
     else:
@@ -497,36 +487,32 @@ def show_dashboard():
             else:
                 st.info("No security events recorded — protection is active and monitoring.")
         except Exception as e:
-            st.error(f"Error loading logs: {e}")
+            st.error(f"Error loading logs: {str(e)}")
 
-    # --- TAB 3: ADMIN USERS / REGISTRATIONS (ONLY FOR YOU) ---
+    # --- TAB 3: ADMIN USERS ---
     if user_email == ADMIN_EMAIL:
         with tab3:
             st.title("👤 Registered Companies & Users")
             st.markdown('<div class="compliance-badge">🔐 Admin Access — View and manage all accounts</div>', unsafe_allow_html=True)
             st.markdown("---")
 
-            # Get all registered companies
             try:
-                all_companies = supabase.table("companies").select("id, name, email, is_active, created_at").order("created_at", desc=True).execute()
+                all_companies = supabase.table("companies").select("id, name, email, is_active").execute()
                 
                 if all_companies.data:
                     df = pd.DataFrame(all_companies.data)
                     st.subheader(f"Total Registered: {len(all_companies.data)}")
                     
-                    # Show table
                     st.dataframe(df, use_container_width=True, column_config={
                         "id": "Company ID",
                         "name": "Organisation Name",
                         "email": "Contact Email",
-                        "is_active": "Active Status",
-                        "created_at": "Registered On"
+                        "is_active": "Active Status"
                     })
 
                     st.markdown("---")
                     st.subheader("🗑️ Remove Unwanted Account")
                     
-                    # Select which company to delete
                     company_options = {f"{row['name']} ({row['email']})": row['id'] for row in all_companies.data}
                     selected_label = st.selectbox("Select account to remove:", list(company_options.keys()))
                     
@@ -534,14 +520,10 @@ def show_dashboard():
                         selected_id = company_options[selected_label]
                         
                         try:
-                            # Delete from related tables first
                             supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
                             supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
-                            
-                            # Delete company record
                             supabase.table("companies").delete().eq("id", selected_id).execute()
                             
-                            # Delete from Supabase auth
                             try:
                                 selected_email = next(row['email'] for row in all_companies.data if row['id'] == selected_id)
                                 supabase.auth.admin.delete_user(selected_email)
