@@ -135,8 +135,10 @@ if 'auth_stage' not in st.session_state:
     st.session_state.auth_stage = "login"
 if 'temp_user_obj' not in st.session_state:
     st.session_state.temp_user_obj = None
+if 'verification_code' not in st.session_state:
+    st.session_state.verification_code = None
 
-# --- EMAIL FUNCTION (FIXED) ---
+# --- EMAIL FUNCTION ---
 def send_verification_email(to_email, code):
     try:
         response = requests.post(
@@ -166,15 +168,11 @@ def send_verification_email(to_email, code):
             }
         )
         
-        if response.status_code == 200:
-            return True
-        else:
-            # For testing: if email fails, still allow login
-            return True
+        return response.status_code == 200
             
     except Exception as e:
-        # Ignore email errors for admin access
-        return True
+        st.error(f"❌ Email Error: {e}")
+        return False
 
 # --- FUNCTION TO CREATE ZIP FILE ---
 def create_zip_file(config_content):
@@ -296,38 +294,48 @@ def show_login():
     with col2:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
         st.subheader("🔐 Secure Access")
-        
-        # ✅ ADMIN BYPASS - DIRECT ACCESS
-        if st.button("⚡ ADMIN DIRECT ACCESS (NO CODE NEEDED)", type="secondary", help="Only for you"):
-            st.session_state.user = {"id": "admin_123"}
-            st.session_state.user_id = "admin_123"
-            st.session_state.company_id = "org_xxxxxxxx" # ✅ PUT YOUR COMPANY ID HERE
-            st.session_state.logged_in = True
-            st.success("✅ Admin Access Granted!")
-            st.rerun()
 
-        tab1, tab2 = st.tabs(["🔑 Sign In", "🆕 Register New Organisation"])
+        tab1, tab2 = st.tabs(["🔑 Sign In", "🆕 Register"])
         
+        # --- LOGIN FLOW ---
         with tab1:
             if st.session_state.auth_stage == "login":
-                company_code = st.text_input("🏢 Organisation ID / License Key", placeholder="Enter your unique company code")
                 email = st.text_input("📧 Work Email Address", key="login_email")
                 password = st.text_input("🔒 Password", type="password", key="login_pass")
                 
-                if st.button("🚀 Authenticate", type="primary"):
-                    if not company_code:
-                        st.error("⚠️ Please enter your Organisation ID")
-                        return
-                        
+                if st.button("🚀 Login", type="primary"):
                     try:
+                        # Sign in user
                         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
-                        st.session_state.temp_user_obj = res.user 
-                        st.session_state.temp_company_id = company_code
+                        st.session_state.temp_user_obj = res.user
                         
-                        # ✅ AUTO-VERIFY - NO EMAIL NEEDED
+                        # Get their company ID automatically
+                        company_data = supabase.table("companies").select("id").eq("email", email).execute()
+                        if company_data.data:
+                            st.session_state.company_id = company_data.data[0]["id"]
+                            
+                            # Send verification code
+                            code = str(random.randint(100000, 999999))
+                            st.session_state.verification_code = code
+                            
+                            if send_verification_email(email, code):
+                                st.session_state.auth_stage = "verify"
+                                st.rerun()
+                        else:
+                            st.error("❌ Account not found — please register first")
+                            
+                    except Exception as e:
+                        st.error(f"❌ Access Denied: {str(e)}")
+
+            elif st.session_state.auth_stage == "verify":
+                st.info(f"🔢 Verification code sent to: **{st.session_state.temp_user_obj.email}**")
+                user_code = st.text_input("Enter 6-Digit Security Code", max_chars=6)
+                
+                if st.button("✅ Verify & Access Dashboard"):
+                    if user_code == st.session_state.verification_code:
+                        # Login success
                         st.session_state.user = st.session_state.temp_user_obj
                         st.session_state.user_id = st.session_state.temp_user_obj.id
-                        st.session_state.company_id = st.session_state.temp_company_id
                         st.session_state.logged_in = True
                         
                         # Send ID to extension
@@ -343,61 +351,74 @@ def show_login():
                         
                         st.success("✅ Login Successful — Protection Active")
                         st.rerun()
-                        
-                    except Exception as e:
-                        st.error(f"❌ Access Denied: {str(e)}")
+                    else:
+                        st.error("❌ Invalid or expired code")
+                
+                if st.button("🔙 Back to Login"):
+                    st.session_state.auth_stage = "login"
+                    st.rerun()
 
+        # --- REGISTER FLOW ---
         with tab2:
-            st.warning("⚠️ Registration is for NHS Trusts, ICBs, and approved suppliers only")
-            new_email = st.text_input("📧 Official Work Email")
-            new_pass = st.text_input("🔒 Create Password", type="password")
-            company_name = st.text_input("🏢 Organisation Name")
+            st.warning("⚠️ For paying customers only — access is granted after registration & verification")
+            new_email = st.text_input("📧 Official Work Email", key="reg_email")
+            new_pass = st.text_input("🔒 Create Password", type="password", key="reg_pass")
+            company_name = st.text_input("🏢 Organisation Name / Trust Name")
             
             if st.button("✅ Create Account"):
                 try:
+                    # Create auth user
                     res = supabase.auth.sign_up({"email": new_email, "password": new_pass})
                     
-                    company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+                    # Generate unique Company ID automatically
+                    company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
                     
+                    # Save company record — AUTO ACTIVATED since they paid
                     supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
                         "email": new_email,
-                        "is_active": True, # ✅ Auto activate for you
+                        "is_active": True,  # ✅ Auto active
                         "compliance_status": "NHS_IG_ALIGNED"
                     }).execute()
                     
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
-                    st.info(f"🔑 YOUR ORGANISATION ID: **{company_id}**")
-                    st.warning("⚠️ Save this ID — you will need it to login and deploy protection.")
+                    st.info("📧 Please check your email — you can now login")
+                    st.balloons()
                     
                 except Exception as e:
-                    st.error(f"Error: {str(e)}")
+                    st.error(f"❌ Error: {str(e)}")
         
         st.markdown('</div>', unsafe_allow_html=True)
 
 # --- DASHBOARD FUNCTION ---
 def show_dashboard():
-    # ✅ Auto set license active for you
-    is_active = True
-    org_name = "Shadow AI Admin"
+    # Fetch company details
+    try:
+        company_data = supabase.table("companies").select("is_active, name").eq("id", st.session_state.company_id).execute()
+        is_active = True  # Always active for paid users
+        org_name = company_data.data[0].get("name", "Your Organisation") if company_data.data else "Your Organisation"
+    except:
+        is_active = True
+        org_name = "Your Organisation"
 
     # --- SIDEBAR ---
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/809/809934.png", width=80)
     st.sidebar.title("🛡️ Shadow AI")
     st.sidebar.markdown(f"**🏢 {org_name}**")
-    st.sidebar.markdown(f"**ID: `{st.session_state.company_id}`**")
+    st.sidebar.markdown(f"**Reference: `{st.session_state.company_id}`**")
     
     if is_active:
         st.sidebar.success("✅ License: ACTIVE | COMPLIANT")
     else:
-        st.sidebar.error("❌ License: PENDING ACTIVATION")
+        st.sidebar.error("❌ License: PENDING")
 
     if st.sidebar.button("🚪 Logout"):
         st.session_state.user = None
+        st.session_state.auth_stage = "login"
         st.rerun()
 
-    # --- ACTIVE DASHBOARD ---
+    # --- MAIN CONTENT ---
     st.title("🛡️ Security Command Center")
     st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
     st.markdown("---")
