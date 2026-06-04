@@ -17,7 +17,10 @@ SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
 RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"
 
-# ✅ Use the service key for all operations (this is what worked before)
+# ✅ Set your admin email here
+ADMIN_EMAIL = "security.shadowai@gmail.com"
+
+# ✅ Use service key for all operations
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # --- PAGE SETUP ---
@@ -120,6 +123,13 @@ st.markdown("""
         font-size: 14px;
         display: inline-block;
         margin: 8px 0;
+    }
+    .delete-btn {
+        background-color: #DA291C !important;
+        color: white !important;
+    }
+    .delete-btn:hover {
+        background-color: #9E1A12 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -358,7 +368,7 @@ def show_login():
                     st.session_state.auth_stage = "login"
                     st.rerun()
 
-        # --- ✅ FIXED REGISTER FLOW — works like before, no key errors ---
+        # --- REGISTER FLOW ---
         with tab2:
             st.warning("⚠️ For paying customers only — access is granted after registration & verification")
             new_email = st.text_input("📧 Official Work Email", key="reg_email")
@@ -376,7 +386,7 @@ def show_login():
                     # Generate unique Company ID
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
                     
-                    # Insert company record — service key bypasses RLS automatically
+                    # Insert company record
                     supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
@@ -387,7 +397,6 @@ def show_login():
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
                     st.info("📧 You can now login with your email and password — a security code will be sent to you")
                     
-                    
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
         
@@ -397,12 +406,14 @@ def show_login():
 def show_dashboard():
     # Fetch company details
     try:
-        company_data = supabase.table("companies").select("is_active, name").eq("id", st.session_state.company_id).execute()
+        company_data = supabase.table("companies").select("is_active, name, email").eq("id", st.session_state.company_id).execute()
         is_active = True
         org_name = company_data.data[0].get("name", "Your Organisation") if company_data.data else "Your Organisation"
+        user_email = company_data.data[0].get("email", "") if company_data.data else ""
     except:
         is_active = True
         org_name = "Your Organisation"
+        user_email = ""
 
     # --- SIDEBAR ---
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/809/809934.png", width=80)
@@ -420,62 +431,134 @@ def show_dashboard():
         st.session_state.auth_stage = "login"
         st.rerun()
 
-    # --- MAIN CONTENT ---
-    st.title("🛡️ Security Command Center")
-    st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
-    st.markdown("---")
+    # --- MAIN CONTENT TABS ---
+    # Only show Admin tab if logged in as admin
+    if user_email == ADMIN_EMAIL:
+        tab1, tab2, tab3 = st.tabs(["📦 Deployment", "📋 Security Logs", "👤 Admin Users"])
+    else:
+        tab1, tab2 = st.tabs(["📦 Deployment", "📋 Security Logs"])
 
-    st.subheader("📦 Deploy Protection Software")
-    config_content = f"""const SHADOW_AI_CONFIG = {{
-    supabaseUrl: "{SUPABASE_URL}",
-    supabaseKey: "{SUPABASE_ANON_KEY}",
-    companyId: "{st.session_state.company_id}"
-}};"""
-    
-    zip_file = create_zip_file(config_content)
-    
-    st.download_button(
-        label="⬇️ DOWNLOAD ENTERPRISE PROTECTION PACKAGE",
-        data=zip_file,
-        file_name="ShadowAI_NHS_Protection.zip",
-        mime="application/zip",
-        type="primary"
-    )
-    st.markdown("*Includes extension, deployment tool, and configuration files — works on Chrome, Edge, and Brave*")
+    # --- TAB 1: DEPLOYMENT ---
+    with tab1:
+        st.title("🛡️ Security Command Center")
+        st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
+        st.markdown("---")
 
-    # --- LOGS SECTION ---
-    st.markdown("---")
-    st.subheader("📋 Security Audit Logs")
-    try:
-        data = supabase.table("security_logs").select("*").eq("company_id", st.session_state.company_id).order("created_at", desc=True).execute()
-        if data.data:
-            st.dataframe(pd.DataFrame(data.data), use_container_width=True)
-        else:
-            st.info("No security events recorded — protection is active and monitoring.")
-    except Exception as e:
-        st.error(f"Error loading logs: {e}")
+        st.subheader("📦 Deploy Protection Software")
+        config_content = f"""const SHADOW_AI_CONFIG = {{
+        supabaseUrl: "{SUPABASE_URL}",
+        supabaseKey: "{SUPABASE_ANON_KEY}",
+        companyId: "{st.session_state.company_id}"
+        }};"""
+        
+        zip_file = create_zip_file(config_content)
+        
+        st.download_button(
+            label="⬇️ DOWNLOAD ENTERPRISE PROTECTION PACKAGE",
+            data=zip_file,
+            file_name="ShadowAI_NHS_Protection.zip",
+            mime="application/zip",
+            type="primary"
+        )
+        st.markdown("*Includes extension, deployment tool, and configuration files — works on Chrome, Edge, and Brave*")
 
-    st.markdown("---")
-    
-    st.subheader("🎛️ Custom Security Rules")
-    st.markdown("*Add words, codes, or identifiers specific to your organisation (e.g. local patient codes, project names)*")
-    col1, col2 = st.columns(2)
-    with col1:
-        secret_word = st.text_input("🔒 Sensitive Term / Phrase")
-    with col2:
-        replacement_label = st.text_input("🏷️ Redaction Label", value="[ORGANISATION RESTRICTED]")
+        st.markdown("---")
+        
+        st.subheader("🎛️ Custom Security Rules")
+        st.markdown("*Add words, codes, or identifiers specific to your organisation (e.g. local patient codes, project names)*")
+        col1, col2 = st.columns(2)
+        with col1:
+            secret_word = st.text_input("🔒 Sensitive Term / Phrase")
+        with col2:
+            replacement_label = st.text_input("🏷️ Redaction Label", value="[ORGANISATION RESTRICTED]")
 
-    if st.button("✅ Deploy Rule Immediately"):
-        if secret_word:
+        if st.button("✅ Deploy Rule Immediately"):
+            if secret_word:
+                try:
+                    supabase.table("company_secrets").insert({
+                        "secret_word": secret_word,
+                        "label": replacement_label,
+                        "company_id": st.session_state.company_id
+                    }).execute()
+                    st.success("✅ Rule added — protection updated across all devices")
+                except Exception as e:
+                    st.error(f"Error saving rule: {str(e)}")
+
+    # --- TAB 2: SECURITY LOGS ---
+    with tab2:
+        st.title("📋 Security Audit Logs")
+        st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
+        st.markdown("---")
+        
+        try:
+            data = supabase.table("security_logs").select("*").eq("company_id", st.session_state.company_id).order("created_at", desc=True).execute()
+            if data.data:
+                st.dataframe(pd.DataFrame(data.data), use_container_width=True)
+            else:
+                st.info("No security events recorded — protection is active and monitoring.")
+        except Exception as e:
+            st.error(f"Error loading logs: {e}")
+
+    # --- TAB 3: ADMIN USERS / REGISTRATIONS (ONLY FOR YOU) ---
+    if user_email == ADMIN_EMAIL:
+        with tab3:
+            st.title("👤 Registered Companies & Users")
+            st.markdown('<div class="compliance-badge">🔐 Admin Access — View and manage all accounts</div>', unsafe_allow_html=True)
+            st.markdown("---")
+
+            # Get all registered companies
             try:
-                supabase.table("company_secrets").insert({
-                    "secret_word": secret_word,
-                    "label": replacement_label,
-                    "company_id": st.session_state.company_id
-                }).execute()
-                st.success("✅ Rule added — protection updated across all devices")
+                all_companies = supabase.table("companies").select("id, name, email, is_active, created_at").order("created_at", desc=True).execute()
+                
+                if all_companies.data:
+                    df = pd.DataFrame(all_companies.data)
+                    st.subheader(f"Total Registered: {len(all_companies.data)}")
+                    
+                    # Show table
+                    st.dataframe(df, use_container_width=True, column_config={
+                        "id": "Company ID",
+                        "name": "Organisation Name",
+                        "email": "Contact Email",
+                        "is_active": "Active Status",
+                        "created_at": "Registered On"
+                    })
+
+                    st.markdown("---")
+                    st.subheader("🗑️ Remove Unwanted Account")
+                    
+                    # Select which company to delete
+                    company_options = {f"{row['name']} ({row['email']})": row['id'] for row in all_companies.data}
+                    selected_label = st.selectbox("Select account to remove:", list(company_options.keys()))
+                    
+                    if st.button("❌ DELETE ACCOUNT", type="primary", help="This will permanently remove the company and all its data"):
+                        selected_id = company_options[selected_label]
+                        
+                        try:
+                            # Delete from related tables first
+                            supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
+                            supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
+                            
+                            # Delete company record
+                            supabase.table("companies").delete().eq("id", selected_id).execute()
+                            
+                            # Delete from Supabase auth
+                            try:
+                                selected_email = next(row['email'] for row in all_companies.data if row['id'] == selected_id)
+                                supabase.auth.admin.delete_user(selected_email)
+                            except:
+                                pass
+                            
+                            st.success("✅ Account and all associated data have been removed successfully")
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"❌ Error deleting account: {str(e)}")
+                
+                else:
+                    st.info("No companies have registered yet.")
+
             except Exception as e:
-                st.error(f"Error saving rule: {e}")
+                st.error(f"❌ Error loading registered users: {str(e)}")
 
 # --- ROUTING ---
 if st.session_state.user is None:
