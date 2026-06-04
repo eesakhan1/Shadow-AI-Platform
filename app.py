@@ -17,8 +17,9 @@ SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
 RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"  # Your branded email
 
-# Initialize Supabase
-supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# Initialize Supabase connections
+supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)  # For admin operations
 
 # --- PAGE SETUP ---
 st.set_page_config(
@@ -338,6 +339,12 @@ def show_login():
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.logged_in = True
                         
+                        # ✅ Set company ID for RLS policies
+                        try:
+                            supabase_admin.rpc('set_config', {'name': 'app.company_id', 'value': st.session_state.company_id})
+                        except:
+                            pass
+                        
                         # Send ID to extension
                         js_code = f"""
                         <script>
@@ -367,7 +374,7 @@ def show_login():
             
             if st.button("✅ Create Account"):
                 try:
-                    # Create user
+                    # Create auth user
                     res = supabase.auth.sign_up({
                         "email": new_email,
                         "password": new_pass
@@ -376,8 +383,8 @@ def show_login():
                     # Generate unique Company ID automatically
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
                     
-                    # Save company record — NO compliance_status field
-                    supabase.table("companies").insert({
+                    # ✅ Use ADMIN connection to insert (bypasses RLS safely)
+                    supabase_admin.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
                         "email": new_email,
@@ -468,7 +475,8 @@ def show_dashboard():
     if st.button("✅ Deploy Rule Immediately"):
         if secret_word:
             try:
-                supabase.table("company_secrets").insert({
+                # ✅ Use admin connection for insert
+                supabase_admin.table("company_secrets").insert({
                     "secret_word": secret_word,
                     "label": replacement_label,
                     "company_id": st.session_state.company_id
