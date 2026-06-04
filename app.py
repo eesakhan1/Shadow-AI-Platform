@@ -15,7 +15,7 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
 SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
-RESEND_FROM_EMAIL = "security@shadowai.co.uk"
+RESEND_FROM_EMAIL ="security@shadowaisecurity.co.uk"
 
 # Initialize Supabase
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
