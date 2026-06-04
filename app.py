@@ -15,7 +15,7 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
 SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
-RESEND_FROM_EMAIL ="security@shadowaisecurity.co.uk"
+RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"  # ✅ YOUR CORRECT EMAIL
 
 # Initialize Supabase
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -300,7 +300,7 @@ def show_login():
         # --- LOGIN FLOW ---
         with tab1:
             if st.session_state.auth_stage == "login":
-                email = st.text_input("📧 Work Email Address", key="login_email")
+                email = st.text_input("📧 Official Work Email Address", key="login_email")
                 password = st.text_input("🔒 Password", type="password", key="login_pass")
                 
                 if st.button("🚀 Login", type="primary"):
@@ -373,13 +373,12 @@ def show_login():
                     # Generate unique Company ID automatically
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
                     
-                    # Save company record — AUTO ACTIVATED since they paid
+                    # ✅ FIXED: Removed compliance_status column
                     supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
                         "email": new_email,
-                        "is_active": True,  # ✅ Auto active
-                        "compliance_status": "NHS_IG_ALIGNED"
+                        "is_active": True
                     }).execute()
                     
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
@@ -396,7 +395,7 @@ def show_dashboard():
     # Fetch company details
     try:
         company_data = supabase.table("companies").select("is_active, name").eq("id", st.session_state.company_id).execute()
-        is_active = True  # Always active for paid users
+        is_active = True
         org_name = company_data.data[0].get("name", "Your Organisation") if company_data.data else "Your Organisation"
     except:
         is_active = True
