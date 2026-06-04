@@ -386,7 +386,7 @@ def show_login():
                     
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
                     st.info("📧 You can now login with your email and password — a security code will be sent to you")
-                    st.balloons()
+                    
                     
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
