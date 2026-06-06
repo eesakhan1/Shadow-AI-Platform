@@ -184,23 +184,25 @@ def send_verification_email(to_email, code):
         st.error(f"❌ Email Error: {e}")
         return False
 
-# --- ✅ UPDATED FUNCTION TO CREATE ZIP — ONLY AI PLATFORMS ---
+# --- ✅ UPDATED FUNCTION TO CREATE ZIP — FIXED FOR COPILOT + EDGE + CHROME ---
 def create_zip_file(config_content):
     manifest_content = '''{
   "manifest_version": 3,
   "name": "🛡️ Shadow AI Enterprise",
-  "version": "2.1",
+  "version": "3.3",
   "description": "Military Grade Data Protection & DLP — Active ONLY on AI Platforms.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
+    "*://*.copilot.microsoft.com/*",
+    "*://copilot.microsoft.com/*",
     "https://chat.openai.com/*",
+    "https://chatgpt.com/*",
     "https://gemini.google.com/*",
     "https://claude.ai/*",
     "https://www.anthropic.com/*",
     "https://perplexity.ai/*",
     "https://www.perplexity.ai/*",
     "https://www.bing.com/chat*",
-    "https://copilot.microsoft.com/*",
     "https://poe.com/*",
     "https://chat.mistral.ai/*",
     "https://huggingface.co/chat/*",
@@ -210,20 +212,25 @@ def create_zip_file(config_content):
     "https://www.coze.com/*",
     "https://grok.x.com/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; trusted-types 'none';"
+  },
   "icons": {
     "128": "icon.png"
   },
   "content_scripts": [
     {
       "matches": [
+        "*://*.copilot.microsoft.com/*",
+        "*://copilot.microsoft.com/*",
         "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
         "https://gemini.google.com/*",
         "https://claude.ai/*",
         "https://www.anthropic.com/*",
         "https://perplexity.ai/*",
         "https://www.perplexity.ai/*",
         "https://www.bing.com/chat*",
-        "https://copilot.microsoft.com/*",
         "https://poe.com/*",
         "https://chat.mistral.ai/*",
         "https://huggingface.co/chat/*",
@@ -235,15 +242,24 @@ def create_zip_file(config_content):
       ],
       "js": ["config.js", "content.js"],
       "run_at": "document_start",
-      "all_frames": true
+      "all_frames": true,
+      "match_about_blank": true,
+      "world": "ISOLATED"
     }
   ],
   "action": {
     "default_icon": "icon.png"
+  },
+  "browser_specific_settings": {
+    "edge": {
+      "browser_action": {
+        "default_icon": "icon.png"
+      }
+    }
   }
 }'''
 
-    content_js_content = '''// --- SHADOW AI CORE ENGINE ---
+    content_js_content = '''// --- SHADOW AI CORE ENGINE — FIXED FOR ALL BROWSERS ---
 // --- NHS COMPLIANT | AI ONLY VERSION ---
 console.log("🚀 SHADOW AI: Script injected and RUNNING");
 
@@ -315,36 +331,46 @@ async function reportLeak(type, detail, blockedText = "") {
   } catch (e) {}
 }
 
-// --- ✅ GUARANTEED BADGE ---
+// --- ✅ GUARANTEED BADGE — CSP SAFE ---
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   const badge = document.createElement('div');
   badge.id = 'shadow-ai-badge';
   badge.textContent = '🛡️ Shadow AI | AI PROTECTION ACTIVE';
-  badge.style.cssText = `
-    position: fixed !important;
-    top: 10px !important;
-    right: 10px !important;
-    background: #003087 !important;
-    color: #ffffff !important;
-    padding: 8px 16px !important;
-    border-radius: 4px !important;
-    font-weight: bold !important;
-    font-size: 12px !important;
-    z-index: 2147483647 !important;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5) !important;
-    border: 2px solid #005EB8 !important;
-    font-family: Arial, sans-serif !important;
-  `;
+  // Safe style assignment (no cssText)
+  badge.style.position = 'fixed';
+  badge.style.top = '10px';
+  badge.style.right = '10px';
+  badge.style.background = '#003087';
+  badge.style.color = '#ffffff';
+  badge.style.padding = '8px 16px';
+  badge.style.borderRadius = '4px';
+  badge.style.fontWeight = 'bold';
+  badge.style.fontSize = '12px';
+  badge.style.zIndex = '2147483647';
+  badge.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+  badge.style.border = '2px solid #005EB8';
+  badge.style.fontFamily = 'Arial, sans-serif';
+  badge.style.pointerEvents = 'none';
   (document.documentElement || document.body).appendChild(badge);
 }
 
-// --- SCAN & BLOCK ---
+// --- ✅ SCAN & BLOCK — COPILOT + EDGE + CHROME COMPATIBLE ---
 function scanAndBlock() {
   let leakFound = false;
   addBadge();
 
-  const inputs = document.querySelectorAll('textarea, [contenteditable="true"], input[type="text"]');
+  const inputs = document.querySelectorAll(`
+    textarea, 
+    [contenteditable="true"], 
+    input[type="text"],
+    div[role="textbox"],
+    .cib-text-input,
+    .cib-serp-input,
+    div[class*="input"],
+    div[class*="prompt"]
+  `);
+  
   inputs.forEach(input => {
     const original = input.value || input.innerText || "";
     if (original.length < 3) return;
@@ -376,12 +402,26 @@ function scanAndBlock() {
     }
 
     if (matched) {
-      if (input.value !== undefined) input.value = redacted;
-      else input.innerText = redacted;
+      if (input.value !== undefined) {
+        input.value = redacted;
+      } else {
+        input.innerText = redacted;
+        // Trigger update for React/Edge/Copilot
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     }
   });
 
-  const sendBtn = document.querySelector('[data-testid="send-button"], button[type="submit"], .send-button, div[role="button"]');
+  const sendBtn = document.querySelector(`
+    [data-testid="send-button"], 
+    button[type="submit"], 
+    .send-button,
+    .cib-submit-button,
+    button[aria-label*="Send"],
+    div[class*="send"]
+  `);
+  
   if (sendBtn) {
     sendBtn.disabled = leakFound;
     sendBtn.style.pointerEvents = leakFound ? "none" : "auto";
@@ -392,14 +432,18 @@ function scanAndBlock() {
 // --- START ---
 function initProtection() {
   fetchCompanySecrets();
-  setInterval(scanAndBlock, 300);
+  setInterval(scanAndBlock, 200);
   setInterval(fetchCompanySecrets, 30000);
 }
 
 loadIdFromStorage();
 
 const obs = new MutationObserver(() => scanAndBlock());
-obs.observe(document.documentElement, { childList: true, subtree: true });
+obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+
+// Extra runs for dynamic pages
+setTimeout(scanAndBlock, 800);
+setTimeout(scanAndBlock, 2000);
 '''
 
     bat_content = r'''@echo off
@@ -432,7 +476,7 @@ echo 📂 Opening folder...
 explorer "%FOLDER_PATH%"
 echo.
 echo STEPS:
-echo 1. chrome://extensions
+echo 1. chrome://extensions  (OR edge://extensions/)
 echo 2. Enable Developer Mode
 echo 3. Load Unpacked → Select this folder
 echo.
@@ -444,6 +488,7 @@ pause'''
         zip_file.writestr("content.js", content_js_content)
         zip_file.writestr("config.js", config_content)
         zip_file.writestr("INSTALL_SHADOW_AI.bat", bat_content)
+        # ✅ Added real icon placeholder (you can replace later)
         zip_file.writestr("icon.png", b"") 
         
     zip_buffer.seek(0)
@@ -500,12 +545,12 @@ def show_login():
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.logged_in = True
                         
+                        # ✅ FIX: Correct way to send ID to extension
                         js_code = f"""
                         <script>
-                        let browserAPI = typeof chrome !== 'undefined' ? chrome : browser;
-                        browserAPI.storage.local.set({{ shadow_company_id: "{st.session_state.company_id}" }}, function() {{
-                            console.log("✅ ID sent to Shadow AI Extension!");
-                        }});
+                        if (typeof chrome !== 'undefined' && chrome.storage) {{
+                            chrome.storage.local.set({{ "shadow_company_id": "{st.session_state.company_id}" }});
+                        }}
                         </script>
                         """
                         st.components.v1.html(js_code, height=0)
