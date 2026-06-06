@@ -1,5 +1,6 @@
 // --- SHADOW AI CORE ENGINE ---
 // --- NHS COMPLIANT | AI ONLY VERSION ---
+console.log("🚀 SHADOW AI: Script injected and RUNNING");
 
 // --- CONFIG ---
 const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
@@ -14,6 +15,7 @@ async function loadIdFromStorage() {
   } catch (e) {
     COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
   }
+  initProtection(); // Start ONLY after ID loaded
 }
 
 let customSecrets = [];
@@ -68,7 +70,7 @@ async function reportLeak(type, detail, blockedText = "") {
   } catch (e) {}
 }
 
-// --- ✅ GUARANTEED BADGE ---
+// --- ✅ GUARANTEED BADGE — CANNOT BE REMOVED ---
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   const badge = document.createElement('div');
@@ -76,84 +78,86 @@ function addBadge() {
   badge.textContent = '🛡️ Shadow AI | AI PROTECTION ACTIVE';
   badge.style.cssText = `
     position: fixed !important;
-    top: 15px !important;
-    right: 15px !important;
+    top: 10px !important;
+    right: 10px !important;
     background: #003087 !important;
     color: #ffffff !important;
-    padding: 10px 20px !important;
+    padding: 8px 16px !important;
     border-radius: 4px !important;
     font-weight: bold !important;
-    font-size: 13px !important;
-    z-index: 999999999 !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+    font-size: 12px !important;
+    z-index: 2147483647 !important;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5) !important;
     border: 2px solid #005EB8 !important;
     font-family: Arial, sans-serif !important;
   `;
-  document.documentElement.appendChild(badge);
+  (document.documentElement || document.body).appendChild(badge);
+  console.log("✅ Shadow AI Badge ADDED");
 }
 
 // --- SCAN & BLOCK ---
 function scanAndBlock() {
-  let globalLeakDetected = false;
-  addBadge(); // Force add every time
+  let leakFound = false;
+  addBadge();
 
   const inputs = document.querySelectorAll('textarea, [contenteditable="true"], input[type="text"]');
   inputs.forEach(input => {
-    let text = input.value || input.innerText || "";
-    if (text.length < 3) return;
+    const original = input.value || input.innerText || "";
+    if (original.length < 3) return;
 
-    let redactedText = text;
-    let localLeak = false;
+    let redacted = original;
+    let matched = false;
 
     // Custom rules
-    customSecrets.forEach(secret => {
+    customSecrets.forEach(rule => {
       try {
-        const regex = new RegExp(`\\b${secret.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
-        if (regex.test(text)) {
-          redactedText = redactedText.replace(regex, '██████████');
-          localLeak = true;
-          globalLeakDetected = true;
-          reportLeak("PREVENTED", `Custom Rule: ${secret.secret_word}`, text);
+        const regex = new RegExp(`\\b${rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
+        if (regex.test(original)) {
+          redacted = redacted.replace(regex, '██████████');
+          matched = true;
+          leakFound = true;
+          reportLeak("BLOCKED", `Custom Rule: ${rule.secret_word}`, original);
         }
       } catch (e) {}
     });
 
     // System rules
-    if (!localLeak) {
+    if (!matched) {
       securityPatterns.forEach(p => {
-        if (p.regex.test(text)) {
-          redactedText = redactedText.replace(p.regex, '██████████');
-          localLeak = true;
-          globalLeakDetected = true;
-          reportLeak("PREVENTED", `Pattern: ${p.name}`, text);
+        if (p.regex.test(original)) {
+          redacted = redacted.replace(p.regex, '██████████');
+          matched = true;
+          leakFound = true;
+          reportLeak("BLOCKED", `Pattern: ${p.name}`, original);
         }
       });
     }
 
-    if (localLeak) {
-      if (input.value !== undefined) input.value = redactedText;
-      else input.innerText = redactedText;
+    if (matched) {
+      if (input.value !== undefined) input.value = redacted;
+      else input.innerText = redacted;
     }
   });
 
   // Block send button
-  const sendBtn = document.querySelector('[data-testid="send-button"], button[type="submit"], .send-button');
+  const sendBtn = document.querySelector('[data-testid="send-button"], button[type="submit"], .send-button, div[role="button"]');
   if (sendBtn) {
-    sendBtn.disabled = globalLeakDetected;
-    sendBtn.style.opacity = globalLeakDetected ? "0.5" : "1";
-    sendBtn.style.border = globalLeakDetected ? "2px solid #DA291C" : "";
-    sendBtn.style.cursor = globalLeakDetected ? "not-allowed" : "pointer";
+    sendBtn.disabled = leakFound;
+    sendBtn.style.pointerEvents = leakFound ? "none" : "auto";
+    sendBtn.style.opacity = leakFound ? "0.5" : "1";
   }
 }
 
-// --- START ---
-loadIdFromStorage().then(() => {
+// --- START PROTECTION ---
+function initProtection() {
   fetchCompanySecrets();
-  setInterval(scanAndBlock, 500); // Run every 0.5s — faster
-  setInterval(fetchCompanySecrets, 60000);
-});
+  setInterval(scanAndBlock, 300); // Run every 0.3s — fastest possible
+  setInterval(fetchCompanySecrets, 30000);
+}
 
-const observer = new MutationObserver(() => scanAndBlock());
-observer.observe(document.body, { childList: true, subtree: true });
+// Load ID then start
+loadIdFromStorage();
 
-console.log("%c ✅ SHADOW AI LOADED — AI PLATFORM ONLY ", "background:#003087;color:white;padding:4px");
+// Observe page changes
+const obs = new MutationObserver(() => scanAndBlock());
+obs.observe(document.documentElement, { childList: true, subtree: true });
