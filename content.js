@@ -1,5 +1,5 @@
-// --- SHADOW AI — CSP SAFE VERSION ---
-console.log("🛡️ Shadow AI: Loaded on", window.location.hostname);
+// --- SHADOW AI — ISOLATED CSP SAFE VERSION ---
+console.log("🛡️ SHADOW AI: ISOLATED SCRIPT RUNNING ON", window.location.hostname);
 
 // --- CONFIG ---
 const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
@@ -11,8 +11,10 @@ async function loadIdFromStorage() {
   try {
     const data = await (chrome || browser).storage.local.get(['shadow_company_id']);
     COMPANY_ID = data.shadow_company_id || (typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "");
+    console.log("✅ COMPANY ID LOADED:", COMPANY_ID);
   } catch (e) {
     COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
+    console.log("⚠️ STORAGE FALLBACK — USING CONFIG ID");
   }
   initProtection();
 }
@@ -44,7 +46,8 @@ async function fetchCompanySecrets() {
       headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
     });
     customSecrets = await res.json() || [];
-  } catch (e) {}
+    console.log("✅ CUSTOM RULES LOADED:", customSecrets.length);
+  } catch (e) { console.log("⚠️ FETCH FAILED:", e.message); }
 }
 
 // --- LOG EVENTS ---
@@ -70,7 +73,8 @@ function addBadge() {
     badge.id = 'shadow-ai-badge';
     badge.textContent = '🛡️ Shadow AI | ACTIVE';
     
-    // Safe style assignment (no cssText)
+    // Safe style assignment
+    badge.style.cssText = ""; // Clear any unsafe
     badge.style.position = 'fixed';
     badge.style.top = '10px';
     badge.style.right = '10px';
@@ -87,9 +91,9 @@ function addBadge() {
     badge.style.pointerEvents = 'none';
 
     document.documentElement.appendChild(badge);
-    console.log("✅ Badge added successfully");
+    console.log("✅ BADGE SUCCESSFULLY ADDED");
   } catch (e) {
-    console.log("⚠️ Badge creation failed:", e.message);
+    console.log("⚠️ BADGE ERROR:", e.message);
   }
 }
 
@@ -98,7 +102,7 @@ function scanAndBlock() {
   let leakFound = false;
   addBadge();
 
-  // All possible input selectors
+  // All possible input selectors for Copilot + all others
   const inputs = document.querySelectorAll(`
     textarea,
     [contenteditable="true"],
@@ -108,8 +112,11 @@ function scanAndBlock() {
     .cib-serp-input,
     .cib-conversation-input,
     div[class*="input"],
-    div[class*="prompt"]
+    div[class*="prompt"],
+    div[class*="compose"]
   `);
+
+  if (inputs.length > 0) console.log("✅ FOUND INPUTS:", inputs.length);
 
   inputs.forEach(input => {
     const original = input.value || input.innerText || "";
@@ -151,6 +158,7 @@ function scanAndBlock() {
       } else {
         input.innerText = redacted;
         input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
       }
     }
   });
@@ -163,22 +171,24 @@ function scanAndBlock() {
     .cib-submit-button,
     button[aria-label*="Send"],
     button[title*="Send"],
-    div[class*="send"]
+    div[class*="send"],
+    div[role="button"] svg
   `);
 
   if (sendBtn) {
     sendBtn.disabled = leakFound;
     sendBtn.style.pointerEvents = leakFound ? 'none' : 'auto';
     sendBtn.style.opacity = leakFound ? '0.5' : '1';
+    sendBtn.style.filter = leakFound ? 'grayscale(100%)' : 'none';
   }
 }
 
 // --- START PROTECTION ---
 function initProtection() {
   fetchCompanySecrets();
-  setInterval(scanAndBlock, 250);
+  setInterval(scanAndBlock, 200);
   setInterval(fetchCompanySecrets, 30000);
-  console.log("✅ Protection engine running");
+  console.log("✅ PROTECTION ENGINE ACTIVE");
 }
 
 // Initialize
@@ -194,5 +204,6 @@ observer.observe(document.documentElement, {
 });
 
 // Extra runs for dynamic content
-setTimeout(scanAndBlock, 1000);
-setTimeout(scanAndBlock, 2500);
+setTimeout(scanAndBlock, 800);
+setTimeout(scanAndBlock, 1800);
+setTimeout(scanAndBlock, 3000);
