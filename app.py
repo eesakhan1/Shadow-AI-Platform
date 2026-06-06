@@ -184,60 +184,246 @@ def send_verification_email(to_email, code):
         st.error(f"❌ Email Error: {e}")
         return False
 
-# --- FUNCTION TO CREATE ZIP FILE ---
+# --- ✅ UPDATED FUNCTION TO CREATE ZIP — ONLY AI PLATFORMS ---
 def create_zip_file(config_content):
     manifest_content = '''{
   "manifest_version": 3,
-  "name": "🛡️ Shadow AI | NHS Compliant",
-  "version": "2.1",
-  "description": "Data Loss Prevention & AI Security — Built for Healthcare & NHS Standards.",
+  "name": "🛡️ Shadow AI Enterprise",
+  "version": "2.0",
+  "description": "Military Grade Data Protection & DLP — Active ONLY on AI Platforms.",
   "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": [
+    "https://chat.openai.com/*",
+    "https://gemini.google.com/*",
+    "https://claude.ai/*",
+    "https://www.anthropic.com/*",
+    "https://perplexity.ai/*",
+    "https://www.perplexity.ai/*",
+    "https://www.bing.com/chat*",
+    "https://copilot.microsoft.com/*",
+    "https://poe.com/*",
+    "https://www.mistral.ai/*",
+    "https://chat.mistral.ai/*",
+    "https://www.llama.ai/*",
+    "https://huggingface.co/chat/*",
+    "https://chat.deepseek.com/*",
+    "https://kimi.moonshot.cn/*",
+    "https://chatglm.cn/*",
+    "https://www.coze.com/*",
+    "https://grok.x.com/*"
+  ],
   "icons": {
     "128": "icon.png"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*",
+        "https://claude.ai/*",
+        "https://www.anthropic.com/*",
+        "https://perplexity.ai/*",
+        "https://www.perplexity.ai/*",
+        "https://www.bing.com/chat*",
+        "https://copilot.microsoft.com/*",
+        "https://poe.com/*",
+        "https://www.mistral.ai/*",
+        "https://chat.mistral.ai/*",
+        "https://www.llama.ai/*",
+        "https://huggingface.co/chat/*",
+        "https://chat.deepseek.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://chatglm.cn/*",
+        "https://www.coze.com/*",
+        "https://grok.x.com/*"
+      ],
       "js": ["config.js", "content.js"],
       "run_at": "document_end"
     }
-  ]
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  }
 }'''
 
     content_js_content = '''// --- SHADOW AI CORE ENGINE ---
 // --- NHS COMPLIANT VERSION ---
+// --- ACTIVE ONLY ON AI PLATFORMS ---
 
-const BADGE_STYLE = `
-position: fixed;
-top: 15px;
-right: 15px;
-background: #003087;
-color: #ffffff;
-padding: 10px 20px;
-border-radius: 4px;
-font-weight: bold;
-font-size: 13px;
-z-index: 9999999;
-box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-border: 2px solid #005EB8;
-font-family: Arial, Helvetica, sans-serif;
-letter-spacing: 0.5px;
-`;
+// --- IMPORT CONFIG ---
+const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
+const supabaseKey = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseKey : "";
 
+let COMPANY_ID = "";
+async function loadIdFromStorage() {
+    try {
+        let storage = chrome || browser;
+        const data = await storage.storage.local.get(['shadow_company_id']);
+        if (data.shadow_company_id) {
+            COMPANY_ID = data.shadow_company_id;
+        } else {
+            COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
+        }
+    } catch (e) {
+        COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
+    }
+}
+
+let customSecrets = [];
+const deviceFingerprint = `${navigator.platform} | ${navigator.userAgent.substring(0, 100)}`;
+
+// ==========================================
+// ✅ NHS FULL PROTECTION RULES
+// ==========================================
+const securityPatterns = [
+    { name: "SENSITIVE_TERM", regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs number|patient id|dob|date of birth|next of kin)\b/gi },
+    { name: "NHS_NUMBER", regex: /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g },
+    { name: "PATIENT_ID", regex: /\b(PAT|PT|patient)[-\s]?[A-Z0-9]{6,12}\b/gi },
+    { name: "ODS_CODE", regex: /\b[A-Z0-9]{3,5}\b/g },
+    { name: "CLINICAL_REF", regex: /\b(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}\b/gi },
+    { name: "DOB", regex: /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g },
+    { name: "EMAIL_ADDRESS", regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi },
+    { name: "PHONE_NUMBER", regex: /\b(?:\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
+    { name: "POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
+    { name: "FULL_NAME", regex: /\b[A-Z][a-z]+\s[A-Z][a-z]+\b/g },
+    { name: "CREDIT_CARD", regex: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g },
+    { name: "API_KEY", regex: /(api|key|token|secret|password|bearer|auth)[^\s]{0,10}['"]?[a-zA-Z0-9_\-+/]{10,}['"]?/gi }
+];
+
+// ==========================================
+// 📡 SYNC WITH DASHBOARD
+// ==========================================
+async function fetchCompanySecrets() {
+    if (!COMPANY_ID) return;
+    try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/company_secrets?select=*&company_id=eq.${COMPANY_ID}`, {
+            headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+        });
+        const data = await res.json();
+        if (Array.isArray(data)) customSecrets = data;
+    } catch (e) {}
+}
+
+// ==========================================
+// 📊 LOG COMPLIANCE EVENTS
+// ==========================================
+async function reportLeak(type, detail, blockedText = "") {
+    if (!COMPANY_ID) return;
+    try {
+        await fetch(`${supabaseUrl}/rest/v1/security_logs`, {
+            method: "POST",
+            headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                event_type: type,
+                user_device: deviceFingerprint,
+                violation_type: detail,
+                site_url: window.location.hostname,
+                blocked_content: blockedText.substring(0, 300),
+                created_at: new Date(),
+                company_id: COMPANY_ID,
+                compliance_flag: "NHS_IG_GDPR"
+            })
+        });
+    } catch (e) {}
+}
+
+// ==========================================
+// 🛡️ STATUS BADGE
+// ==========================================
 function addBadge() {
     if (document.getElementById('shadow-ai-badge')) return;
     const badge = document.createElement('div');
     badge.id = 'shadow-ai-badge';
-    badge.innerHTML = '🛡️ SHADOW AI | NHS COMPLIANT';
-    badge.style.cssText = BADGE_STYLE;
+    badge.innerHTML = `🛡️ Shadow AI | AI PROTECTION ACTIVE`;
+    badge.style.cssText = `
+        position: fixed; top: 15px; right: 15px;
+        background: #003087; color: #fff;
+        padding: 10px 20px; border-radius: 4px;
+        font-weight: bold; font-size: 13px; z-index: 9999999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2); border: 2px solid #005EB8;
+        font-family: Arial, sans-serif;
+    `;
     document.body.appendChild(badge);
 }
 
-setInterval(() => {
+// ==========================================
+// ⚡ PROTECTION ENGINE — ONLY RUNS ON AI SITES
+// ==========================================
+function scanAndBlock() {
+    let globalLeakDetected = false;
     addBadge();
-    if(typeof SHADOW_AI_CONFIG !== 'undefined'){}
-}, 1000);
+
+    const inputs = document.querySelectorAll('textarea, [contenteditable="true"], input[type="text"]');
+    inputs.forEach(input => {
+        let text = input.value || input.innerText || "";
+        if (text.length < 3) return;
+
+        let redactedText = text;
+        let localLeak = false;
+
+        // Custom rules
+        customSecrets.forEach(secret => {
+            try {
+                const regex = new RegExp(`\\b${secret.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
+                if (regex.test(text)) {
+                    redactedText = redactedText.replace(regex, '██████████');
+                    localLeak = true;
+                    globalLeakDetected = true;
+                    reportLeak("PREVENTED", `Custom Rule: ${secret.secret_word}`, text);
+                }
+            } catch (e) {}
+        });
+
+        // System patterns
+        if (!localLeak) {
+            securityPatterns.forEach(p => {
+                if (p.regex.test(text)) {
+                    redactedText = redactedText.replace(p.regex, '██████████');
+                    localLeak = true;
+                    globalLeakDetected = true;
+                    reportLeak("PREVENTED", `Pattern: ${p.name}`, text);
+                }
+            });
+        }
+
+        if (localLeak) {
+            if (input.value !== undefined) input.value = redactedText;
+            else input.innerText = redactedText;
+        }
+    });
+
+    // Lock send button
+    const sendBtn = document.querySelector('[data-testid="send-button"], button[type="submit"], .send-button');
+    if (sendBtn) {
+        sendBtn.disabled = globalLeakDetected;
+        sendBtn.style.opacity = globalLeakDetected ? "0.5" : "1";
+        sendBtn.style.border = globalLeakDetected ? "2px solid #DA291C" : "";
+        sendBtn.style.cursor = globalLeakDetected ? "not-allowed" : "pointer";
+    }
+}
+
+// ==========================================
+// 🚀 STARTUP
+// ==========================================
+loadIdFromStorage().then(() => {
+    fetchCompanySecrets();
+    setInterval(scanAndBlock, 800);
+    setInterval(fetchCompanySecrets, 60000);
+});
+
+const observer = new MutationObserver(debounce(() => scanAndBlock(), 200));
+observer.observe(document.body, { childList: true, subtree: true });
+
+function debounce(func, wait) {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+console.log("%c 🛡️ SHADOW AI — NHS COMPLIANT | ACTIVE ON AI PLATFORMS ONLY ", "background:#003087;color:white;padding:4px");
 '''
 
     bat_content = r'''@echo off
@@ -252,7 +438,7 @@ echo ██████╔╝╚██████╔╝██║  ██║█�
 echo ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 echo.
 echo          NHS COMPLIANT DEPLOYMENT TOOL
-echo          COPYING FILES AUTOMATICALLY
+echo          ACTIVE ONLY ON AI PLATFORMS
 echo ============================================
 echo.
 
@@ -279,6 +465,7 @@ echo 2. Turn ON Developer Mode
 echo 3. Click "LOAD UNPACKED"
 echo 4. SELECT THE FOLDER THAT OPENED
 echo.
+echo ✅ PROTECTION RUNS ONLY ON: ChatGPT, Gemini, Claude, Copilot, Perplexity, Mistral, etc.
 echo ============================================
 pause'''
 

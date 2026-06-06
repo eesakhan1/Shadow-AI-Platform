@@ -89,7 +89,7 @@ function addBadge() {
     if (document.getElementById('shadow-ai-badge')) return;
     const badge = document.createElement('div');
     badge.id = 'shadow-ai-badge';
-    badge.innerHTML = `🛡️ Shadow AI | NHS Compliant`;
+    badge.innerHTML = `🛡️ Shadow AI | AI PROTECTION ACTIVE`;
     badge.style.cssText = `
         position: fixed; top: 15px; right: 15px;
         background: #003087; color: #fff;
@@ -102,7 +102,7 @@ function addBadge() {
 }
 
 // ==========================================
-// ⚡ PROTECTION ENGINE — FULL BLACKOUT
+// ⚡ PROTECTION ENGINE — ONLY RUNS ON AI SITES
 // ==========================================
 function scanAndBlock() {
     let globalLeakDetected = false;
@@ -177,4 +177,4 @@ function debounce(func, wait) {
     };
 }
 
-console.log("%c 🛡️ SHADOW AI — NHS COMPLIANT | FULL PROTECTION ACTIVE ", "background:#003087;color:white;padding:4px");
+console.log("%c 🛡️ SHADOW AI — NHS COMPLIANT | ACTIVE ON AI PLATFORMS ONLY ", "background:#003087;color:white;padding:4px");
