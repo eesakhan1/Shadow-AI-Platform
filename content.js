@@ -1,12 +1,12 @@
-// --- SHADOW AI — CSP COMPLIANT VERSION ---
-console.log("🛡️ SHADOW AI: Running on", window.location.hostname);
+// --- SHADOW AI — CSP SAFE VERSION ---
+console.log("🛡️ Shadow AI: Loaded on", window.location.hostname);
 
 // --- CONFIG ---
 const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
 const supabaseKey = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseKey : "";
 let COMPANY_ID = "";
 
-// --- LOAD ID ---
+// --- LOAD COMPANY ID ---
 async function loadIdFromStorage() {
   try {
     const data = await (chrome || browser).storage.local.get(['shadow_company_id']);
@@ -36,7 +36,7 @@ const securityPatterns = [
   { name: "API_KEY", regex: /(api|key|token|secret|password|bearer|auth)[^\s]{0,10}['"]?[a-zA-Z0-9_\-+/]{10,}['"]?/gi }
 ];
 
-// --- FETCH RULES ---
+// --- FETCH CUSTOM RULES ---
 async function fetchCompanySecrets() {
   if (!COMPANY_ID) return;
   try {
@@ -47,7 +47,7 @@ async function fetchCompanySecrets() {
   } catch (e) {}
 }
 
-// --- LOG ---
+// --- LOG EVENTS ---
 async function reportLeak(type, detail, blockedText = "") {
   if (!COMPANY_ID) return;
   try {
@@ -69,27 +69,46 @@ function addBadge() {
     const badge = document.createElement('div');
     badge.id = 'shadow-ai-badge';
     badge.textContent = '🛡️ Shadow AI | ACTIVE';
-    Object.assign(badge.style, {
-      position: 'fixed', top: '10px', right: '10px',
-      background: '#003087', color: '#fff', padding: '8px 16px',
-      borderRadius: '4px', fontWeight: 'bold', fontSize: '12px',
-      zIndex: '2147483647', boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-      border: '2px solid #005EB8', fontFamily: 'Arial, sans-serif',
-      pointerEvents: 'none'
-    });
-    (document.documentElement || document.body).appendChild(badge);
-  } catch (e) { /* fail silently if blocked */ }
+    
+    // Safe style assignment (no cssText)
+    badge.style.position = 'fixed';
+    badge.style.top = '10px';
+    badge.style.right = '10px';
+    badge.style.background = '#003087';
+    badge.style.color = '#ffffff';
+    badge.style.padding = '8px 16px';
+    badge.style.borderRadius = '4px';
+    badge.style.fontWeight = 'bold';
+    badge.style.fontSize = '12px';
+    badge.style.zIndex = '2147483647';
+    badge.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+    badge.style.border = '2px solid #005EB8';
+    badge.style.fontFamily = 'Arial, sans-serif';
+    badge.style.pointerEvents = 'none';
+
+    document.documentElement.appendChild(badge);
+    console.log("✅ Badge added successfully");
+  } catch (e) {
+    console.log("⚠️ Badge creation failed:", e.message);
+  }
 }
 
-// --- ✅ CSP-SAFE SCAN ---
+// --- ✅ SCAN & PROTECT ---
 function scanAndBlock() {
   let leakFound = false;
   addBadge();
 
+  // All possible input selectors
   const inputs = document.querySelectorAll(`
-    textarea, [contenteditable="true"], input[type="text"],
-    div[role="textbox"], .cib-text-input, .cib-serp-input,
-    div[class*="input"], div[class*="prompt"]
+    textarea,
+    [contenteditable="true"],
+    input[type="text"],
+    div[role="textbox"],
+    .cib-text-input,
+    .cib-serp-input,
+    .cib-conversation-input,
+    div[class*="input"],
+    div[class*="prompt"]
   `);
 
   inputs.forEach(input => {
@@ -99,18 +118,21 @@ function scanAndBlock() {
     let redacted = original;
     let matched = false;
 
+    // Custom rules
     customSecrets.forEach(rule => {
       try {
-        const rx = new RegExp(`\\b${rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
-        if (rx.test(original)) {
-          redacted = redacted.replace(rx, '██████████');
+        const escaped = rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
+        if (regex.test(original)) {
+          redacted = redacted.replace(regex, '██████████');
           matched = true;
           leakFound = true;
-          reportLeak("BLOCKED", `Custom: ${rule.secret_word}`, original);
+          reportLeak("BLOCKED", `Custom Rule: ${rule.secret_word}`, original);
         }
       } catch (e) {}
     });
 
+    // System rules
     if (!matched) {
       securityPatterns.forEach(p => {
         if (p.regex.test(original)) {
@@ -122,6 +144,7 @@ function scanAndBlock() {
       });
     }
 
+    // Update content safely
     if (matched) {
       if (input.value !== undefined) {
         input.value = redacted;
@@ -132,10 +155,17 @@ function scanAndBlock() {
     }
   });
 
+  // Block send button
   const sendBtn = document.querySelector(`
-    [data-testid="send-button"], button[type="submit"], .send-button,
-    .cib-submit-button, button[aria-label*="Send"], div[class*="send"]
+    [data-testid="send-button"],
+    button[type="submit"],
+    .send-button,
+    .cib-submit-button,
+    button[aria-label*="Send"],
+    button[title*="Send"],
+    div[class*="send"]
   `);
+
   if (sendBtn) {
     sendBtn.disabled = leakFound;
     sendBtn.style.pointerEvents = leakFound ? 'none' : 'auto';
@@ -143,17 +173,26 @@ function scanAndBlock() {
   }
 }
 
-// --- START ---
+// --- START PROTECTION ---
 function initProtection() {
   fetchCompanySecrets();
-  setInterval(scanAndBlock, 200);
+  setInterval(scanAndBlock, 250);
   setInterval(fetchCompanySecrets, 30000);
+  console.log("✅ Protection engine running");
 }
 
+// Initialize
 loadIdFromStorage();
 
-const obs = new MutationObserver(() => scanAndBlock());
-obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+// Watch for changes
+const observer = new MutationObserver(() => scanAndBlock());
+observer.observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  characterData: true
+});
 
-setTimeout(scanAndBlock, 800);
-setTimeout(scanAndBlock, 1800);
+// Extra runs for dynamic content
+setTimeout(scanAndBlock, 1000);
+setTimeout(scanAndBlock, 2500);
