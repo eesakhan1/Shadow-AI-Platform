@@ -90,17 +90,31 @@ function addBadge() {
     box-shadow: 0 0 10px rgba(0,0,0,0.5) !important;
     border: 2px solid #005EB8 !important;
     font-family: Arial, sans-serif !important;
+    pointer-events: none !important;
   `;
   (document.documentElement || document.body).appendChild(badge);
   console.log("✅ Shadow AI Badge ADDED");
 }
 
-// --- SCAN & BLOCK ---
+// --- ✅ FIXED SCAN & BLOCK — WORKS ON COPILOT + ALL OTHERS ---
 function scanAndBlock() {
   let leakFound = false;
   addBadge();
 
-  const inputs = document.querySelectorAll('textarea, [contenteditable="true"], input[type="text"]');
+  // ✅ TARGETS EVERY INPUT TYPE ACROSS ALL AI PLATFORMS
+  const inputs = document.querySelectorAll(`
+    textarea,
+    [contenteditable="true"],
+    input[type="text"],
+    div[role="textbox"],
+    div[class*="input"],
+    div[class*="prompt"],
+    div[class*="chatbox"],
+    .msg-form__input,
+    .chat-input,
+    .input-box
+  `);
+
   inputs.forEach(input => {
     const original = input.value || input.innerText || "";
     if (original.length < 3) return;
@@ -133,18 +147,37 @@ function scanAndBlock() {
       });
     }
 
+    // ✅ UPDATE FIELD + TRIGGER CHANGE FOR REACT/VUE (Copilot needs this!)
     if (matched) {
-      if (input.value !== undefined) input.value = redacted;
-      else input.innerText = redacted;
+      if (input.value !== undefined) {
+        input.value = redacted;
+      } else {
+        input.innerText = redacted;
+        // Force framework to detect change
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     }
   });
 
-  // Block send button
-  const sendBtn = document.querySelector('[data-testid="send-button"], button[type="submit"], .send-button, div[role="button"]');
+  // ✅ FIXED SEND BUTTON DETECTION — WORKS ON COPILOT + ALL OTHERS
+  const sendBtn = document.querySelector(`
+    [data-testid="send-button"],
+    button[type="submit"],
+    .send-button,
+    div[role="button"]:has(svg),
+    button[aria-label*="Send"],
+    button[title*="Send"],
+    div[class*="send"],
+    div[class*="submit"]
+  `);
+
   if (sendBtn) {
     sendBtn.disabled = leakFound;
     sendBtn.style.pointerEvents = leakFound ? "none" : "auto";
     sendBtn.style.opacity = leakFound ? "0.5" : "1";
+    sendBtn.style.filter = leakFound ? "grayscale(100%)" : "none";
+    sendBtn.style.cursor = leakFound ? "not-allowed" : "pointer";
   }
 }
 
@@ -158,6 +191,6 @@ function initProtection() {
 // Load ID then start
 loadIdFromStorage();
 
-// Observe page changes
+// Observe page changes (for dynamic loads like Copilot)
 const obs = new MutationObserver(() => scanAndBlock());
-obs.observe(document.documentElement, { childList: true, subtree: true });
+obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
