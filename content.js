@@ -1,5 +1,5 @@
-// --- SHADOW AI — FORCED INJECT VERSION ---
-console.log("%c 🛡️ SHADOW AI: LOADED SUCCESSFULLY", "background:#003087;color:white;font-size:14px;padding:4px;");
+// --- SHADOW AI — FINAL AI-ONLY VERSION ---
+console.log("🛡️ SHADOW AI: ACTIVE ON AI PLATFORM —", window.location.hostname);
 
 // --- CONFIG ---
 const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
@@ -62,25 +62,32 @@ async function reportLeak(type, detail, blockedText = "") {
   } catch (e) {}
 }
 
-// --- ✅ BADGE — GUARANTEED TO SHOW ---
+// --- ✅ CSP-SAFE BADGE ---
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   try {
     const badge = document.createElement('div');
     badge.id = 'shadow-ai-badge';
     badge.textContent = '🛡️ Shadow AI | ACTIVE';
-    badge.style.cssText = `
-      position:fixed;top:10px;right:10px;background:#003087;color:#fff;
-      padding:8px 16px;border-radius:4px;font-weight:bold;font-size:12px;
-      z-index:2147483647;box-shadow:0 0 10px rgba(0,0,0,0.5);
-      border:2px solid #005EB8;font-family:Arial,sans-serif;pointer-events:none;
-    `;
+    badge.style.position = 'fixed';
+    badge.style.top = '10px';
+    badge.style.right = '10px';
+    badge.style.background = '#003087';
+    badge.style.color = '#ffffff';
+    badge.style.padding = '8px 16px';
+    badge.style.borderRadius = '4px';
+    badge.style.fontWeight = 'bold';
+    badge.style.fontSize = '12px';
+    badge.style.zIndex = '2147483647';
+    badge.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+    badge.style.border = '2px solid #005EB8';
+    badge.style.fontFamily = 'Arial, sans-serif';
+    badge.style.pointerEvents = 'none';
     document.documentElement.appendChild(badge);
-    console.log("✅ BADGE VISIBLE");
   } catch (e) {}
 }
 
-// --- ✅ SCAN & BLOCK — COPILOT-OPTIMIZED ---
+// --- ✅ SCAN & BLOCK — COPILOT + ALL AI SITES ---
 function scanAndBlock() {
   let leakFound = false;
   addBadge();
@@ -138,17 +145,24 @@ function scanAndBlock() {
   }
 }
 
-// --- START ---
+// --- START PROTECTION ---
 function initProtection() {
   fetchCompanySecrets();
   setInterval(scanAndBlock, 200);
   setInterval(fetchCompanySecrets, 30000);
 }
 
+// Initialize
 loadIdFromStorage();
 
-const obs = new MutationObserver(() => scanAndBlock());
-obs.observe(document.documentElement, {childList:true,subtree:true,attributes:true,characterData:true});
+// Watch for changes
+const observer = new MutationObserver(() => scanAndBlock());
+observer.observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  characterData: true
+});
 
-setTimeout(scanAndBlock, 1000);
-setTimeout(scanAndBlock, 2500);
+setTimeout(scanAndBlock, 800);
+setTimeout(scanAndBlock, 2000);
