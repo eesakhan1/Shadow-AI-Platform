@@ -1,6 +1,5 @@
-// --- SHADOW AI CORE ENGINE ---
-// --- NHS COMPLIANT | AI ONLY VERSION ---
-console.log("🚀 SHADOW AI: Script injected and RUNNING");
+// --- SHADOW AI CORE ENGINE — COPILOT FIXED VERSION ---
+console.log("%c 🛡️ SHADOW AI: LOADED ON " + window.location.hostname, "background:#003087;color:white;font-size:14px;padding:4px;");
 
 // --- CONFIG ---
 const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
@@ -12,8 +11,10 @@ async function loadIdFromStorage() {
   try {
     const data = await (chrome || browser).storage.local.get(['shadow_company_id']);
     COMPANY_ID = data.shadow_company_id || (typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "");
+    console.log("✅ COMPANY ID:", COMPANY_ID);
   } catch (e) {
     COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
+    console.log("⚠️ STORAGE ERROR — USING CONFIG ID");
   }
   initProtection();
 }
@@ -46,7 +47,8 @@ async function fetchCompanySecrets() {
     });
     const data = await res.json();
     customSecrets = Array.isArray(data) ? data : [];
-  } catch (e) {}
+    console.log("✅ CUSTOM RULES LOADED:", customSecrets.length);
+  } catch (e) { console.log("❌ FETCH ERROR", e); }
 }
 
 // --- LOG EVENTS ---
@@ -70,12 +72,12 @@ async function reportLeak(type, detail, blockedText = "") {
   } catch (e) {}
 }
 
-// --- ✅ GUARANTEED BADGE ---
+// --- ✅ FORCED BADGE — WILL SHOW 100% ---
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   const badge = document.createElement('div');
   badge.id = 'shadow-ai-badge';
-  badge.textContent = '🛡️ Shadow AI | AI PROTECTION ACTIVE';
+  badge.textContent = '🛡️ Shadow AI | ACTIVE';
   badge.style.cssText = `
     position: fixed !important; top: 10px !important; right: 10px !important;
     background: #003087 !important; color: #ffffff !important;
@@ -87,16 +89,17 @@ function addBadge() {
     font-family: Arial, sans-serif !important;
     pointer-events: none !important;
   `;
-  (document.documentElement || document.body).appendChild(badge);
-  console.log("✅ Shadow AI Badge ADDED");
+  // Force add to root
+  try { document.documentElement.appendChild(badge); } catch(e) { document.body.appendChild(badge); }
+  console.log("✅ BADGE INSERTED");
 }
 
-// --- ✅ FIXED SCAN — NOW WORKS ON COPILOT ---
+// --- ✅ COPILOT-OPTIMIZED SCAN ---
 function scanAndBlock() {
   let leakFound = false;
   addBadge();
 
-  // ✅ COPILOT-SPECIFIC SELECTORS + ALL OTHERS
+  // EXACT COPILOT SELECTORS + ALL OTHERS
   const inputs = document.querySelectorAll(`
     textarea,
     [contenteditable="true"],
@@ -104,10 +107,17 @@ function scanAndBlock() {
     div[role="textbox"],
     .cib-text-input,
     .cib-serp-input,
-    div[class*="cib-"],
+    .cib-conversation-input,
+    div[class*="cib-text"],
     div[class*="input"],
     div[class*="prompt"]
   `);
+
+  if (inputs.length === 0) {
+    console.log("⚠️ NO INPUTS FOUND — WILL RETRY");
+  } else {
+    console.log("✅ FOUND INPUTS:", inputs.length);
+  }
 
   inputs.forEach(input => {
     const original = input.value || input.innerText || "";
@@ -141,30 +151,31 @@ function scanAndBlock() {
       });
     }
 
-    // ✅ FORCE UPDATE FOR REACT/COPILOT
+    // ✅ FORCE REACT/COPILOT TO SEE CHANGES
     if (matched) {
       if (input.value !== undefined) {
         input.value = redacted;
       } else {
         input.innerText = redacted;
-        // Critical: Tell React/Microsoft framework content changed
+        // Trigger all events Microsoft listens for
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
-        input.dispatchEvent(new Event('blur', { bubbles: true }));
+        input.dispatchEvent(new Event('keydown', { bubbles: true }));
       }
+      console.log("🔒 REDACTED:", original.slice(0, 40) + "...");
     }
   });
 
-  // ✅ COPILOT SEND BUTTON DETECTION
+  // ✅ COPILOT SEND BUTTON — EXACT MATCH
   const sendBtn = document.querySelector(`
     [data-testid="send-button"],
     button[type="submit"],
     .send-button,
     .cib-submit-button,
+    .cib-button-icon,
     button[aria-label*="Send"],
     button[title*="Send"],
-    div[class*="send"],
-    div[class*="submit"]
+    div[class*="send"]
   `);
 
   if (sendBtn) {
@@ -179,19 +190,25 @@ function scanAndBlock() {
 // --- START PROTECTION ---
 function initProtection() {
   fetchCompanySecrets();
-  setInterval(scanAndBlock, 200); // Even faster: every 0.2s
+  // Run VERY frequently — Copilot changes DOM constantly
+  setInterval(scanAndBlock, 150);
   setInterval(fetchCompanySecrets, 30000);
+  console.log("✅ PROTECTION ACTIVE");
 }
 
 // Load ID then start
 loadIdFromStorage();
 
-// ✅ DEEPER OBSERVER — catches Copilot's dynamic DOM changes
+// ✅ AGGRESSIVE OBSERVER — watches EVERYTHING
 const obs = new MutationObserver(() => scanAndBlock());
 obs.observe(document.documentElement, { 
   childList: true, 
   subtree: true, 
   attributes: true, 
   characterData: true,
-  attributeFilter: ['class', 'contenteditable']
+  attributeFilter: ['class', 'contenteditable', 'style']
 });
+
+// ✅ EXTRA SAFETY: Run again after delay
+setTimeout(scanAndBlock, 1000);
+setTimeout(scanAndBlock, 2000);
