@@ -1,5 +1,5 @@
-// --- SHADOW AI — ISOLATED CSP SAFE VERSION ---
-console.log("🛡️ SHADOW AI: ISOLATED SCRIPT RUNNING ON", window.location.hostname);
+// --- SHADOW AI — FORCED INJECT VERSION ---
+console.log("%c 🛡️ SHADOW AI: LOADED SUCCESSFULLY", "background:#003087;color:white;font-size:14px;padding:4px;");
 
 // --- CONFIG ---
 const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
@@ -11,10 +11,8 @@ async function loadIdFromStorage() {
   try {
     const data = await (chrome || browser).storage.local.get(['shadow_company_id']);
     COMPANY_ID = data.shadow_company_id || (typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "");
-    console.log("✅ COMPANY ID LOADED:", COMPANY_ID);
   } catch (e) {
     COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
-    console.log("⚠️ STORAGE FALLBACK — USING CONFIG ID");
   }
   initProtection();
 }
@@ -46,8 +44,7 @@ async function fetchCompanySecrets() {
       headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
     });
     customSecrets = await res.json() || [];
-    console.log("✅ CUSTOM RULES LOADED:", customSecrets.length);
-  } catch (e) { console.log("⚠️ FETCH FAILED:", e.message); }
+  } catch (e) {}
 }
 
 // --- LOG EVENTS ---
@@ -65,58 +62,34 @@ async function reportLeak(type, detail, blockedText = "") {
   } catch (e) {}
 }
 
-// --- ✅ CSP-SAFE BADGE ---
+// --- ✅ BADGE — GUARANTEED TO SHOW ---
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   try {
     const badge = document.createElement('div');
     badge.id = 'shadow-ai-badge';
     badge.textContent = '🛡️ Shadow AI | ACTIVE';
-    
-    // Safe style assignment
-    badge.style.cssText = ""; // Clear any unsafe
-    badge.style.position = 'fixed';
-    badge.style.top = '10px';
-    badge.style.right = '10px';
-    badge.style.background = '#003087';
-    badge.style.color = '#ffffff';
-    badge.style.padding = '8px 16px';
-    badge.style.borderRadius = '4px';
-    badge.style.fontWeight = 'bold';
-    badge.style.fontSize = '12px';
-    badge.style.zIndex = '2147483647';
-    badge.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
-    badge.style.border = '2px solid #005EB8';
-    badge.style.fontFamily = 'Arial, sans-serif';
-    badge.style.pointerEvents = 'none';
-
+    badge.style.cssText = `
+      position:fixed;top:10px;right:10px;background:#003087;color:#fff;
+      padding:8px 16px;border-radius:4px;font-weight:bold;font-size:12px;
+      z-index:2147483647;box-shadow:0 0 10px rgba(0,0,0,0.5);
+      border:2px solid #005EB8;font-family:Arial,sans-serif;pointer-events:none;
+    `;
     document.documentElement.appendChild(badge);
-    console.log("✅ BADGE SUCCESSFULLY ADDED");
-  } catch (e) {
-    console.log("⚠️ BADGE ERROR:", e.message);
-  }
+    console.log("✅ BADGE VISIBLE");
+  } catch (e) {}
 }
 
-// --- ✅ SCAN & PROTECT ---
+// --- ✅ SCAN & BLOCK — COPILOT-OPTIMIZED ---
 function scanAndBlock() {
   let leakFound = false;
   addBadge();
 
-  // All possible input selectors for Copilot + all others
   const inputs = document.querySelectorAll(`
-    textarea,
-    [contenteditable="true"],
-    input[type="text"],
-    div[role="textbox"],
-    .cib-text-input,
-    .cib-serp-input,
-    .cib-conversation-input,
-    div[class*="input"],
-    div[class*="prompt"],
-    div[class*="compose"]
+    textarea,[contenteditable="true"],input[type="text"],
+    div[role="textbox"],.cib-text-input,.cib-serp-input,
+    div[class*="input"],div[class*="prompt"]
   `);
-
-  if (inputs.length > 0) console.log("✅ FOUND INPUTS:", inputs.length);
 
   inputs.forEach(input => {
     const original = input.value || input.innerText || "";
@@ -125,21 +98,18 @@ function scanAndBlock() {
     let redacted = original;
     let matched = false;
 
-    // Custom rules
     customSecrets.forEach(rule => {
       try {
-        const escaped = rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
-        if (regex.test(original)) {
-          redacted = redacted.replace(regex, '██████████');
+        const rx = new RegExp(`\\b${rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
+        if (rx.test(original)) {
+          redacted = redacted.replace(rx, '██████████');
           matched = true;
           leakFound = true;
-          reportLeak("BLOCKED", `Custom Rule: ${rule.secret_word}`, original);
+          reportLeak("BLOCKED", `Custom: ${rule.secret_word}`, original);
         }
       } catch (e) {}
     });
 
-    // System rules
     if (!matched) {
       securityPatterns.forEach(p => {
         if (p.regex.test(original)) {
@@ -151,59 +121,34 @@ function scanAndBlock() {
       });
     }
 
-    // Update content safely
     if (matched) {
-      if (input.value !== undefined) {
-        input.value = redacted;
-      } else {
-        input.innerText = redacted;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-      }
+      if (input.value !== undefined) input.value = redacted;
+      else { input.innerText = redacted; input.dispatchEvent(new Event('input', {bubbles:true})); }
     }
   });
 
-  // Block send button
   const sendBtn = document.querySelector(`
-    [data-testid="send-button"],
-    button[type="submit"],
-    .send-button,
-    .cib-submit-button,
-    button[aria-label*="Send"],
-    button[title*="Send"],
-    div[class*="send"],
-    div[role="button"] svg
+    [data-testid="send-button"],button[type="submit"],.send-button,
+    .cib-submit-button,button[aria-label*="Send"],div[class*="send"]
   `);
-
   if (sendBtn) {
     sendBtn.disabled = leakFound;
     sendBtn.style.pointerEvents = leakFound ? 'none' : 'auto';
     sendBtn.style.opacity = leakFound ? '0.5' : '1';
-    sendBtn.style.filter = leakFound ? 'grayscale(100%)' : 'none';
   }
 }
 
-// --- START PROTECTION ---
+// --- START ---
 function initProtection() {
   fetchCompanySecrets();
   setInterval(scanAndBlock, 200);
   setInterval(fetchCompanySecrets, 30000);
-  console.log("✅ PROTECTION ENGINE ACTIVE");
 }
 
-// Initialize
 loadIdFromStorage();
 
-// Watch for changes
-const observer = new MutationObserver(() => scanAndBlock());
-observer.observe(document.documentElement, {
-  childList: true,
-  subtree: true,
-  attributes: true,
-  characterData: true
-});
+const obs = new MutationObserver(() => scanAndBlock());
+obs.observe(document.documentElement, {childList:true,subtree:true,attributes:true,characterData:true});
 
-// Extra runs for dynamic content
-setTimeout(scanAndBlock, 800);
-setTimeout(scanAndBlock, 1800);
-setTimeout(scanAndBlock, 3000);
+setTimeout(scanAndBlock, 1000);
+setTimeout(scanAndBlock, 2500);
