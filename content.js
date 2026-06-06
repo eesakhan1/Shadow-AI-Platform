@@ -15,7 +15,7 @@ async function loadIdFromStorage() {
   } catch (e) {
     COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
   }
-  initProtection(); // Start ONLY after ID loaded
+  initProtection();
 }
 
 let customSecrets = [];
@@ -70,22 +70,17 @@ async function reportLeak(type, detail, blockedText = "") {
   } catch (e) {}
 }
 
-// --- ✅ GUARANTEED BADGE — CANNOT BE REMOVED ---
+// --- ✅ GUARANTEED BADGE ---
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   const badge = document.createElement('div');
   badge.id = 'shadow-ai-badge';
   badge.textContent = '🛡️ Shadow AI | AI PROTECTION ACTIVE';
   badge.style.cssText = `
-    position: fixed !important;
-    top: 10px !important;
-    right: 10px !important;
-    background: #003087 !important;
-    color: #ffffff !important;
-    padding: 8px 16px !important;
-    border-radius: 4px !important;
-    font-weight: bold !important;
-    font-size: 12px !important;
+    position: fixed !important; top: 10px !important; right: 10px !important;
+    background: #003087 !important; color: #ffffff !important;
+    padding: 8px 16px !important; border-radius: 4px !important;
+    font-weight: bold !important; font-size: 12px !important;
     z-index: 2147483647 !important;
     box-shadow: 0 0 10px rgba(0,0,0,0.5) !important;
     border: 2px solid #005EB8 !important;
@@ -96,23 +91,22 @@ function addBadge() {
   console.log("✅ Shadow AI Badge ADDED");
 }
 
-// --- ✅ FIXED SCAN & BLOCK — WORKS ON COPILOT + ALL OTHERS ---
+// --- ✅ FIXED SCAN — NOW WORKS ON COPILOT ---
 function scanAndBlock() {
   let leakFound = false;
   addBadge();
 
-  // ✅ TARGETS EVERY INPUT TYPE ACROSS ALL AI PLATFORMS
+  // ✅ COPILOT-SPECIFIC SELECTORS + ALL OTHERS
   const inputs = document.querySelectorAll(`
     textarea,
     [contenteditable="true"],
     input[type="text"],
     div[role="textbox"],
+    .cib-text-input,
+    .cib-serp-input,
+    div[class*="cib-"],
     div[class*="input"],
-    div[class*="prompt"],
-    div[class*="chatbox"],
-    .msg-form__input,
-    .chat-input,
-    .input-box
+    div[class*="prompt"]
   `);
 
   inputs.forEach(input => {
@@ -147,25 +141,26 @@ function scanAndBlock() {
       });
     }
 
-    // ✅ UPDATE FIELD + TRIGGER CHANGE FOR REACT/VUE (Copilot needs this!)
+    // ✅ FORCE UPDATE FOR REACT/COPILOT
     if (matched) {
       if (input.value !== undefined) {
         input.value = redacted;
       } else {
         input.innerText = redacted;
-        // Force framework to detect change
+        // Critical: Tell React/Microsoft framework content changed
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('blur', { bubbles: true }));
       }
     }
   });
 
-  // ✅ FIXED SEND BUTTON DETECTION — WORKS ON COPILOT + ALL OTHERS
+  // ✅ COPILOT SEND BUTTON DETECTION
   const sendBtn = document.querySelector(`
     [data-testid="send-button"],
     button[type="submit"],
     .send-button,
-    div[role="button"]:has(svg),
+    .cib-submit-button,
     button[aria-label*="Send"],
     button[title*="Send"],
     div[class*="send"],
@@ -184,13 +179,19 @@ function scanAndBlock() {
 // --- START PROTECTION ---
 function initProtection() {
   fetchCompanySecrets();
-  setInterval(scanAndBlock, 300); // Run every 0.3s — fastest possible
+  setInterval(scanAndBlock, 200); // Even faster: every 0.2s
   setInterval(fetchCompanySecrets, 30000);
 }
 
 // Load ID then start
 loadIdFromStorage();
 
-// Observe page changes (for dynamic loads like Copilot)
+// ✅ DEEPER OBSERVER — catches Copilot's dynamic DOM changes
 const obs = new MutationObserver(() => scanAndBlock());
-obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+obs.observe(document.documentElement, { 
+  childList: true, 
+  subtree: true, 
+  attributes: true, 
+  characterData: true,
+  attributeFilter: ['class', 'contenteditable']
+});
