@@ -17,36 +17,38 @@ st.markdown('<div class="container">', unsafe_allow_html=True)
 st.header("🔒 Create New Password")
 
 params = st.query_params
-token = params.get("access_token")
+access_token = params.get("access_token")
 
-if not token:
-    st.warning("⚠️ Invalid/expired link.")
-    st.markdown("<p style='text-align:center;'><a href='/forgot-password'>Request new link</a></p>", unsafe_allow_html=True)
+if not access_token:
+    st.warning("⚠️ Invalid or expired reset link. Please request a new one.")
+    st.markdown("<p style='text-align:center;'><a href='/forgot-password'>→ Request New Link</a></p>", unsafe_allow_html=True)
 else:
-    new1 = st.text_input("New Password", type="password")
-    new2 = st.text_input("Confirm Password", type="password")
+    new_pass = st.text_input("New Password", type="password")
+    confirm_pass = st.text_input("Confirm Password", type="password")
+
     if st.button("Update Password"):
-        if new1 != new2:
-            st.error("❌ Not matching")
-        elif len(new1) < 6:
-            st.error("❌ Min 6 chars")
+        if new_pass != confirm_pass:
+            st.error("❌ Passwords do not match")
+        elif len(new_pass) < 6:
+            st.error("❌ Password must be at least 6 characters long")
         else:
-                try:
-                    res = requests.put(
-                        "https://ypjpj1xwdjcvlmrmsgc.supabase.co/auth/v1/user",
-                        headers={
-                            "apikey": st.secrets["SUPABASE_ANON_KEY"],
-                            "Authorization": f"Bearer {token}",
-                            "Content-Type": "application/json"
-                        },
-                        json={"password": new1}
-                    )
-                    if res.ok:
-                        st.success("✅ Password updated!")
-                        st.markdown("<p style='text-align:center;'><a href='/'>→ Go to Login</a></p>", unsafe_allow_html=True)
-                    else:
-                        st.error("❌ Error updating")
-                except Exception as e:
-                    st.error(f"❌ {e}")
+            try:
+                res = requests.put(
+                    "https://ypjpjixwdjcvlmrmsgzc.supabase.co/auth/v1/user",
+                    headers={
+                        "apikey": st.secrets["SUPABASE_ANON_KEY"],
+                        "Authorization": f"Bearer {access_token}",
+                        "Content-Type": "application/json"
+                    },
+                    json={"password": new_pass}
+                )
+                if res.ok:
+                    st.success("✅ Password updated successfully! You can now login.")
+                    st.markdown("<p style='text-align:center;'><a href='/'>→ Go to Login</a></p>", unsafe_allow_html=True)
+                else:
+                    data = res.json()
+                    st.error(f"❌ {data.get('error', {}).get('message', 'Failed to update password')}")
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
 
 st.markdown('</div>', unsafe_allow_html=True)
