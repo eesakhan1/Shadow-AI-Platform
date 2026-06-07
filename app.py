@@ -195,7 +195,7 @@ def send_verification_email(to_email, code):
         st.error(f"❌ Email Error: {e}")
         return False
 
-# --- ✅ RESET PASSWORD EMAIL FUNCTION — FIXED LINK ---
+# --- ✅ RESET PASSWORD EMAIL FUNCTION — CORRECT URL ---
 def send_reset_email(to_email, reset_link):
     try:
         response = requests.post(
@@ -205,7 +205,7 @@ def send_reset_email(to_email, reset_link):
                 "Content-Type": "application/json"
             },
             json={
-                "from": RESEND_FROM_EMAIL,  # ✅ SAME EMAIL AS 2FA
+                "from": RESEND_FROM_EMAIL,
                 "to": to_email,
                 "subject": "🔐 Shadow AI | Reset Your Password",
                 "html": f"""
@@ -295,8 +295,8 @@ def create_zip_file(config_content):
       ],
       "js": ["config.js", "content.js"],
       "run_at": "document_start",
-      "all_frames": true,
-      "match_about_blank": true,
+      "all_frames": True,
+      "match_about_blank": True,
       "world": "ISOLATED"
     }
   ],
@@ -534,7 +534,7 @@ pause'''
     zip_buffer.seek(0)
     return zip_buffer
 
-# --- ✅ FORGOT PASSWORD PAGE ---
+# --- ✅ FORGOT PASSWORD PAGE — CORRECT LINK ---
 def show_forgot_password():
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.subheader("🔑 Reset Your Password")
@@ -547,9 +547,9 @@ def show_forgot_password():
             st.warning("⚠️ Please enter your email address")
         else:
             try:
-                # ✅ CORRECT LINK — NO MORE 404
-                encoded_email = urllib.parse.quote(email)
-                reset_link = f"https://shadow-ai-platform-4ewudc2yankypfirbaej3.streamlit.app/?mode=reset&email={encoded_email}"
+                encoded_email = urllib.parse.quote(email.strip())
+                # ✅ YOUR EXACT CORRECT URL — NO MORE ERRORS!
+                reset_link = f"https://shadow-ai-platform-4ewudc2yankyvpfirbaej3.streamlit.app/?mode=reset&email={encoded_email}"
 
                 if send_reset_email(email, reset_link):
                     st.success("✅ Reset link sent successfully!")
@@ -849,7 +849,7 @@ def show_dashboard():
             except Exception as e:
                 st.error(f"❌ Error loading registered users: {str(e)}")
 
-# --- ✅ ROUTING — FINAL FIX (THIS WAS THE MISSING PART!) ---
+# --- ✅ ROUTING — FINAL FIX ---
 def main():
     params = st.query_params
     page = params.get("page", "")
@@ -861,9 +861,11 @@ def main():
         show_forgot_password()
         return
 
-    # ✅ Handle reset password form — THIS WAS NOT WORKING BEFORE
+    # ✅ Handle reset password form
     if mode == "reset" and reset_email:
-        show_reset_password(reset_email)
+        from urllib.parse import unquote
+        decoded_email = unquote(reset_email)
+        show_reset_password(decoded_email)
         return
 
     # ✅ Default flow
