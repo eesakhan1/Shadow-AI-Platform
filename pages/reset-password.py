@@ -1,20 +1,19 @@
 import streamlit as st
 from supabase import create_client
 
-# --- LOAD SAME SECRETS ---
+# --- LOAD SECRETS ---
 try:
     SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
+    SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
 except Exception as e:
     st.error(f"❌ Secrets Error: {e}")
     st.stop()
 
-auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Set New Password | Shadow AI", page_icon="🔑", layout="centered")
 
-# --- SAME CSS ---
 st.markdown("""
     <style>
     .main {
@@ -25,7 +24,6 @@ st.markdown("""
     .login-card {
         background-color: rgba(20, 30, 60, 0.85);
         backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
         padding: 40px;
         border-radius: 8px;
         border: 2px solid #005EB8;
@@ -33,7 +31,6 @@ st.markdown("""
     }
     h2 {
         color: #FFFFFF !important;
-        font-family: Arial, Helvetica, sans-serif;
         font-weight: bold;
     }
     .stButton>button {
@@ -42,18 +39,12 @@ st.markdown("""
         height: 55px;
         font-size: 18px;
         font-weight: bold;
-        border: none;
-        transition: all 0.3s ease;
         background: #005EB8;
         color: #FFFFFF !important;
-        box-shadow: 0 2px 8px rgba(0,94,184,0.3);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        border: none;
     }
     .stButton>button:hover {
         background: #003087;
-        box-shadow: 0 4px 12px rgba(0,48,135,0.5);
-        transform: translateY(-1px);
     }
     .stTextInput>div>div>input {
         background-color: rgba(255,255,255,0.05);
@@ -73,7 +64,7 @@ params = st.query_params
 email = params.get("email", "")
 
 if not email:
-    st.error("❌ Invalid or expired link — please request a new one")
+    st.error("❌ Invalid or expired reset link — please request a new one")
     st.markdown("<p style='text-align:center;'><a href='/forgot-password' style='color:#4da6ff;'>← Request New Link</a></p>", unsafe_allow_html=True)
     st.stop()
 
@@ -88,18 +79,26 @@ confirm_password = st.text_input("🔒 Confirm New Password", type="password")
 if st.button("✅ Update Password"):
     if new_password != confirm_password:
         st.error("❌ Passwords do not match — please retype")
-    elif len(new_password) < 6:
-        st.warning("⚠️ Password must be at least 6 characters")
+    elif len(new_password) < 8:
+        st.warning("⚠️ Password must be at least 8 characters long")
     else:
         try:
-            # ✅ Update password directly
-            auth_client.auth.admin.update_user_by_id(
-                email,
-                {"password": new_password}
-            )
-            st.success("✅ Password updated successfully!")
-            st.markdown("<p style='text-align:center; margin-top:20px;'><a href='/' style='color:#4da6ff; font-weight:bold;'>← Go to Login</a></p>", unsafe_allow_html=True)
+            # ✅ Find user by email
+            users = supabase.auth.admin.list_users()
+            target_user = next((u for u in users if u.email == email), None)
+
+            if not target_user:
+                st.error("❌ No account found with this email address")
+            else:
+                # ✅ Update password directly
+                supabase.auth.admin.update_user_by_id(
+                    target_user.id,
+                    {"password": new_password}
+                )
+                st.success("✅ Password updated successfully! You can now log in with your new password.")
+                st.markdown("<p style='text-align:center; margin-top:20px;'><a href='/' style='color:#4da6ff; font-weight:bold;'>← Go to Login</a></p>", unsafe_allow_html=True)
+
         except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
+            st.error(f"❌ Error updating password: {str(e)}")
 
 st.markdown('</div>', unsafe_allow_html=True)
