@@ -25,8 +25,8 @@ async function loadIdFromStorage() {
 let customSecrets = [];
 const deviceFingerprint = `${navigator.platform} | ${navigator.userAgent.substring(0, 100)}`;
 
-// --- ✅ LICENSE & DEVICE TRACKING — FULLY FIXED ---
-async function checkLicenseAndRegisterDevice() {
+// --- ✅ LICENSE & DEVICE TRACKING — EDGE + CHROME FIXED ---
+async function checkLicenseAndRegisterDevice(retryCount = 0) {
   // ❌ Public store version — do nothing
   if (
     supabaseUrl === "YOUR_SUPABASE_URL_HERE" ||
@@ -40,9 +40,9 @@ async function checkLicenseAndRegisterDevice() {
   }
 
   try {
-    // ✅ Add timeout to avoid false offline errors
+    // ✅ LONGER TIMEOUT (15s) — works on slow Edge connections
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     // Send device info to YOUR DASHBOARD — it decides the limit
     const res = await fetch(`${supabaseUrl}/functions/v1/register-device`, {
@@ -82,26 +82,31 @@ async function checkLicenseAndRegisterDevice() {
     return true;
 
   } catch (err) {
-    console.warn("⚠️ Shadow AI: License check issue — allowing temporary access", err.message);
-    
-    // ✅ OFFLINE GRACE PERIOD: 7 days allowed
+    console.warn(`⚠️ Shadow AI: Connection issue (attempt ${retryCount+1})`, err.message);
+
+    // ✅ AUTO-RETRY 2 MORE TIMES (ONLY ON EDGE/CHROME DELAYS)
+    if (retryCount < 2) {
+      await new Promise(resolve => setTimeout(resolve, 1200)); // wait 1.2s
+      return checkLicenseAndRegisterDevice(retryCount + 1);
+    }
+
+    // ✅ ONLY BLOCK IF NEVER CHECKED OR OVER 7 DAYS OLD
     const lastCheck = localStorage.getItem("shadow_ai_last_check");
     const sevenDays = 7 * 24 * 60 * 60 * 1000;
 
-    // Only block if never checked OR over 7 days old
     if (!lastCheck || Date.now() - parseInt(lastCheck) > sevenDays) {
       showBlockMessage("OFFLINE / EXPIRED", "Cannot verify license for over 7 days. Please reconnect.");
       return false;
     }
 
-    // ✅ Allow temporary offline use (no error thrown!)
+    // ✅ ALLOW USE — NO ERROR SHOWN
+    console.log("✅ Shadow AI: Using offline grace period");
     return true;
   }
 }
 
 // --- ✅ SHOW BLOCK MESSAGE ---
 function showBlockMessage(title, text) {
-  // Clear page safely
   document.body.innerHTML = "";
   document.body.style.background = "#141E3C";
   document.body.style.color = "white";
@@ -113,7 +118,6 @@ function showBlockMessage(title, text) {
       <p style="font-size: 16px; line-height: 1.6;">${text}</p>
     </div>
   `;
-  // ✅ NO ERROR THROWN — stops the red console error
   throw new Error("Shadow AI: " + title);
 }
 
@@ -126,7 +130,7 @@ const securityPatterns = [
   { name: "CLINICAL_REF", regex: /\b(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}\b/gi },
   { name: "DOB", regex: /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g },
   { name: "EMAIL_ADDRESS", regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi },
-  { name: "PHONE_NUMBER", regex: /\b(?:\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
+  { name: "PHONE_NUMBER", regex: /\b(?:+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
   { name: "POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
   { name: "FULL_NAME", regex: /\b[A-Z][a-z]+\s[A-Z][a-z]+\b/g },
   { name: "CREDIT_CARD", regex: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g },
