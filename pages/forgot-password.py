@@ -21,7 +21,7 @@ if st.button("Send Reset Link"):
     if email:
         try:
             res = requests.post(
-                "https://ypjpjixwdjcvlmrmsgzc.supabase.co/auth/v1/recover",
+                "https://ypjpjixwdjcvmlrmsgzc.supabase.co/auth/v1/recover",
                 headers={
                     "apikey": st.secrets["SUPABASE_ANON_KEY"],
                     "Content-Type": "application/json"
