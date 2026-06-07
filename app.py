@@ -10,17 +10,15 @@ import zipfile
 from io import BytesIO
 import string
 
-# --- CONFIGURATION ---
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
-SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
-RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
+# --- CONFIGURATION — YOUR CORRECT VALUES ---
+SUPABASE_URL = "https://ypjpjixwdjcvlmrmsgzc.supabase.co"
+SUPABASE_SERVICE_KEY = st.secrets.get("SUPABASE_SERVICE_KEY", "")
+SUPABASE_ANON_KEY = st.secrets.get("SUPABASE_ANON_KEY", "")
+RESEND_API_KEY = st.secrets.get("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"
 
-# ✅ Admin email restriction
 ADMIN_EMAIL = "security.shadowai@gmail.com"
 
-# ✅ Supabase client
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # --- PAGE SETUP ---
@@ -184,7 +182,7 @@ def send_verification_email(to_email, code):
         st.error(f"❌ Email Error: {e}")
         return False
 
-# --- ✅ UPDATED FUNCTION TO CREATE ZIP — FIXED FOR COPILOT + EDGE + CHROME ---
+# --- CREATE ZIP FILE ---
 def create_zip_file(config_content):
     manifest_content = '''{
   "manifest_version": 3,
@@ -259,16 +257,13 @@ def create_zip_file(config_content):
   }
 }'''
 
-    content_js_content = '''// --- SHADOW AI CORE ENGINE — FIXED FOR ALL BROWSERS ---
-// --- NHS COMPLIANT | AI ONLY VERSION ---
+    content_js_content = '''// --- SHADOW AI CORE ENGINE — NHS COMPLIANT ---
 console.log("🚀 SHADOW AI: Script injected and RUNNING");
 
-// --- CONFIG ---
 const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
 const supabaseKey = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseKey : "";
 let COMPANY_ID = "";
 
-// --- LOAD COMPANY ID ---
 async function loadIdFromStorage() {
   try {
     const data = await (chrome || browser).storage.local.get(['shadow_company_id']);
@@ -282,7 +277,6 @@ async function loadIdFromStorage() {
 let customSecrets = [];
 const deviceFingerprint = `${navigator.platform} | ${navigator.userAgent.substring(0, 100)}`;
 
-// --- NHS RULES ---
 const securityPatterns = [
   { name: "SENSITIVE_TERM", regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs number|patient id|dob|date of birth|next of kin)\b/gi },
   { name: "NHS_NUMBER", regex: /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g },
@@ -298,7 +292,6 @@ const securityPatterns = [
   { name: "API_KEY", regex: /(api|key|token|secret|password|bearer|auth)[^\s]{0,10}['"]?[a-zA-Z0-9_\-+/]{10,}['"]?/gi }
 ];
 
-// --- FETCH CUSTOM RULES ---
 async function fetchCompanySecrets() {
   if (!COMPANY_ID) return;
   try {
@@ -310,7 +303,6 @@ async function fetchCompanySecrets() {
   } catch (e) {}
 }
 
-// --- LOG EVENTS ---
 async function reportLeak(type, detail, blockedText = "") {
   if (!COMPANY_ID) return;
   try {
@@ -331,13 +323,11 @@ async function reportLeak(type, detail, blockedText = "") {
   } catch (e) {}
 }
 
-// --- ✅ GUARANTEED BADGE — CSP SAFE ---
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   const badge = document.createElement('div');
   badge.id = 'shadow-ai-badge';
   badge.textContent = '🛡️ Shadow AI | AI PROTECTION ACTIVE';
-  // Safe style assignment (no cssText)
   badge.style.position = 'fixed';
   badge.style.top = '10px';
   badge.style.right = '10px';
@@ -355,7 +345,6 @@ function addBadge() {
   (document.documentElement || document.body).appendChild(badge);
 }
 
-// --- ✅ SCAN & BLOCK — COPILOT + EDGE + CHROME COMPATIBLE ---
 function scanAndBlock() {
   let leakFound = false;
   addBadge();
@@ -406,7 +395,6 @@ function scanAndBlock() {
         input.value = redacted;
       } else {
         input.innerText = redacted;
-        // Trigger update for React/Edge/Copilot
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
       }
@@ -429,7 +417,6 @@ function scanAndBlock() {
   }
 }
 
-// --- START ---
 function initProtection() {
   fetchCompanySecrets();
   setInterval(scanAndBlock, 200);
@@ -441,7 +428,6 @@ loadIdFromStorage();
 const obs = new MutationObserver(() => scanAndBlock());
 obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
 
-// Extra runs for dynamic pages
 setTimeout(scanAndBlock, 800);
 setTimeout(scanAndBlock, 2000);
 '''
@@ -488,7 +474,6 @@ pause'''
         zip_file.writestr("content.js", content_js_content)
         zip_file.writestr("config.js", config_content)
         zip_file.writestr("INSTALL_SHADOW_AI.bat", bat_content)
-        # ✅ Added real icon placeholder (you can replace later)
         zip_file.writestr("icon.png", b"") 
         
     zip_buffer.seek(0)
@@ -508,7 +493,6 @@ def show_login():
 
         tab1, tab2 = st.tabs(["🔑 Sign In", "🆕 Register"])
         
-        # --- LOGIN FLOW ---
         with tab1:
             if st.session_state.auth_stage == "login":
                 email = st.text_input("📧 Official Work Email Address", key="login_email")
@@ -535,7 +519,6 @@ def show_login():
                     except Exception as e:
                         st.error(f"❌ Access Denied: {str(e)}")
 
-                # ✅ CORRECT LINK — IN PLACE, NO NEW TAB
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown(
                     '<p style="text-align: center; margin-top: 8px;">'
@@ -554,7 +537,6 @@ def show_login():
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.logged_in = True
                         
-                        # ✅ FIX: Correct way to send ID to extension
                         js_code = f"""
                         <script>
                         if (typeof chrome !== 'undefined' && chrome.storage) {{
@@ -573,7 +555,6 @@ def show_login():
                     st.session_state.auth_stage = "login"
                     st.rerun()
 
-        # --- REGISTER FLOW ---
         with tab2:
             st.warning("⚠️ For paying customers only — access is granted after registration & verification")
             new_email = st.text_input("📧 Official Work Email", key="reg_email")
@@ -605,7 +586,7 @@ def show_login():
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("---")
 
-# --- DASHBOARD FUNCTION ---
+# --- DASHBOARD ---
 def show_dashboard():
     try:
         company_data = supabase.table("companies").select("is_active, name, email").eq("id", st.session_state.company_id).execute()
@@ -617,7 +598,6 @@ def show_dashboard():
         org_name = "Your Organisation"
         user_email = ""
 
-    # --- SIDEBAR ---
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/809/809934.png", width=80)
     st.sidebar.title("🛡️ Shadow AI")
     st.sidebar.markdown(f"**🏢 {org_name}**")
@@ -633,13 +613,11 @@ def show_dashboard():
         st.session_state.auth_stage = "login"
         st.rerun()
 
-    # --- MAIN CONTENT TABS ---
     if user_email == ADMIN_EMAIL:
         tab1, tab2, tab3 = st.tabs(["📦 Deployment", "📋 Security Logs", "👤 Admin Users"])
     else:
         tab1, tab2 = st.tabs(["📦 Deployment", "📋 Security Logs"])
 
-    # --- TAB 1: DEPLOYMENT ---
     with tab1:
         st.title("🛡️ Security Command Center")
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
@@ -685,7 +663,6 @@ def show_dashboard():
                 except Exception as e:
                     st.error(f"Error saving rule: {str(e)}")
 
-    # --- TAB 2: SECURITY LOGS ---
     with tab2:
         st.title("📋 Security Audit Logs")
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
@@ -700,7 +677,6 @@ def show_dashboard():
         except Exception as e:
             st.error(f"Error loading logs: {str(e)}")
 
-    # --- TAB 3: ADMIN USERS ---
     if user_email == ADMIN_EMAIL:
         with tab3:
             st.title("👤 Registered Companies & Users")
@@ -753,16 +729,11 @@ def show_dashboard():
             except Exception as e:
                 st.error(f"❌ Error loading registered users: {str(e)}")
 
-# --- ✅ FIXED ROUTING — ALLOW PASSWORD PAGES WITHOUT LOGIN ---
+# --- FIXED ROUTING ---
 def main():
-    # Get current page path
-    path = st.query_params.get("page", "")
-    
-    # Allow access to password pages even if not logged in
-    if path in ["forgot-password", "reset-password"]:
-        return  # Let Streamlit load the page normally
-    
-    # Otherwise enforce login
+    current_page = st.query_params.get("page", "")
+    if current_page in ["forgot-password", "reset-password"]:
+        return
     if st.session_state.user is None:
         show_login()
     else:
