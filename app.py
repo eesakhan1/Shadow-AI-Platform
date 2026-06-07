@@ -23,6 +23,7 @@ except Exception as e:
     st.stop()
 
 ADMIN_EMAIL = "security.shadowai@gmail.com"
+DEFAULT_MAX_DEVICES = 3  # ✅ Default limit for new accounts
 
 # ✅ CRITICAL: Use ANON KEY for AUTH (login/register) — SERVICE KEY for DATABASE ONLY
 auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)   # ✅ FOR LOGIN
@@ -130,6 +131,16 @@ st.markdown("""
         font-size: 14px;
         display: inline-block;
         margin: 8px 0;
+    }
+    .device-badge {
+        background: #FFB300;
+        color: black;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 14px;
+        display: inline-block;
+        margin: 4px 0;
     }
     .delete-btn {
         background-color: #DA291C !important;
@@ -622,7 +633,7 @@ def show_login():
                         
                         st.session_state.temp_user_obj = res.user
                         
-                        company_data = supabase.table("companies").select("id").eq("email", email).execute()
+                        company_data = supabase.table("companies").select("id, max_devices, used_devices").eq("email", email).execute()
                         if company_data.data:
                             st.session_state.company_id = company_data.data[0]["id"]
                             
@@ -655,6 +666,14 @@ def show_login():
                         st.session_state.user = st.session_state.temp_user_obj
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.logged_in = True
+                        
+                        # ✅ INCREMENT DEVICE COUNT ON FIRST LOGIN
+                        try:
+                            company_info = supabase.table("companies").select("used_devices, max_devices").eq("id", st.session_state.company_id).execute().data[0]
+                            if company_info["used_devices"] < company_info["max_devices"]:
+                                supabase.table("companies").update({"used_devices": company_info["used_devices"] + 1}).eq("id", st.session_state.company_id).execute()
+                        except:
+                            pass
                         
                         js_code = f"""
                         <script>
@@ -690,15 +709,18 @@ def show_login():
                     
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
                     
+                    # ✅ SET DEVICE LIMITS ON CREATION
                     supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
                         "email": new_email,
-                        "is_active": True
+                        "is_active": True,
+                        "max_devices": DEFAULT_MAX_DEVICES,  # ✅ DEFAULT LIMIT
+                        "used_devices": 0                   # ✅ START AT 0
                     }).execute()
                     
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
-                    st.info("📧 You can now login with your email and password — a security code will be sent to you")
+                    st.info(f"📧 You can now login with your email and password — **Default device limit: {DEFAULT_MAX_DEVICES}**")
                     
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
@@ -709,19 +731,26 @@ def show_login():
 # --- DASHBOARD ---
 def show_dashboard():
     try:
-        company_data = supabase.table("companies").select("is_active, name, email").eq("id", st.session_state.company_id).execute()
+        company_data = supabase.table("companies").select("is_active, name, email, max_devices, used_devices").eq("id", st.session_state.company_id).execute()
         is_active = True
         org_name = company_data.data[0].get("name", "Your Organisation") if company_data.data else "Your Organisation"
         user_email = company_data.data[0].get("email", "") if company_data.data else ""
+        max_devices = company_data.data[0].get("max_devices", DEFAULT_MAX_DEVICES) if company_data.data else DEFAULT_MAX_DEVICES
+        used_devices = company_data.data[0].get("used_devices", 0) if company_data.data else 0
     except:
         is_active = True
         org_name = "Your Organisation"
         user_email = ""
+        max_devices = DEFAULT_MAX_DEVICES
+        used_devices = 0
 
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/809/809934.png", width=80)
     st.sidebar.title("🛡️ Shadow AI")
     st.sidebar.markdown(f"**🏢 {org_name}**")
     st.sidebar.markdown(f"**Reference: `{st.session_state.company_id}`**")
+    
+    # ✅ DEVICE LIMIT IN SIDEBAR
+    st.sidebar.markdown(f'<div class="device-badge">📱 Devices: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
     
     if is_active:
         st.sidebar.success("✅ License: ACTIVE | COMPLIANT")
@@ -741,6 +770,9 @@ def show_dashboard():
     with tab1:
         st.title("🛡️ Security Command Center")
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
+        
+        # ✅ DEVICE LIMIT DISPLAY FOR USERS
+        st.markdown(f'<div class="device-badge" style="font-size:16px; padding:8px 16px;">📱 Allowed Devices: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
         st.markdown("---")
 
         st.subheader("📦 Deploy Protection Software")
@@ -804,7 +836,7 @@ def show_dashboard():
             st.markdown("---")
 
             try:
-                all_companies = supabase.table("companies").select("id, name, email, is_active").execute()
+                all_companies = supabase.table("companies").select("id, name, email, is_active, max_devices, used_devices").execute()
                 
                 if all_companies.data:
                     df = pd.DataFrame(all_companies.data)
@@ -814,14 +846,29 @@ def show_dashboard():
                         "id": "Company ID",
                         "name": "Organisation Name",
                         "email": "Contact Email",
-                        "is_active": "Active Status"
+                        "is_active": "Active Status",
+                        "max_devices": "Max Devices ✏️",
+                        "used_devices": "Used Devices"
                     })
 
                     st.markdown("---")
-                    st.subheader("🗑️ Remove Unwanted Account")
+                    st.subheader("⚙️ Set Device Limit for Account")
                     
                     company_options = {f"{row['name']} ({row['email']})": row['id'] for row in all_companies.data}
-                    selected_label = st.selectbox("Select account to remove:", list(company_options.keys()))
+                    selected_label = st.selectbox("Select account:", list(company_options.keys()))
+                    new_limit = st.number_input("New Max Devices Allowed", min_value=1, max_value=100, value=3)
+                    
+                    if st.button("✅ UPDATE DEVICE LIMIT", type="primary"):
+                        selected_id = company_options[selected_label]
+                        try:
+                            supabase.table("companies").update({"max_devices": new_limit}).eq("id", selected_id).execute()
+                            st.success(f"✅ Device limit updated to **{new_limit}** devices")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)}")
+
+                    st.markdown("---")
+                    st.subheader("🗑️ Remove Unwanted Account")
                     
                     if st.button("❌ DELETE ACCOUNT", type="primary", help="This will permanently remove the company and all its data"):
                         selected_id = company_options[selected_label]
