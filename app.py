@@ -535,15 +535,15 @@ def show_login():
                     except Exception as e:
                         st.error(f"❌ Access Denied: {str(e)}")
 
-                # ✅ FORGOT PASSWORD LINK — RIGHT HERE, UNDER LOGIN BUTTON
-                # ✅ CORRECT LINK — NO NEW TAB, NO REFRESH
+                # ✅ CORRECT LINK — IN PLACE, NO NEW TAB
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown(
-    '<p style="text-align:center; margin-top:10px;">'
-    '<a href="/forgot-password" target="_self" style="color:#4da6ff; text-decoration:none;">🔑 Forgot your password?</a>'
-    '</p>',
-    unsafe_allow_html=True
-)
+                    '<p style="text-align: center; margin-top: 8px;">'
+                    '<a href="/forgot-password" target="_self" style="color: #4da6ff; text-decoration: none;">🔑 Forgot your password?</a>'
+                    '</p>',
+                    unsafe_allow_html=True
+                )
+
             elif st.session_state.auth_stage == "verify":
                 st.info(f"🔢 Verification code sent to: **{st.session_state.temp_user_obj.email}**")
                 user_code = st.text_input("Enter 6-Digit Security Code", max_chars=6)
@@ -733,7 +733,7 @@ def show_dashboard():
                         try:
                             supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
                             supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
-                            supabase.table("companies").delete().eq("id", selected_id).execute()
+                            supabase.table("companies").delete().eq("company_id", selected_id).execute()
                             
                             try:
                                 selected_email = next(row['email'] for row in all_companies.data if row['id'] == selected_id)
@@ -753,8 +753,20 @@ def show_dashboard():
             except Exception as e:
                 st.error(f"❌ Error loading registered users: {str(e)}")
 
-# --- ROUTING ---
-if st.session_state.user is None:
-    show_login()
-else:
-    show_dashboard()
+# --- ✅ FIXED ROUTING — ALLOW PASSWORD PAGES WITHOUT LOGIN ---
+def main():
+    # Get current page path
+    path = st.query_params.get("page", "")
+    
+    # Allow access to password pages even if not logged in
+    if path in ["forgot-password", "reset-password"]:
+        return  # Let Streamlit load the page normally
+    
+    # Otherwise enforce login
+    if st.session_state.user is None:
+        show_login()
+    else:
+        show_dashboard()
+
+if __name__ == "__main__":
+    main()
