@@ -136,8 +136,9 @@ if st.button("📩 Send Reset Link"):
                 }
             )
 
-            # ✅ Build full reset link
-            reset_link = f"https://shadowai-security.streamlit.app/reset-password?email={email}"
+            # ✅ FIXED: Include the ACCESS TOKEN in the link — this was missing!
+            access_token = res.data.get("access_token", "")
+            reset_link = f"https://shadowai-security.streamlit.app/reset-password?token={access_token}&email={email}"
 
             # ✅ Send from YOUR email, same design as 2FA
             if send_reset_email(email, reset_link):
