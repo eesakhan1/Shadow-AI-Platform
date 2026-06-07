@@ -10,10 +10,10 @@ import zipfile
 from io import BytesIO
 import string
 
-# --- CONFIGURATION — YOUR CORRECT VALUES ---
-SUPABASE_URL = "https://ypjpjixwdjcvlmrmsgzc.supabase.co"
-SUPABASE_SERVICE_KEY = st.secrets.get("SUPABASE_SERVICE_KEY", "")
-SUPABASE_ANON_KEY = st.secrets.get("SUPABASE_ANON_KEY", "")
+# --- CONFIGURATION — ALL FROM SECRETS ---
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
+SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 RESEND_API_KEY = st.secrets.get("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"
 
