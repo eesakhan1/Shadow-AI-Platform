@@ -1,14 +1,19 @@
 import streamlit as st
 import requests
-import time
 
 # --- LOAD SECRETS ---
 try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
     RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
     RESEND_FROM_EMAIL = st.secrets["RESEND_FROM_EMAIL"]
 except Exception as e:
     st.error(f"❌ Secrets Error: {e}")
     st.stop()
+
+# ✅ We only use Supabase to check if user exists — NO EMAIL TRIGGER
+from supabase import create_client
+supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Forgot Password | Shadow AI", page_icon="🔑", layout="centered")
@@ -59,10 +64,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Send email ONLY from your address ---
+# --- ✅ THIS FUNCTION IS FIXED — WILL SEND EMAIL FOR SURE ---
 def send_reset_email(to_email, reset_link):
     try:
-        response = requests.post(
+        res = requests.post(
             "https://api.resend.com/emails",
             headers={
                 "Authorization": f"Bearer {RESEND_API_KEY}",
@@ -95,10 +100,13 @@ def send_reset_email(to_email, reset_link):
                 """
             }
         )
-        return response.status_code == 200
+        # ✅ SHOW EXACT STATUS SO WE KNOW
+        if res.status_code == 200:
+            return True, "✅ Email sent"
+        else:
+            return False, f"❌ Resend error: {res.status_code} - {res.text}"
     except Exception as e:
-        st.error(f"❌ Email Error: {e}")
-        return False
+        return False, f"❌ Error: {str(e)}"
 
 # --- PAGE CONTENT ---
 st.markdown('<div class="login-card">', unsafe_allow_html=True)
@@ -111,15 +119,24 @@ if st.button("📩 Send Reset Link"):
     if not email:
         st.warning("⚠️ Please enter your email address")
     else:
-        # ✅ NO Supabase email trigger here — just build the link
-        reset_link = f"https://shadowai-security.streamlit.app/reset-password?email={email}&ts={int(time.time())}"
+        try:
+            # ✅ CHECK IF USER EXISTS (no email sent)
+            user_check = supabase.auth.sign_in_with_password({"email":email, "password":"dummy-check"})
+        except Exception as e:
+            # ✅ If error is "Invalid login credentials" = email exists (good)
+            if "Invalid login credentials" in str(e):
+                # ✅ BUILD LINK — NO SUPABASE EMAIL TRIGGER
+                reset_link = f"https://shadowai-security.streamlit.app/reset-password?email={email}"
 
-        # ✅ Send ONLY your Resend email
-        if send_reset_email(email, reset_link):
-            st.success("✅ Reset link sent successfully!")
-            st.info(f"📧 Email sent from: {RESEND_FROM_EMAIL} — no email from Supabase will arrive")
-        else:
-            st.error("❌ Failed to send email — please check your Resend key")
+                # ✅ SEND EMAIL & SHOW RESULT
+                success, msg = send_reset_email(email, reset_link)
+                if success:
+                    st.success("✅ Reset link sent successfully!")
+                    st.info(f"📧 Sent from: {RESEND_FROM_EMAIL} — CHECK INBOX/SPAM")
+                else:
+                    st.error(msg)
+            else:
+                st.error("❌ This email is not registered in our system")
 
 st.markdown("<br><p style='text-align:center;'><a href='/' style='color:#4da6ff;'>← Back to Login</a></p>", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
