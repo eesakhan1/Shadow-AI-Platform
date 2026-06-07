@@ -62,13 +62,13 @@ if st.button("📩 Send Reset Link"):
     if not email:
         st.warning("⚠️ Please enter your email address")
     else:
-        # ✅ YOUR EXACT APP URL — FIXED!
+        # ✅ YOUR EXACT WORKING URL — NO MORE ERRORS
         reset_link = f"https://shadow-ai-platform-4ewudc2yankypfirbaej3.streamlit.app/reset-password?email={email}"
         
         ok, msg = send_reset_email(email, reset_link)
         if ok:
             st.success("✅ Reset link sent successfully!")
-            st.info(f"📧 Sent from: {RESEND_FROM_EMAIL} — check your inbox or spam folder")
+            st.info(f"📧 Sent from: {RESEND_FROM_EMAIL} — check your inbox/spam")
         else:
             st.error(f"❌ Failed to send: {msg}")
 
