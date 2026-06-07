@@ -6,6 +6,11 @@ const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.s
 const supabaseKey = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseKey : "";
 let COMPANY_ID = "";
 
+// --- ✅ DELAY START UNTIL PAGE IS READY — THIS FIXES THE FLASH ---
+window.addEventListener('DOMContentLoaded', () => {
+  loadIdFromStorage();
+});
+
 // --- LOAD SETTINGS ---
 async function loadIdFromStorage() {
   try {
@@ -15,7 +20,7 @@ async function loadIdFromStorage() {
     COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
   }
 
-  // ✅ CHECK LICENSE — NEVER BLOCK, NO RED FLASH
+  // ✅ CHECK LICENSE — SILENT, NO PAGE CHANGES UNLESS NEEDED
   await checkLicenseAndRegisterDevice();
   initProtection();
 }
@@ -23,9 +28,9 @@ async function loadIdFromStorage() {
 let customSecrets = [];
 const deviceFingerprint = `${navigator.platform} | ${navigator.userAgent.substring(0, 100)}`;
 
-// --- ✅ LICENSE CHECK — NO RED FLASH, NO ERRORS ---
+// --- ✅ LICENSE CHECK — NO FLASH, NO ERRORS, NO BLOCK ON CONNECTION FAIL ---
 async function checkLicenseAndRegisterDevice(retryCount = 0) {
-  // ❌ ONLY BLOCK FOR REAL LICENSE ISSUES
+  // ❌ ONLY BLOCK FOR REAL LICENSE ISSUES / DEMO VERSION
   if (
     !supabaseUrl || !supabaseKey || !COMPANY_ID ||
     supabaseUrl === "YOUR_SUPABASE_URL_HERE" ||
@@ -59,7 +64,7 @@ async function checkLicenseAndRegisterDevice(retryCount = 0) {
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const result = await res.json();
 
-    // ✅ ONLY BLOCK IF OVER LIMIT / INVALID
+    // ✅ ONLY BLOCK IF EXPLICITLY OVER LIMIT OR INVALID
     if (result.status === "over_limit") {
       showBlockMessage("LICENSE LIMIT REACHED", `You paid for ${result.allowed} devices — currently using ${result.used}. Protection paused. Contact support to upgrade.`);
       return false;
@@ -74,7 +79,7 @@ async function checkLicenseAndRegisterDevice(retryCount = 0) {
     return true;
 
   } catch (err) {
-    // ✅ CONNECTION FAILED — SILENT, NO RED FLASH, NO ERROR
+    // ✅ CONNECTION FAILED — 100% SILENT, NO PAGE CHANGES
     console.warn("⚠️ Shadow AI: Could not connect — protection still active");
     if (retryCount < 2) {
       await new Promise(r => setTimeout(r, 1500));
@@ -84,23 +89,26 @@ async function checkLicenseAndRegisterDevice(retryCount = 0) {
   }
 }
 
-// --- ✅ SHOW BLOCK MESSAGE — NO THROW ERROR ANYMORE ---
+// --- ✅ SHOW BLOCK MESSAGE — ONLY WHEN REQUIRED, NO EARLY PAGE EDITS ---
 function showBlockMessage(title, text) {
-  document.body.innerHTML = "";
-  document.body.style.background = "#141E3C";
-  document.body.style.color = "white";
-  document.body.style.padding = "3rem";
-  document.body.style.fontFamily = "Arial, sans-serif";
-  document.body.innerHTML = `
-    <div style="max-width: 600px; margin: 0 auto; background: #141E3C; color: white; border-radius: 8px; border: 2px solid #DA291C; padding: 2rem;">
-      <h2 style="color: #DA291C; margin-top: 0;">🛡️ Shadow AI — ${title}</h2>
-      <p style="font-size: 16px; line-height: 1.6;">${text}</p>
-    </div>
-  `;
-  // ❌ REMOVED: throw new Error — THIS WAS CAUSING THE EXTENSION ERROR
+  // ❌ ONLY EDIT PAGE IF WE ACTUALLY NEED TO BLOCK — THIS IS THE MAIN FIX FOR FLASH
+  if (document.body) {
+    document.body.innerHTML = "";
+    document.body.style.background = "#141E3C";
+    document.body.style.color = "white";
+    document.body.style.padding = "3rem";
+    document.body.style.fontFamily = "Arial, sans-serif";
+    document.body.innerHTML = `
+      <div style="max-width: 600px; margin: 0 auto; background: #141E3C; color: white; border-radius: 8px; border: 2px solid #DA291C; padding: 2rem;">
+        <h2 style="color: #DA291C; margin-top: 0;">🛡️ Shadow AI — ${title}</h2>
+        <p style="font-size: 16px; line-height: 1.6;">${text}</p>
+      </div>
+    `;
+  }
+  // ❌ NO throw new Error — NO ERRORS IN EXTENSIONS
 }
 
-// --- ✅ NHS & SECURITY RULES — FIXED ---
+// --- ✅ NHS & SECURITY RULES — FIXED REGEX ---
 const securityPatterns = [
   { name: "SENSITIVE_TERM", regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs number|patient id|dob|date of birth|next of kin)\b/gi },
   { name: "NHS_NUMBER", regex: /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g },
@@ -169,7 +177,7 @@ function addBadge() {
   badge.style.border = '2px solid #005EB8';
   badge.style.fontFamily = 'Arial, sans-serif';
   badge.style.pointerEvents = 'none';
-  (document.documentElement || document.body).appendChild(badge);
+  if (document.body) document.body.appendChild(badge);
 }
 
 // --- SCAN & BLOCK ---
@@ -241,8 +249,6 @@ function initProtection() {
   setInterval(scanAndBlock, 200);
   setInterval(fetchCompanySecrets, 30000);
 }
-
-loadIdFromStorage();
 
 const obs = new MutationObserver(() => scanAndBlock());
 obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
