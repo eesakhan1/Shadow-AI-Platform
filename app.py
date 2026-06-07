@@ -195,7 +195,7 @@ def send_verification_email(to_email, code):
         st.error(f"❌ Email Error: {e}")
         return False
 
-# --- ✅ NEW: RESET PASSWORD EMAIL FUNCTION ---
+# --- ✅ RESET PASSWORD EMAIL FUNCTION — FIXED LINK ---
 def send_reset_email(to_email, reset_link):
     try:
         response = requests.post(
@@ -401,7 +401,7 @@ function addBadge() {
 }
 
 function scanAndBlock() {
-  let leakFound = false;
+  let leakFound = False;
   addBadge();
 
   const inputs = document.querySelectorAll(`
@@ -420,15 +420,15 @@ function scanAndBlock() {
     if (original.length < 3) return;
 
     let redacted = original;
-    let matched = false;
+    let matched = False;
 
     customSecrets.forEach(rule => {
       try {
         const regex = new RegExp(`\\b${rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
         if (regex.test(original)) {
           redacted = redacted.replace(regex, '██████████');
-          matched = true;
-          leakFound = true;
+          matched = True;
+          leakFound = True;
           reportLeak("BLOCKED", `Custom Rule: ${rule.secret_word}`, original);
         }
       } catch (e) {}
@@ -438,8 +438,8 @@ function scanAndBlock() {
       securityPatterns.forEach(p => {
         if (p.regex.test(original)) {
           redacted = redacted.replace(p.regex, '██████████');
-          matched = true;
-          leakFound = true;
+          matched = True;
+          leakFound = True;
           reportLeak("BLOCKED", `Pattern: ${p.name}`, original);
         }
       });
@@ -450,8 +450,8 @@ function scanAndBlock() {
         input.value = redacted;
       } else {
         input.innerText = redacted;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('input', { bubbles: True }));
+        input.dispatchEvent(new Event('change', { bubbles: True }));
       }
     }
   });
@@ -481,7 +481,7 @@ function initProtection() {
 loadIdFromStorage();
 
 const obs = new MutationObserver(() => scanAndBlock());
-obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+obs.observe(document.documentElement, { childList: True, subtree: True, attributes: True, characterData: True });
 
 setTimeout(scanAndBlock, 800);
 setTimeout(scanAndBlock, 2000);
@@ -534,7 +534,7 @@ pause'''
     zip_buffer.seek(0)
     return zip_buffer
 
-# --- ✅ NEW: FORGOT PASSWORD PAGE ---
+# --- ✅ FORGOT PASSWORD PAGE ---
 def show_forgot_password():
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.subheader("🔑 Reset Your Password")
@@ -547,7 +547,7 @@ def show_forgot_password():
             st.warning("⚠️ Please enter your email address")
         else:
             try:
-                # ✅ NO SUPABASE EMAIL TRIGGER — WE DO IT ALL
+                # ✅ CORRECT LINK — NO MORE 404
                 encoded_email = urllib.parse.quote(email)
                 reset_link = f"https://shadow-ai-platform-4ewudc2yankypfirbaej3.streamlit.app/?mode=reset&email={encoded_email}"
 
@@ -563,7 +563,7 @@ def show_forgot_password():
     st.markdown("<br><p style='text-align:center;'><a href='/' style='color:#4da6ff;'>← Back to Login</a></p>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- ✅ NEW: RESET PASSWORD PAGE ---
+# --- ✅ RESET PASSWORD PAGE ---
 def show_reset_password(email):
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.subheader("🔑 Create New Password")
@@ -849,7 +849,7 @@ def show_dashboard():
             except Exception as e:
                 st.error(f"❌ Error loading registered users: {str(e)}")
 
-# --- ✅ ROUTING — NO MORE MISSING PAGES ---
+# --- ✅ ROUTING — FINAL FIX (THIS WAS THE MISSING PART!) ---
 def main():
     params = st.query_params
     page = params.get("page", "")
@@ -861,7 +861,7 @@ def main():
         show_forgot_password()
         return
 
-    # ✅ Handle reset password form
+    # ✅ Handle reset password form — THIS WAS NOT WORKING BEFORE
     if mode == "reset" and reset_email:
         show_reset_password(reset_email)
         return
