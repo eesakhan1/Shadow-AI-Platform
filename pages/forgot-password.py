@@ -82,17 +82,15 @@ def send_reset_email(to_email, reset_link):
                 "Content-Type": "application/json"
             },
             json={
-                "from": RESEND_FROM_EMAIL,  # ✅ SAME EMAIL AS 2FA
+                "from": RESEND_FROM_EMAIL,
                 "to": to_email,
                 "subject": "🔐 Shadow AI | Reset Your Password",
                 "html": f"""
                 <div style="font-family: Arial, sans-serif; background:#0A0F1F; padding:30px; color:white; max-width:600px; margin:0 auto;">
-                    <!-- HEADER -->
                     <div style="background:#003087; padding:15px; border-radius:4px;">
                         <h1 style="color:white; margin:0; font-size:24px; font-weight:bold;">🛡️ Shadow AI</h1>
                         <p style="color:#B0C4DE; margin:5px 0 0 0; font-size:14px;">NHS Compliant Data Protection</p>
                     </div>
-                    <!-- CONTENT -->
                     <div style="padding:20px; background:#141E3C; border-radius:4px; margin-top:15px;">
                         <p style="font-size:16px; line-height:1.5;">You requested to reset your password for your Shadow AI account.</p>
                         <p style="font-size:16px; line-height:1.5; margin:20px 0;">Click the button below to create a new password:</p>
@@ -128,19 +126,18 @@ if st.button("📩 Send Reset Link"):
         st.warning("⚠️ Please enter your email address")
     else:
         try:
-            # ✅ Tell Supabase to generate token — DO NOT send email
-            res = auth_client.auth.reset_password_for_email(
+            # ✅ Call Supabase to generate reset token (no email sent)
+            auth_client.auth.reset_password_for_email(
                 email,
                 options={
-                    "redirect_to": "https://shadowai-security.streamlit.app/reset-password"  # ✅ YOUR APP URL
+                    "redirect_to": "https://shadowai-security.streamlit.app/reset-password"
                 }
             )
 
-            # ✅ FIXED: Include the ACCESS TOKEN in the link — this was missing!
-            access_token = res.data.get("access_token", "")
-            reset_link = f"https://shadowai-security.streamlit.app/reset-password?token={access_token}&email={email}"
+            # ✅ Build reset link (we will handle token in the reset page)
+            reset_link = f"https://shadowai-security.streamlit.app/reset-password?email={email}"
 
-            # ✅ Send from YOUR email, same design as 2FA
+            # ✅ Send email from your address
             if send_reset_email(email, reset_link):
                 st.success("✅ Reset link sent successfully!")
                 st.info("📧 Email sent from: security@shadowaisecurity.co.uk — same as your 2FA codes")
