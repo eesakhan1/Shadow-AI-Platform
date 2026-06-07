@@ -9,6 +9,7 @@ except Exception as e:
     st.error(f"❌ Secrets Error: {e}")
     st.stop()
 
+# ✅ Use ANON key for auth
 auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 # --- PAGE SETUP ---
@@ -68,12 +69,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- GET EMAIL FROM URL ---
+# --- GET TOKEN & EMAIL FROM URL — NOW WE HAVE BOTH! ---
 params = st.query_params
+token = params.get("token", "")
 email = params.get("email", "")
 
-if not email:
-    st.error("❌ Invalid or expired link — please request a new reset link")
+if not token or not email:
+    st.error("❌ Invalid or expired reset link — please request a new one")
     st.markdown("<p style='text-align:center;'><a href='/forgot-password' style='color:#4da6ff;'>← Request New Link</a></p>", unsafe_allow_html=True)
     st.stop()
 
@@ -92,8 +94,11 @@ if st.button("✅ Update Password"):
         st.warning("⚠️ Password must be at least 6 characters")
     else:
         try:
-            # ✅ Update password securely
-            auth_client.auth.update_user({"password": new_password})
+            # ✅ Use the token to update password
+            auth_client.auth.update_user(
+                {"password": new_password},
+                access_token=token
+            )
             st.success("✅ Password updated successfully!")
             st.markdown("<p style='text-align:center; margin-top:20px;'><a href='/' style='color:#4da6ff; font-weight:bold;'>← Go to Login</a></p>", unsafe_allow_html=True)
         except Exception as e:
