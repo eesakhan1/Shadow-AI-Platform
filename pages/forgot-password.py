@@ -21,21 +21,25 @@ if st.button("Send Reset Link"):
     if email:
         try:
             res = requests.post(
-                "https://ypjpj1xwdjcvlmrmsgc.supabase.co/auth/v1/recover",
-                headers={"apikey": st.secrets["SUPABASE_ANON_KEY"], "Content-Type":"application/json"},
+                "https://ypjpjixwdjcvlmrmsgzc.supabase.co/auth/v1/recover",
+                headers={
+                    "apikey": st.secrets["SUPABASE_ANON_KEY"],
+                    "Content-Type": "application/json"
+                },
                 json={
                     "email": email,
                     "redirect_to": "https://shadow-ai-platform-4ewudc2yankypfirbaej3.streamlit.app/reset-password"
                 }
             )
             if res.ok:
-                st.success("✅ Link sent — check inbox/spam")
+                st.success("✅ Reset link sent — check your inbox and spam folder")
             else:
-                st.error("❌ Error — check email")
+                data = res.json()
+                st.error(f"❌ {data.get('error', {}).get('message', 'Failed to send link')}")
         except Exception as e:
-            st.error(f"❌ {e}")
+            st.error(f"❌ Error: {str(e)}")
     else:
-        st.error("❌ Enter email")
+        st.error("❌ Please enter your email address")
 
 st.markdown("<p style='text-align:center;'><a href='/'>← Back to Login</a></p>", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
