@@ -33,7 +33,7 @@ else:
         else:
             try:
                 res = requests.put(
-                    "https://ypjpjixwdjcvlmrmsgzc.supabase.co/auth/v1/user",
+                    "https://ypjpjixwdjcvmlrmsgzc.supabase.co/auth/v1/user",
                     headers={
                         "apikey": st.secrets["SUPABASE_ANON_KEY"],
                         "Authorization": f"Bearer {access_token}",
