@@ -23,7 +23,7 @@ except Exception as e:
     st.stop()
 
 ADMIN_EMAIL = "security.shadowai@gmail.com"
-DEFAULT_MAX_DEVICES = 3  # ✅ Default limit for new accounts
+DEFAULT_MAX_DEVICES = 3  # Default limit for new accounts
 
 # ✅ CRITICAL: Use ANON KEY for AUTH (login/register) — SERVICE KEY for DATABASE ONLY
 auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)   # ✅ FOR LOGIN
@@ -633,9 +633,20 @@ def show_login():
                         
                         st.session_state.temp_user_obj = res.user
                         
+                        # ✅ GET DEVICE LIMITS FIRST — CHECK BEFORE ALLOWING
                         company_data = supabase.table("companies").select("id, max_devices, used_devices").eq("email", email).execute()
                         if company_data.data:
-                            st.session_state.company_id = company_data.data[0]["id"]
+                            comp = company_data.data[0]
+                            max_dev = comp["max_devices"]
+                            used_dev = comp["used_devices"]
+
+                            # ✅ BLOCK IF OVER LIMIT
+                            if used_dev >= max_dev:
+                                st.error(f"❌ ACCESS DENIED — You have reached your limit of **{max_dev} devices**. Please remove an old device or contact support.")
+                                st.stop()
+
+                            # ✅ ALLOW ONLY IF SPACE AVAILABLE
+                            st.session_state.company_id = comp["id"]
                             
                             code = str(random.randint(100000, 999999))
                             st.session_state.verification_code = code
@@ -667,11 +678,9 @@ def show_login():
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.logged_in = True
                         
-                        # ✅ INCREMENT DEVICE COUNT ON FIRST LOGIN
+                        # ✅ INCREMENT DEVICE COUNT ONLY AFTER SUCCESSFUL VERIFICATION
                         try:
-                            company_info = supabase.table("companies").select("used_devices, max_devices").eq("id", st.session_state.company_id).execute().data[0]
-                            if company_info["used_devices"] < company_info["max_devices"]:
-                                supabase.table("companies").update({"used_devices": company_info["used_devices"] + 1}).eq("id", st.session_state.company_id).execute()
+                            supabase.table("companies").update({"used_devices": supabase.rpc("increment", {"x": 1})}).eq("id", st.session_state.company_id).execute()
                         except:
                             pass
                         
@@ -749,8 +758,11 @@ def show_dashboard():
     st.sidebar.markdown(f"**🏢 {org_name}**")
     st.sidebar.markdown(f"**Reference: `{st.session_state.company_id}`**")
     
-    # ✅ DEVICE LIMIT IN SIDEBAR
-    st.sidebar.markdown(f'<div class="device-badge">📱 Devices: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
+    # ✅ DEVICE LIMIT IN SIDEBAR — CLEAR WARNING IF FULL
+    if used_devices >= max_devices:
+        st.sidebar.markdown(f'<div class="device-badge" style="background:#DA291C; color:white;">📱 DEVICE LIMIT REACHED: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
+    else:
+        st.sidebar.markdown(f'<div class="device-badge">📱 Devices: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
     
     if is_active:
         st.sidebar.success("✅ License: ACTIVE | COMPLIANT")
@@ -772,7 +784,10 @@ def show_dashboard():
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
         
         # ✅ DEVICE LIMIT DISPLAY FOR USERS
-        st.markdown(f'<div class="device-badge" style="font-size:16px; padding:8px 16px;">📱 Allowed Devices: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
+        if used_devices >= max_devices:
+            st.markdown(f'<div class="device-badge" style="font-size:16px; padding:8px 16px; background:#DA291C; color:white;">⚠️ DEVICE LIMIT REACHED: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="device-badge" style="font-size:16px; padding:8px 16px;">📱 Allowed Devices: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
         st.markdown("---")
 
         st.subheader("📦 Deploy Protection Software")
@@ -852,17 +867,21 @@ def show_dashboard():
                     })
 
                     st.markdown("---")
-                    st.subheader("⚙️ Set Device Limit for Account")
+                    st.subheader("⚙️ Manage Account Limits")
                     
                     company_options = {f"{row['name']} ({row['email']})": row['id'] for row in all_companies.data}
                     selected_label = st.selectbox("Select account:", list(company_options.keys()))
                     new_limit = st.number_input("New Max Devices Allowed", min_value=1, max_value=100, value=3)
+                    reset_count = st.checkbox("Reset used devices to 0")
                     
-                    if st.button("✅ UPDATE DEVICE LIMIT", type="primary"):
+                    if st.button("✅ UPDATE SETTINGS", type="primary"):
                         selected_id = company_options[selected_label]
                         try:
-                            supabase.table("companies").update({"max_devices": new_limit}).eq("id", selected_id).execute()
-                            st.success(f"✅ Device limit updated to **{new_limit}** devices")
+                            update_data = {"max_devices": new_limit}
+                            if reset_count:
+                                update_data["used_devices"] = 0
+                            supabase.table("companies").update(update_data).eq("id", selected_id).execute()
+                            st.success(f"✅ Updated: Limit = {new_limit}, Used = {0 if reset_count else 'unchanged'}")
                             st.rerun()
                         except Exception as e:
                             st.error(f"❌ Error: {str(e)}")
@@ -876,7 +895,7 @@ def show_dashboard():
                         try:
                             supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
                             supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
-                            supabase.table("companies").delete().eq("company_id", selected_id).execute()
+                            supabase.table("companies").delete().eq("id", selected_id).execute()
                             
                             try:
                                 selected_email = next(row['email'] for row in all_companies.data if row['id'] == selected_id)
