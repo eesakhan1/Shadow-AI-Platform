@@ -9,6 +9,7 @@ except Exception as e:
     st.error(f"❌ Secrets Error: {e}")
     st.stop()
 
+# ✅ USE SERVICE KEY TO UPDATE PASSWORD DIRECTLY
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # --- PAGE SETUP ---
@@ -83,22 +84,22 @@ if st.button("✅ Update Password"):
         st.warning("⚠️ Password must be at least 8 characters long")
     else:
         try:
-            # ✅ Find user by email
+            # ✅ FIND USER BY EMAIL
             users = supabase.auth.admin.list_users()
             target_user = next((u for u in users if u.email == email), None)
 
             if not target_user:
                 st.error("❌ No account found with this email address")
             else:
-                # ✅ Update password directly
+                # ✅ UPDATE PASSWORD DIRECTLY
                 supabase.auth.admin.update_user_by_id(
                     target_user.id,
                     {"password": new_password}
                 )
-                st.success("✅ Password updated successfully! You can now log in with your new password.")
+                st.success("✅ Password updated successfully! You can now log in.")
                 st.markdown("<p style='text-align:center; margin-top:20px;'><a href='/' style='color:#4da6ff; font-weight:bold;'>← Go to Login</a></p>", unsafe_allow_html=True)
 
         except Exception as e:
-            st.error(f"❌ Error updating password: {str(e)}")
+            st.error(f"❌ Error: {str(e)}")
 
 st.markdown('</div>', unsafe_allow_html=True)
