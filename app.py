@@ -11,6 +11,7 @@ from io import BytesIO
 import string
 import urllib.parse
 import uuid
+import base64
 
 # --- CONFIGURATION — EXACTLY AS YOU HAVE IN SECRETS ---
 try:
@@ -24,7 +25,7 @@ except Exception as e:
     st.stop()
 
 ADMIN_EMAIL = "security.shadowai@gmail.com"
-DEFAULT_MAX_DEVICES = 3  # Default limit for new accounts
+DEFAULT_MAX_DEVICES = 3  # Paid device limit per account
 
 # ✅ CRITICAL: Use ANON KEY for AUTH (login/register) — SERVICE KEY for DATABASE ONLY
 auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)   # ✅ FOR LOGIN
@@ -143,6 +144,10 @@ st.markdown("""
         display: inline-block;
         margin: 4px 0;
     }
+    .device-badge.limit-reached {
+        background: #DA291C;
+        color: white;
+    }
     .delete-btn {
         background-color: #DA291C !important;
         color: white !important;
@@ -209,9 +214,7 @@ def send_verification_email(to_email, code):
                 """
             }
         )
-        
         return response.status_code == 200
-            
     except Exception as e:
         st.error(f"❌ Email Error: {e}")
         return False
@@ -316,8 +319,8 @@ def create_zip_file(config_content):
       ],
       "js": ["config.js", "content.js"],
       "run_at": "document_start",
-      "all_frames": True,
-      "match_about_blank": True,
+      "all_frames": true,
+      "match_about_blank": true,
       "world": "ISOLATED"
     }
   ],
@@ -347,12 +350,35 @@ async function loadIdFromStorage() {
   } catch (e) {
     COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
   }
+  if (COMPANY_ID) registerDeviceHeartbeat();
   initProtection();
 }
 
-let customSecrets = [];
-const deviceFingerprint = `${navigator.platform} | ${navigator.userAgent.substring(0, 100)}`;
+// --- UNIQUE DEVICE ID FOR COUNTING ---
+const deviceFingerprint = btoa(navigator.userAgent + navigator.platform + screen.width + screen.height);
+const deviceName = `${navigator.platform} | ${navigator.userAgent.substring(0, 40)}...`;
 
+// --- SEND HEARTBEAT EVERY 30s — ONLY COUNTS REAL RUNNING DEVICES ---
+async function registerDeviceHeartbeat() {
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/rpc/register_device_heartbeat`, {
+      method: "POST",
+      headers: {
+        "apikey": supabaseKey,
+        "Authorization": `Bearer ${supabaseKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        p_company_id: COMPANY_ID,
+        p_device_id: deviceFingerprint,
+        p_device_name: deviceName
+      })
+    });
+  } catch (e) {}
+  setTimeout(registerDeviceHeartbeat, 30000);
+}
+
+let customSecrets = [];
 const securityPatterns = [
   { name: "SENSITIVE_TERM", regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs number|patient id|dob|date of birth|next of kin)\b/gi },
   { name: "NHS_NUMBER", regex: /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g },
@@ -387,7 +413,7 @@ async function reportLeak(type, detail, blockedText = "") {
       headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         event_type: type,
-        user_device: deviceFingerprint,
+        user_device: deviceFingerprint.substring(0, 100),
         violation_type: detail,
         site_url: window.location.hostname,
         blocked_content: blockedText.substring(0, 300),
@@ -422,7 +448,7 @@ function addBadge() {
 }
 
 function scanAndBlock() {
-  let leakFound = False;
+  let leakFound = false;
   addBadge();
 
   const inputs = document.querySelectorAll(`
@@ -441,15 +467,15 @@ function scanAndBlock() {
     if (original.length < 3) return;
 
     let redacted = original;
-    let matched = False;
+    let matched = false;
 
     customSecrets.forEach(rule => {
       try {
         const regex = new RegExp(`\\b${rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
         if (regex.test(original)) {
           redacted = redacted.replace(regex, '██████████');
-          matched = True;
-          leakFound = True;
+          matched = true;
+          leakFound = true;
           reportLeak("BLOCKED", `Custom Rule: ${rule.secret_word}`, original);
         }
       } catch (e) {}
@@ -459,8 +485,8 @@ function scanAndBlock() {
       securityPatterns.forEach(p => {
         if (p.regex.test(original)) {
           redacted = redacted.replace(p.regex, '██████████');
-          matched = True;
-          leakFound = True;
+          matched = true;
+          leakFound = true;
           reportLeak("BLOCKED", `Pattern: ${p.name}`, original);
         }
       });
@@ -471,8 +497,8 @@ function scanAndBlock() {
         input.value = redacted;
       } else {
         input.innerText = redacted;
-        input.dispatchEvent(new Event('input', { bubbles: True }));
-        input.dispatchEvent(new Event('change', { bubbles: True }));
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
       }
     }
   });
@@ -502,7 +528,7 @@ function initProtection() {
 loadIdFromStorage();
 
 const obs = new MutationObserver(() => scanAndBlock());
-obs.observe(document.documentElement, { childList: True, subtree: True, attributes: True, characterData: True });
+obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
 
 setTimeout(scanAndBlock, 800);
 setTimeout(scanAndBlock, 2000);
@@ -569,7 +595,6 @@ def show_forgot_password():
         else:
             try:
                 encoded_email = urllib.parse.quote(email.strip())
-                # ✅ YOUR EXACT CORRECT URL — NO MORE ERRORS!
                 reset_link = f"https://shadow-ai-platform-4ewudc2yankyvpfirbaej3.streamlit.app/?mode=reset&email={encoded_email}"
 
                 if send_reset_email(email, reset_link):
@@ -600,7 +625,6 @@ def show_reset_password(email):
             st.warning("⚠️ Password must be at least 8 characters")
         else:
             try:
-                # ✅ Find user and update password securely
                 users = supabase.auth.admin.list_users()
                 target_user = next((u for u in users if u.email == email), None)
                 if not target_user:
@@ -617,7 +641,7 @@ def show_reset_password(email):
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- LOGIN SCREEN ---
+# --- LOGIN SCREEN — ✅ NO DEVICE COUNT ON LOGIN ---
 def show_login():
     st.title("🛡️ Shadow AI")
     st.markdown("#### *NHS Compliant Data Protection & AI Security*")
@@ -638,37 +662,21 @@ def show_login():
                 
                 if st.button("🚀 Login", type="primary"):
                     try:
-                        # ✅ LOGIN WITH ANON KEY — THIS WAS THE BUG!
                         res = auth_client.auth.sign_in_with_password({"email": email, "password": password})
-                        
                         st.session_state.temp_user_obj = res.user
                         
-                        # ✅ GET DEVICE LIMITS FIRST — CHECK BEFORE ALLOWING
-                        company_data = supabase.table("companies").select("id, max_devices, used_devices").eq("email", email).execute()
-                        if company_data.data:
-                            comp = company_data.data[0]
-                            max_dev = comp["max_devices"]
-                            used_dev = comp["used_devices"]
-
-                            # ✅ ADMIN EXEMPT — NEVER BLOCK YOU
-                            if email.strip().lower() == ADMIN_EMAIL.lower():
-                                pass  # skip check entirely
-                            else:
-                                # Normal users still get blocked
-                                if used_dev >= max_dev:
-                                    st.error(f"❌ ACCESS DENIED — You have reached your limit of **{max_dev} devices**. Please remove an old device or contact support.")
-                                    st.stop()
-
-                            st.session_state.company_id = comp["id"]
-                            
-                            code = str(random.randint(100000, 999999))
-                            st.session_state.verification_code = code
-                            
-                            if send_verification_email(email, code):
-                                st.session_state.auth_stage = "verify"
-                                st.rerun()
-                        else:
+                        company_data = supabase.table("companies").select("id, name").eq("email", email).execute()
+                        if not company_data.data:
                             st.error("❌ Account not found — please register first")
+                            st.stop()
+
+                        st.session_state.company_id = company_data.data[0]["id"]
+                        code = str(random.randint(100000, 999999))
+                        st.session_state.verification_code = code
+                        
+                        if send_verification_email(email, code):
+                            st.session_state.auth_stage = "verify"
+                            st.rerun()
                             
                     except Exception as e:
                         st.error(f"❌ Access Denied: {str(e)}")
@@ -691,23 +699,6 @@ def show_login():
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.logged_in = True
                         
-                        # ✅ DEVICE INFO — SAVE NEW DEVICE
-                        import platform
-                        device_name = f"{platform.system()} {platform.release()}"
-                        device_info = st.session_state.temp_user_obj.user_metadata.get("device", "Unknown Browser") + " | " + device_name
-                        
-                        # ✅ CHECK IF THIS DEVICE ALREADY EXISTS
-                        existing = supabase.table("active_devices").select("id").eq("company_id", st.session_state.company_id).eq("device_info", device_info).eq("is_active", True).execute()
-                        
-                        if not existing.data:
-                            # ✅ ADD NEW DEVICE + INCREMENT COUNT
-                            supabase.table("active_devices").insert({
-                                "company_id": st.session_state.company_id,
-                                "device_name": device_name,
-                                "device_info": device_info
-                            }).execute()
-                            supabase.table("companies").update({"used_devices": supabase.rpc("increment", {"x": 1})}).eq("id", st.session_state.company_id).execute()
-                        
                         js_code = f"""
                         <script>
                         if (typeof chrome !== 'undefined' && chrome.storage) {{
@@ -716,7 +707,6 @@ def show_login():
                         </script>
                         """
                         st.components.v1.html(js_code, height=0)
-                        
                         st.success("✅ Login Successful — Protection Active")
                         st.rerun()
                     else:
@@ -734,26 +724,21 @@ def show_login():
             
             if st.button("✅ Create Account"):
                 try:
-                    # ✅ REGISTER WITH ANON KEY — SAME FIX
-                    res = auth_client.auth.sign_up({
-                        "email": new_email,
-                        "password": new_pass
-                    })
-                    
+                    res = auth_client.auth.sign_up({"email": new_email, "password": new_pass})
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
                     
-                    # ✅ SET DEVICE LIMITS ON CREATION
                     supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
                         "email": new_email,
                         "is_active": True,
-                        "max_devices": DEFAULT_MAX_DEVICES,  # ✅ DEFAULT LIMIT
-                        "used_devices": 0                   # ✅ START AT 0
+                        "max_devices": DEFAULT_MAX_DEVICES,
+                        "total_downloads": 0,
+                        "active_protected_devices": 0
                     }).execute()
                     
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
-                    st.info(f"📧 You can now login with your email and password — **Default device limit: {DEFAULT_MAX_DEVICES}**")
+                    st.info(f"📧 You can now login — **Paid device limit: {DEFAULT_MAX_DEVICES}**")
                     
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
@@ -761,32 +746,38 @@ def show_login():
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("---")
 
-# --- DASHBOARD ---
+# --- DASHBOARD — ✅ SHOWS ONLY WHAT YOU CARE ABOUT ---
 def show_dashboard():
     try:
-        company_data = supabase.table("companies").select("is_active, name, email, max_devices, used_devices").eq("id", st.session_state.company_id).execute()
+        company_data = supabase.table("companies").select(
+            "is_active, name, email, max_devices, active_protected_devices, total_downloads"
+        ).eq("id", st.session_state.company_id).execute()
+        
         is_active = True
         org_name = company_data.data[0].get("name", "Your Organisation") if company_data.data else "Your Organisation"
         user_email = company_data.data[0].get("email", "") if company_data.data else ""
         max_devices = company_data.data[0].get("max_devices", DEFAULT_MAX_DEVICES) if company_data.data else DEFAULT_MAX_DEVICES
-        used_devices = company_data.data[0].get("used_devices", 0) if company_data.data else 0
+        active_devices = company_data.data[0].get("active_protected_devices", 0) if company_data.data else 0
+        total_downloads = company_data.data[0].get("total_downloads", 0) if company_data.data else 0
     except:
         is_active = True
         org_name = "Your Organisation"
         user_email = ""
         max_devices = DEFAULT_MAX_DEVICES
-        used_devices = 0
+        active_devices = 0
+        total_downloads = 0
 
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/809/809934.png", width=80)
     st.sidebar.title("🛡️ Shadow AI")
     st.sidebar.markdown(f"**🏢 {org_name}**")
     st.sidebar.markdown(f"**Reference: `{st.session_state.company_id}`**")
     
-    # ✅ DEVICE LIMIT IN SIDEBAR — CLEAR WARNING IF FULL
-    if used_devices >= max_devices and user_email.lower() != ADMIN_EMAIL.lower():
-        st.sidebar.markdown(f'<div class="device-badge" style="background:#DA291C; color:white;">📱 DEVICE LIMIT REACHED: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
+    # ✅ EXACTLY WHAT YOU WANT: Downloads + Active Protected Devices
+    st.sidebar.markdown(f'<div class="device-badge">📥 Total Downloads: {total_downloads}</div>', unsafe_allow_html=True)
+    if active_devices >= max_devices and user_email.lower() != ADMIN_EMAIL.lower():
+        st.sidebar.markdown(f'<div class="device-badge limit-reached">🛡️ ACTIVE DEVICES: {active_devices} / {max_devices} (LIMIT REACHED)</div>', unsafe_allow_html=True)
     else:
-        st.sidebar.markdown(f'<div class="device-badge">📱 Devices: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
+        st.sidebar.markdown(f'<div class="device-badge">🛡️ Active Protected Devices: {active_devices} / {max_devices}</div>', unsafe_allow_html=True)
     
     if is_active:
         st.sidebar.success("✅ License: ACTIVE | COMPLIANT")
@@ -794,29 +785,23 @@ def show_dashboard():
         st.sidebar.error("❌ License: PENDING")
 
     if st.sidebar.button("🚪 Logout"):
-        # ✅ MARK DEVICE AS INACTIVE ON LOGOUT
-        try:
-            supabase.table("active_devices").update({"is_active": False}).eq("company_id", st.session_state.company_id).execute()
-        except:
-            pass
         st.session_state.user = None
         st.session_state.auth_stage = "login"
         st.rerun()
 
     if user_email == ADMIN_EMAIL:
-        tab1, tab2, tab3, tab4 = st.tabs(["📦 Deployment", "📋 Security Logs", "📱 My Devices", "👤 Admin Users"])
+        tab1, tab2, tab3, tab4 = st.tabs(["📦 Deployment", "📋 Security Logs", "📱 Active Devices", "👤 Admin Users"])
     else:
-        tab1, tab2, tab3 = st.tabs(["📦 Deployment", "📋 Security Logs", "📱 My Devices"])
+        tab1, tab2, tab3 = st.tabs(["📦 Deployment", "📋 Security Logs", "📱 Active Devices"])
 
     with tab1:
         st.title("🛡️ Security Command Center")
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
         
-        # ✅ DEVICE LIMIT DISPLAY FOR USERS
-        if used_devices >= max_devices and user_email.lower() != ADMIN_EMAIL.lower():
-            st.markdown(f'<div class="device-badge" style="font-size:16px; padding:8px 16px; background:#DA291C; color:white;">⚠️ DEVICE LIMIT REACHED: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
+        if active_devices >= max_devices and user_email.lower() != ADMIN_EMAIL.lower():
+            st.markdown(f'<div class="device-badge limit-reached" style="font-size:16px; padding:8px 16px;">⚠️ DEVICE LIMIT REACHED: {active_devices} / {max_devices} — No new devices allowed</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="device-badge" style="font-size:16px; padding:8px 16px;">📱 Allowed Devices: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="device-badge" style="font-size:16px; padding:8px 16px;">✅ Active Devices: {active_devices} / {max_devices} — Ready to deploy</div>', unsafe_allow_html=True)
         st.markdown("---")
 
         st.subheader("📦 Deploy Protection Software")
@@ -826,6 +811,8 @@ def show_dashboard():
         companyId: "{st.session_state.company_id}"
         }};"""
         
+        # ✅ COUNT DOWNLOADS EVERY TIME
+        supabase.table("companies").update({"total_downloads": total_downloads + 1}).eq("id", st.session_state.company_id).execute()
         zip_file = create_zip_file(config_content)
         
         st.download_button(
@@ -873,33 +860,30 @@ def show_dashboard():
         except Exception as e:
             st.error(f"Error loading logs: {str(e)}")
 
-    # ✅ NEW TAB: MY DEVICES
+    # ✅ SHOW ONLY REAL DEVICES RUNNING THE EXTENSION
     with tab3:
-        st.title("📱 Manage Active Devices")
-        st.markdown('<div class="compliance-badge">✅ View and remove connected devices</div>', unsafe_allow_html=True)
+        st.title("📱 Active Protected Devices")
+        st.markdown('<div class="compliance-badge">✅ Only devices with extension installed & running</div>', unsafe_allow_html=True)
         st.markdown("---")
 
         try:
-            devices = supabase.table("active_devices").select("*").eq("company_id", st.session_state.company_id).eq("is_active", True).order("last_seen", desc=True).execute()
+            devices = supabase.table("active_protection_devices").select("*").eq("company_id", st.session_state.company_id).order("last_heartbeat", desc=True).execute()
             
             if devices.data:
-                st.write(f"**{len(devices.data)} active device(s)**")
+                st.write(f"**{len(devices.data)} active device(s) out of {max_devices} paid limit**")
                 for dev in devices.data:
                     cols = st.columns([3,2,1])
                     with cols[0]:
                         st.markdown(f"**{dev['device_name']}**")
-                        st.caption(f"{dev['device_info']}")
                     with cols[1]:
-                        st.caption(f"First seen: {dev['first_login'][:16]}")
+                        st.caption(f"Last seen: {dev['last_heartbeat'][:16]}")
                     with cols[2]:
-                        if st.button("❌ Remove", key=dev['id'], help="Revoke access from this device"):
-                            # Delete device + reduce count
-                            supabase.table("active_devices").delete().eq("id", dev['id']).execute()
-                            supabase.table("companies").update({"used_devices": used_devices - 1}).eq("id", st.session_state.company_id).execute()
-                            st.success("✅ Device removed successfully")
+                        if st.button("❌ Remove", key=dev['id'], help="Revoke protection from this device"):
+                            supabase.table("active_protection_devices").delete().eq("id", dev['id']).execute()
+                            st.success("✅ Device removed — protection stopped")
                             st.rerun()
             else:
-                st.info("No active devices found.")
+                st.info("No active protected devices — download and install the package to start.")
 
         except Exception as e:
             st.error(f"Error loading devices: {str(e)}")
@@ -911,7 +895,7 @@ def show_dashboard():
             st.markdown("---")
 
             try:
-                all_companies = supabase.table("companies").select("id, name, email, is_active, max_devices, used_devices").execute()
+                all_companies = supabase.table("companies").select("id, name, email, is_active, max_devices, active_protected_devices, total_downloads").execute()
                 
                 if all_companies.data:
                     df = pd.DataFrame(all_companies.data)
@@ -922,8 +906,9 @@ def show_dashboard():
                         "name": "Organisation Name",
                         "email": "Contact Email",
                         "is_active": "Active Status",
-                        "max_devices": "Max Devices ✏️",
-                        "used_devices": "Used Devices"
+                        "max_devices": "Paid Device Limit",
+                        "active_protected_devices": "Active Devices",
+                        "total_downloads": "Total Downloads"
                     })
 
                     st.markdown("---")
@@ -931,49 +916,13 @@ def show_dashboard():
                     
                     company_options = {f"{row['name']} ({row['email']})": row['id'] for row in all_companies.data}
                     selected_label = st.selectbox("Select account:", list(company_options.keys()))
-                    new_limit = st.number_input("New Max Devices Allowed", min_value=1, max_value=100, value=3)
-                    reset_count = st.checkbox("Reset used devices to 0")
+                    new_limit = st.number_input("New Paid Device Limit", min_value=1, max_value=100, value=3)
                     
-                    if st.button("✅ UPDATE SETTINGS", type="primary"):
+                    if st.button("✅ UPDATE LIMIT", type="primary"):
                         selected_id = company_options[selected_label]
-                        try:
-                            update_data = {"max_devices": new_limit}
-                            if reset_count:
-                                update_data["used_devices"] = 0
-                                # Also clear all devices for this account
-                                supabase.table("active_devices").delete().eq("company_id", selected_id).execute()
-                            supabase.table("companies").update(update_data).eq("id", selected_id).execute()
-                            st.success(f"✅ Updated: Limit = {new_limit}, Used = {0 if reset_count else 'unchanged'}")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ Error: {str(e)}")
-
-                    st.markdown("---")
-                    st.subheader("🗑️ Remove Unwanted Account")
-                    
-                    if st.button("❌ DELETE ACCOUNT", type="primary", help="This will permanently remove the company and all its data"):
-                        selected_id = company_options[selected_label]
-                        
-                        try:
-                            supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
-                            supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
-                            supabase.table("active_devices").delete().eq("company_id", selected_id).execute()
-                            supabase.table("companies").delete().eq("id", selected_id).execute()
-                            
-                            try:
-                                selected_email = next(row['email'] for row in all_companies.data if row['id'] == selected_id)
-                                supabase.auth.admin.delete_user(selected_email)
-                            except:
-                                pass
-                            
-                            st.success("✅ Account and all associated data have been removed successfully")
-                            st.rerun()
-                            
-                        except Exception as e:
-                            st.error(f"❌ Error deleting account: {str(e)}")
-                
-                else:
-                    st.info("No companies have registered yet.")
+                        supabase.table("companies").update({"max_devices": new_limit}).eq("id", selected_id).execute()
+                        st.success(f"✅ Updated: Paid limit = {new_limit} devices")
+                        st.rerun()
 
             except Exception as e:
                 st.error(f"❌ Error loading registered users: {str(e)}")
@@ -985,19 +934,16 @@ def main():
     mode = params.get("mode", "")
     reset_email = params.get("email", "")
 
-    # ✅ Handle forgot password
     if page == "forgot-password":
         show_forgot_password()
         return
 
-    # ✅ Handle reset password form
     if mode == "reset" and reset_email:
         from urllib.parse import unquote
         decoded_email = unquote(reset_email)
         show_reset_password(decoded_email)
         return
 
-    # ✅ Default flow
     if st.session_state.user is None:
         show_login()
     else:
