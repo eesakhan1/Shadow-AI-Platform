@@ -185,8 +185,9 @@ def send_verification_email(to_email, code):
         st.error(f"❌ Email Error: {e}")
         return False
 
-# --- ✅ UPDATED FUNCTION TO CREATE ZIP — PUBLIC VERSION IS EMPTY ---
+# --- ✅ FIXED ZIP GENERATOR — NO .BAT, NO ICON.PNG, CLEAN MANIFEST ---
 def create_zip_file(config_content):
+    # ✅ CLEAN MANIFEST — NO ICONS, NO ERRORS
     manifest_content = '''{
   "manifest_version": 3,
   "name": "🛡️ Shadow AI Enterprise",
@@ -215,9 +216,6 @@ def create_zip_file(config_content):
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; trusted-types 'none';"
-  },
-  "icons": {
-    "128": "icon.png"
   },
   "content_scripts": [
     {
@@ -248,66 +246,26 @@ def create_zip_file(config_content):
       "world": "ISOLATED"
     }
   ],
-  "action": {
-    "default_icon": "icon.png"
-  },
+  "action": {},
   "browser_specific_settings": {
     "edge": {
-      "browser_action": {
-        "default_icon": "icon.png"
-      }
+      "browser_action": {}
     }
   }
 }'''
 
-    # ✅ Use the FIXED content.js from above
+    # ✅ Load the FIXED content.js (no errors)
     with open("content.js", "r", encoding="utf-8") as f:
         content_js_content = f.read()
 
-    bat_content = r'''@echo off
-chcp 65001 >nul
-cls
-echo.
-echo ██████╗ ██╗   ██╗██████╗ ███████╗██████╗ 
-echo ██╔══██╗██║   ██║██╔══██╗██╔════╝██╔══██╗
-echo ██████╔╝██║   ██║██████╔╝█████╗  ██████╔╝
-echo ██╔══██╗██║   ██║██╔══██╗██╔══╝  ██╔══██╗
-echo ██████╔╝╚██████╔╝██║  ██║███████║██║  ██║
-echo ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-echo.
-echo          NHS COMPLIANT DEPLOYMENT TOOL
-echo ============================================
-echo.
-
-set "FOLDER_PATH=%LOCALAPPDATA%\Google\Chrome\User Data\Default\Extensions\ShadowAI"
-rmdir /S /Q "%FOLDER_PATH%" 2>nul
-mkdir "%FOLDER_PATH%" 2>nul
-
-echo [✓] Copying files...
-copy /Y manifest.json "%FOLDER_PATH%\" >nul
-copy /Y content.js "%FOLDER_PATH%\" >nul
-copy /Y config.js "%FOLDER_PATH%\" >nul
-
-echo.
-echo ✅ FILES READY!
-echo 📂 Opening folder...
-explorer "%FOLDER_PATH%"
-echo.
-echo STEPS:
-echo 1. chrome://extensions  (OR edge://extensions/)
-echo 2. Enable Developer Mode
-echo 3. Load Unpacked → Select this folder
-echo.
-pause'''
-
+    # ✅ ZIP CONTAINS ONLY 3 FILES — NO EXTRA STUFF
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         zip_file.writestr("manifest.json", manifest_content)
         zip_file.writestr("content.js", content_js_content)
         zip_file.writestr("config.js", config_content)
-        zip_file.writestr("INSTALL_SHADOW_AI.bat", bat_content)
-        zip_file.writestr("icon.png", b"") 
-        
+        # ❌ REMOVED: .bat file + icon.png — no longer added
+    
     zip_buffer.seek(0)
     return zip_buffer
 
@@ -481,7 +439,7 @@ def show_dashboard():
             mime="application/zip",
             type="primary"
         )
-        st.markdown("*Includes extension, deployment tool, and configuration files — works on Chrome, Edge, and Brave*")
+        st.markdown("*Includes extension and configuration files — works on Chrome, Edge, and Brave*")
 
         st.markdown("---")
         
