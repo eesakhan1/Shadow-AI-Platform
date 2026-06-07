@@ -10,6 +10,7 @@ import zipfile
 from io import BytesIO
 import string
 import urllib.parse
+import uuid
 
 # --- CONFIGURATION — EXACTLY AS YOU HAVE IN SECRETS ---
 try:
@@ -152,6 +153,15 @@ st.markdown("""
     a {
         color: #4da6ff !important;
         text-decoration: none;
+    }
+    .device-row {
+        padding: 12px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 6px;
+        margin: 8px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -351,7 +361,7 @@ const securityPatterns = [
   { name: "CLINICAL_REF", regex: /\b(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}\b/gi },
   { name: "DOB", regex: /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g },
   { name: "EMAIL_ADDRESS", regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi },
-  { name: "PHONE_NUMBER", regex: /\b(?:\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
+  { name: "PHONE_NUMBER", regex: /\b(?:+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
   { name: "POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
   { name: "FULL_NAME", regex: /\b[A-Z][a-z]+\s[A-Z][a-z]+\b/g },
   { name: "CREDIT_CARD", regex: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g },
@@ -640,12 +650,15 @@ def show_login():
                             max_dev = comp["max_devices"]
                             used_dev = comp["used_devices"]
 
-                            # ✅ BLOCK IF OVER LIMIT
-                            if used_dev >= max_dev:
-                                st.error(f"❌ ACCESS DENIED — You have reached your limit of **{max_dev} devices**. Please remove an old device or contact support.")
-                                st.stop()
+                            # ✅ ADMIN EXEMPT — NEVER BLOCK YOU
+                            if email.strip().lower() == ADMIN_EMAIL.lower():
+                                pass  # skip check entirely
+                            else:
+                                # Normal users still get blocked
+                                if used_dev >= max_dev:
+                                    st.error(f"❌ ACCESS DENIED — You have reached your limit of **{max_dev} devices**. Please remove an old device or contact support.")
+                                    st.stop()
 
-                            # ✅ ALLOW ONLY IF SPACE AVAILABLE
                             st.session_state.company_id = comp["id"]
                             
                             code = str(random.randint(100000, 999999))
@@ -678,11 +691,22 @@ def show_login():
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.logged_in = True
                         
-                        # ✅ INCREMENT DEVICE COUNT ONLY AFTER SUCCESSFUL VERIFICATION
-                        try:
+                        # ✅ DEVICE INFO — SAVE NEW DEVICE
+                        import platform
+                        device_name = f"{platform.system()} {platform.release()}"
+                        device_info = st.session_state.temp_user_obj.user_metadata.get("device", "Unknown Browser") + " | " + device_name
+                        
+                        # ✅ CHECK IF THIS DEVICE ALREADY EXISTS
+                        existing = supabase.table("active_devices").select("id").eq("company_id", st.session_state.company_id).eq("device_info", device_info).eq("is_active", True).execute()
+                        
+                        if not existing.data:
+                            # ✅ ADD NEW DEVICE + INCREMENT COUNT
+                            supabase.table("active_devices").insert({
+                                "company_id": st.session_state.company_id,
+                                "device_name": device_name,
+                                "device_info": device_info
+                            }).execute()
                             supabase.table("companies").update({"used_devices": supabase.rpc("increment", {"x": 1})}).eq("id", st.session_state.company_id).execute()
-                        except:
-                            pass
                         
                         js_code = f"""
                         <script>
@@ -759,7 +783,7 @@ def show_dashboard():
     st.sidebar.markdown(f"**Reference: `{st.session_state.company_id}`**")
     
     # ✅ DEVICE LIMIT IN SIDEBAR — CLEAR WARNING IF FULL
-    if used_devices >= max_devices:
+    if used_devices >= max_devices and user_email.lower() != ADMIN_EMAIL.lower():
         st.sidebar.markdown(f'<div class="device-badge" style="background:#DA291C; color:white;">📱 DEVICE LIMIT REACHED: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
     else:
         st.sidebar.markdown(f'<div class="device-badge">📱 Devices: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
@@ -770,21 +794,26 @@ def show_dashboard():
         st.sidebar.error("❌ License: PENDING")
 
     if st.sidebar.button("🚪 Logout"):
+        # ✅ MARK DEVICE AS INACTIVE ON LOGOUT
+        try:
+            supabase.table("active_devices").update({"is_active": False}).eq("company_id", st.session_state.company_id).execute()
+        except:
+            pass
         st.session_state.user = None
         st.session_state.auth_stage = "login"
         st.rerun()
 
     if user_email == ADMIN_EMAIL:
-        tab1, tab2, tab3 = st.tabs(["📦 Deployment", "📋 Security Logs", "👤 Admin Users"])
+        tab1, tab2, tab3, tab4 = st.tabs(["📦 Deployment", "📋 Security Logs", "📱 My Devices", "👤 Admin Users"])
     else:
-        tab1, tab2 = st.tabs(["📦 Deployment", "📋 Security Logs"])
+        tab1, tab2, tab3 = st.tabs(["📦 Deployment", "📋 Security Logs", "📱 My Devices"])
 
     with tab1:
         st.title("🛡️ Security Command Center")
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
         
         # ✅ DEVICE LIMIT DISPLAY FOR USERS
-        if used_devices >= max_devices:
+        if used_devices >= max_devices and user_email.lower() != ADMIN_EMAIL.lower():
             st.markdown(f'<div class="device-badge" style="font-size:16px; padding:8px 16px; background:#DA291C; color:white;">⚠️ DEVICE LIMIT REACHED: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="device-badge" style="font-size:16px; padding:8px 16px;">📱 Allowed Devices: {used_devices} / {max_devices}</div>', unsafe_allow_html=True)
@@ -844,8 +873,39 @@ def show_dashboard():
         except Exception as e:
             st.error(f"Error loading logs: {str(e)}")
 
+    # ✅ NEW TAB: MY DEVICES
+    with tab3:
+        st.title("📱 Manage Active Devices")
+        st.markdown('<div class="compliance-badge">✅ View and remove connected devices</div>', unsafe_allow_html=True)
+        st.markdown("---")
+
+        try:
+            devices = supabase.table("active_devices").select("*").eq("company_id", st.session_state.company_id).eq("is_active", True).order("last_seen", desc=True).execute()
+            
+            if devices.data:
+                st.write(f"**{len(devices.data)} active device(s)**")
+                for dev in devices.data:
+                    cols = st.columns([3,2,1])
+                    with cols[0]:
+                        st.markdown(f"**{dev['device_name']}**")
+                        st.caption(f"{dev['device_info']}")
+                    with cols[1]:
+                        st.caption(f"First seen: {dev['first_login'][:16]}")
+                    with cols[2]:
+                        if st.button("❌ Remove", key=dev['id'], help="Revoke access from this device"):
+                            # Delete device + reduce count
+                            supabase.table("active_devices").delete().eq("id", dev['id']).execute()
+                            supabase.table("companies").update({"used_devices": used_devices - 1}).eq("id", st.session_state.company_id).execute()
+                            st.success("✅ Device removed successfully")
+                            st.rerun()
+            else:
+                st.info("No active devices found.")
+
+        except Exception as e:
+            st.error(f"Error loading devices: {str(e)}")
+
     if user_email == ADMIN_EMAIL:
-        with tab3:
+        with tab4:
             st.title("👤 Registered Companies & Users")
             st.markdown('<div class="compliance-badge">🔐 Admin Access — View and manage all accounts</div>', unsafe_allow_html=True)
             st.markdown("---")
@@ -880,6 +940,8 @@ def show_dashboard():
                             update_data = {"max_devices": new_limit}
                             if reset_count:
                                 update_data["used_devices"] = 0
+                                # Also clear all devices for this account
+                                supabase.table("active_devices").delete().eq("company_id", selected_id).execute()
                             supabase.table("companies").update(update_data).eq("id", selected_id).execute()
                             st.success(f"✅ Updated: Limit = {new_limit}, Used = {0 if reset_count else 'unchanged'}")
                             st.rerun()
@@ -895,6 +957,7 @@ def show_dashboard():
                         try:
                             supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
                             supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
+                            supabase.table("active_devices").delete().eq("company_id", selected_id).execute()
                             supabase.table("companies").delete().eq("id", selected_id).execute()
                             
                             try:
