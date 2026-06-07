@@ -16,8 +16,7 @@ a {color:#4da6ff; text-decoration:none;}
 st.markdown('<div class="container">', unsafe_allow_html=True)
 st.header("🔒 Create New Password")
 
-params = st.query_params
-access_token = params.get("access_token")
+access_token = st.query_params.get("access_token", "")
 
 if not access_token:
     st.warning("⚠️ Invalid or expired reset link. Please request a new one.")
