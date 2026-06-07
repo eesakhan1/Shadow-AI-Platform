@@ -1,24 +1,19 @@
 import streamlit as st
-from supabase import create_client
 import requests
+import time
 
-# --- LOAD SAME SECRETS ---
+# --- LOAD SECRETS ---
 try:
-    SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
     RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
     RESEND_FROM_EMAIL = st.secrets["RESEND_FROM_EMAIL"]
 except Exception as e:
     st.error(f"❌ Secrets Error: {e}")
     st.stop()
 
-# ✅ Use ANON key for auth
-auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
-
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Forgot Password | Shadow AI", page_icon="🔑", layout="centered")
 
-# --- CUSTOM CSS — EXACT SAME AS MAIN APP ---
+# --- SAME CSS ---
 st.markdown("""
     <style>
     .main {
@@ -29,7 +24,6 @@ st.markdown("""
     .login-card {
         background-color: rgba(20, 30, 60, 0.85);
         backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
         padding: 40px;
         border-radius: 8px;
         border: 2px solid #005EB8;
@@ -37,7 +31,6 @@ st.markdown("""
     }
     h2 {
         color: #FFFFFF !important;
-        font-family: Arial, Helvetica, sans-serif;
         font-weight: bold;
     }
     .stButton>button {
@@ -46,18 +39,12 @@ st.markdown("""
         height: 55px;
         font-size: 18px;
         font-weight: bold;
-        border: none;
-        transition: all 0.3s ease;
         background: #005EB8;
         color: #FFFFFF !important;
-        box-shadow: 0 2px 8px rgba(0,94,184,0.3);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        border: none;
     }
     .stButton>button:hover {
         background: #003087;
-        box-shadow: 0 4px 12px rgba(0,48,135,0.5);
-        transform: translateY(-1px);
     }
     .stTextInput>div>div>input {
         background-color: rgba(255,255,255,0.05);
@@ -72,7 +59,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SEND RESET EMAIL — EXACT SAME DESIGN AS 2FA ---
+# --- Send email ONLY from your address ---
 def send_reset_email(to_email, reset_link):
     try:
         response = requests.post(
@@ -101,9 +88,8 @@ def send_reset_email(to_email, reset_link):
                             </a>
                         </div>
 
-                        <p style="font-size:14px; color:#B0C4DE; margin-top:30px;">This link is valid for <strong>60 minutes</strong>. If you did not request this change, please ignore this email or contact support immediately.</p>
-                        
-                        <p style="margin-top:30px; font-size:12px; color:#888;">Shadow AI is registered on the NHS Evergreen Supplier Assessment | Ref: a0BPz0000GzZ65MAF20260528125015</p>
+                        <p style="font-size:14px; color:#B0C4DE; margin-top:30px;">This link is valid for <strong>60 minutes</strong>. If you did not request this change, please ignore this email.</p>
+                        <p style="margin-top:30px; font-size:12px; color:#888;">Shadow AI • NHS Evergreen Supplier Registered</p>
                     </div>
                 </div>
                 """
@@ -125,27 +111,15 @@ if st.button("📩 Send Reset Link"):
     if not email:
         st.warning("⚠️ Please enter your email address")
     else:
-        try:
-            # ✅ Call Supabase to generate reset token (no email sent)
-            auth_client.auth.reset_password_for_email(
-                email,
-                options={
-                    "redirect_to": "https://shadowai-security.streamlit.app/reset-password"
-                }
-            )
+        # ✅ NO Supabase email trigger here — just build the link
+        reset_link = f"https://shadowai-security.streamlit.app/reset-password?email={email}&ts={int(time.time())}"
 
-            # ✅ Build reset link (we will handle token in the reset page)
-            reset_link = f"https://shadowai-security.streamlit.app/reset-password?email={email}"
-
-            # ✅ Send email from your address
-            if send_reset_email(email, reset_link):
-                st.success("✅ Reset link sent successfully!")
-                st.info("📧 Email sent from: security@shadowaisecurity.co.uk — same as your 2FA codes")
-            else:
-                st.error("❌ Failed to send email — please try again")
-
-        except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
+        # ✅ Send ONLY your Resend email
+        if send_reset_email(email, reset_link):
+            st.success("✅ Reset link sent successfully!")
+            st.info(f"📧 Email sent from: {RESEND_FROM_EMAIL} — no email from Supabase will arrive")
+        else:
+            st.error("❌ Failed to send email — please check your Resend key")
 
 st.markdown("<br><p style='text-align:center;'><a href='/' style='color:#4da6ff;'>← Back to Login</a></p>", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
