@@ -387,7 +387,7 @@ def show_login():
             new_email = st.text_input("📧 Official Work Email", key="reg_email")
             new_pass = st.text_input("🔒 Create Password", type="password", key="reg_pass")
             company_name = st.text_input("🏢 Organisation Name / Trust Name")
-            max_devices = st.number_input("📱 Number of Devices Licensed", min_value=10, max_value=10000, value=100, step=10)
+            max_devices = st.number_input("📱 Number of Devices Licensed", min_value=1, max_value=10000, value=100, step=1)
             
             if st.button("✅ Create Account"):
                 try:
@@ -546,7 +546,7 @@ def show_dashboard():
                     st.subheader("⚙️ Update License Limit")
                     company_options = {f"{row['name']} ({row['email']})": row['id'] for row in all_companies.data}
                     selected_label = st.selectbox("Select company:", list(company_options.keys()))
-                    new_limit = st.number_input("New Device Limit", min_value=10, max_value=50000, value=100)
+                    new_limit = st.number_input("New Device Limit", min_value=1, max_value=50000, value=100)
                     
                     if st.button("✅ UPDATE LIMIT"):
                         selected_id = company_options[selected_label]
