@@ -10,15 +10,21 @@ import zipfile
 from io import BytesIO
 import string
 
-# --- CONFIGURATION — ALL FROM SECRETS ---
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
-SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
+# --- CONFIGURATION — 100% FROM SECRETS ---
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
+    SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
+except Exception as e:
+    st.error(f"❌ Secrets not loaded: {e}")
+    st.stop()
+
 RESEND_API_KEY = st.secrets.get("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"
 
 ADMIN_EMAIL = "security.shadowai@gmail.com"
 
+# ✅ CREATE CLIENT WITH CORRECT KEYS
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # --- PAGE SETUP ---
@@ -500,7 +506,10 @@ def show_login():
                 
                 if st.button("🚀 Login", type="primary"):
                     try:
-                        res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                        # ✅ LOGIN WITH CORRECT ANON KEY
+                        auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+                        res = auth_client.auth.sign_in_with_password({"email": email, "password": password})
+                        
                         st.session_state.temp_user_obj = res.user
                         
                         company_data = supabase.table("companies").select("id").eq("email", email).execute()
@@ -563,7 +572,9 @@ def show_login():
             
             if st.button("✅ Create Account"):
                 try:
-                    res = supabase.auth.sign_up({
+                    # ✅ REGISTER WITH CORRECT ANON KEY
+                    auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+                    res = auth_client.auth.sign_up({
                         "email": new_email,
                         "password": new_pass
                     })
