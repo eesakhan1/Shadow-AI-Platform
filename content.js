@@ -15,36 +15,32 @@ async function loadIdFromStorage() {
     COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
   }
 
-  // ✅ FIRST: Check license before starting anything
-  const licenseOk = await checkLicenseAndRegisterDevice();
-  if (!licenseOk) return; // Stop if over limit or invalid
-
-  initProtection();
+  // ✅ CHECK LICENSE — BUT NEVER BLOCK ON CONNECTION FAIL
+  await checkLicenseAndRegisterDevice();
+  initProtection(); // ALWAYS START PROTECTION
 }
 
 let customSecrets = [];
 const deviceFingerprint = `${navigator.platform} | ${navigator.userAgent.substring(0, 100)}`;
 
-// --- ✅ LICENSE & DEVICE TRACKING — EDGE + CHROME FIXED ---
+// --- ✅ LICENSE CHECK — NEVER BLOCK FOR CONNECTION ISSUES ---
 async function checkLicenseAndRegisterDevice(retryCount = 0) {
-  // ❌ Public store version — do nothing
+  // ❌ ONLY BLOCK IF CONFIG IS MISSING / DEMO VERSION
   if (
+    !supabaseUrl || !supabaseKey || !COMPANY_ID ||
     supabaseUrl === "YOUR_SUPABASE_URL_HERE" ||
     supabaseKey === "YOUR_SUPABASE_ANON_KEY_HERE" ||
-    COMPANY_ID === "YOUR_COMPANY_ID_HERE" ||
-    !COMPANY_ID
+    COMPANY_ID === "YOUR_COMPANY_ID_HERE"
   ) {
-    console.log("❌ Shadow AI: Unlicensed — download from your dashboard");
     showBlockMessage("NOT LICENSED", "This is a public demo only. Please purchase a license from shadowaisecurity.co.uk to use.");
     return false;
   }
 
   try {
-    // ✅ LONGER TIMEOUT (15s) — works on slow Edge connections
+    // ✅ LONG TIMEOUT + CORS SUPPORT
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    // Send device info to YOUR DASHBOARD — it decides the limit
     const res = await fetch(`${supabaseUrl}/functions/v1/register-device`, {
       method: "POST",
       headers: {
@@ -64,6 +60,7 @@ async function checkLicenseAndRegisterDevice(retryCount = 0) {
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const result = await res.json();
 
+    // ✅ ONLY BLOCK IF EXPLICITLY OVER LIMIT OR INVALID
     if (result.status === "over_limit") {
       showBlockMessage(
         "LICENSE LIMIT REACHED",
@@ -77,35 +74,28 @@ async function checkLicenseAndRegisterDevice(retryCount = 0) {
       return false;
     }
 
-    // ✅ All good — save last check time
+    // ✅ SUCCESS — UPDATE TIMESTAMP
     localStorage.setItem("shadow_ai_last_check", Date.now().toString());
+    console.log("✅ Shadow AI: License verified");
     return true;
 
   } catch (err) {
-    console.warn(`⚠️ Shadow AI: Connection issue (attempt ${retryCount+1})`, err.message);
+    // ✅ CONNECTION FAILED — DO NOT BLOCK, JUST LOG
+    console.warn(`⚠️ Shadow AI: Could not connect (attempt ${retryCount+1}) — protection still active`, err.message);
 
-    // ✅ AUTO-RETRY 2 MORE TIMES (ONLY ON EDGE/CHROME DELAYS)
+    // ✅ RETRY SILENTLY IN BACKGROUND
     if (retryCount < 2) {
-      await new Promise(resolve => setTimeout(resolve, 1200)); // wait 1.2s
+      await new Promise(resolve => setTimeout(resolve, 1500));
       return checkLicenseAndRegisterDevice(retryCount + 1);
     }
 
-    // ✅ ONLY BLOCK IF NEVER CHECKED OR OVER 7 DAYS OLD
-    const lastCheck = localStorage.getItem("shadow_ai_last_check");
-    const sevenDays = 7 * 24 * 60 * 60 * 1000;
-
-    if (!lastCheck || Date.now() - parseInt(lastCheck) > sevenDays) {
-      showBlockMessage("OFFLINE / EXPIRED", "Cannot verify license for over 7 days. Please reconnect.");
-      return false;
-    }
-
-    // ✅ ALLOW USE — NO ERROR SHOWN
-    console.log("✅ Shadow AI: Using offline grace period");
+    // ✅ AFTER ALL RETRIES: STILL WORK — NO BLOCK
+    console.log("✅ Shadow AI: OFFLINE MODE — PROTECTION ACTIVE FOREVER");
     return true;
   }
 }
 
-// --- ✅ SHOW BLOCK MESSAGE ---
+// --- ✅ SHOW BLOCK MESSAGE — ONLY FOR REAL LICENSE ISSUES ---
 function showBlockMessage(title, text) {
   document.body.innerHTML = "";
   document.body.style.background = "#141E3C";
@@ -121,7 +111,7 @@ function showBlockMessage(title, text) {
   throw new Error("Shadow AI: " + title);
 }
 
-// --- ✅ FIXED NHS & SECURITY RULES ---
+// --- ✅ NHS & SECURITY RULES — FIXED REGEX ---
 const securityPatterns = [
   { name: "SENSITIVE_TERM", regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs number|patient id|dob|date of birth|next of kin)\b/gi },
   { name: "NHS_NUMBER", regex: /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g },
@@ -130,7 +120,6 @@ const securityPatterns = [
   { name: "CLINICAL_REF", regex: /\b(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}\b/gi },
   { name: "DOB", regex: /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g },
   { name: "EMAIL_ADDRESS", regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi },
-  // ✅ FIXED PHONE NUMBER REGEX — escaped + sign
   { name: "PHONE_NUMBER", regex: /\b(?:\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
   { name: "POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
   { name: "FULL_NAME", regex: /\b[A-Z][a-z]+\s[A-Z][a-z]+\b/g },
@@ -148,7 +137,7 @@ async function fetchCompanySecrets() {
     const data = await res.json();
     customSecrets = Array.isArray(data) ? data : [];
   } catch (e) {
-    console.warn("⚠️ Could not load custom rules", e);
+    console.warn("⚠️ Could not load custom rules — using default only");
   }
 }
 
@@ -171,7 +160,7 @@ async function reportLeak(type, detail, blockedText = "") {
       })
     });
   } catch (e) {
-    console.warn("⚠️ Could not send log", e);
+    // ✅ LOG FAILS SILENTLY — NO IMPACT
   }
 }
 
