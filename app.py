@@ -9,6 +9,7 @@ import time
 import zipfile
 from io import BytesIO
 import string
+import urllib.parse
 
 # --- CONFIGURATION — EXACTLY AS YOU HAVE IN SECRETS ---
 try:
@@ -70,6 +71,8 @@ st.markdown("""
         border-radius: 8px;
         border: 2px solid #005EB8;
         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        max-width: 550px;
+        margin: 2rem auto;
     }
     h1, h2, h3, h4, h5, h6 {
         color: #FFFFFF !important;
@@ -135,6 +138,10 @@ st.markdown("""
     .delete-btn:hover {
         background-color: #9E1A12 !important;
     }
+    a {
+        color: #4da6ff !important;
+        text-decoration: none;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -188,6 +195,48 @@ def send_verification_email(to_email, code):
         st.error(f"❌ Email Error: {e}")
         return False
 
+# --- ✅ NEW: RESET PASSWORD EMAIL FUNCTION ---
+def send_reset_email(to_email, reset_link):
+    try:
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from": RESEND_FROM_EMAIL,  # ✅ SAME EMAIL AS 2FA
+                "to": to_email,
+                "subject": "🔐 Shadow AI | Reset Your Password",
+                "html": f"""
+                <div style="font-family: Arial, sans-serif; background:#0A0F1F; padding:30px; color:white; max-width:600px;">
+                    <div style="background:#003087; padding:15px; border-radius:4px;">
+                        <h1 style="color:white; margin:0; font-size:24px; font-weight:bold;">🛡️ Shadow AI</h1>
+                        <p style="color:#B0C4DE; margin:5px 0 0 0; font-size:14px;">NHS Compliant Data Protection</p>
+                    </div>
+                    <div style="padding:20px; background:#141E3C; border-radius:4px; margin-top:15px;">
+                        <p style="font-size:16px; line-height:1.5;">You requested to reset your password for your Shadow AI account.</p>
+                        <p style="font-size:16px; line-height:1.5; margin:20px 0;">Click the button below to create a new password:</p>
+                        
+                        <div style="text-align:center; margin:30px 0;">
+                            <a href="{reset_link}" style="background:#00A499; color:#ffffff; padding:14px 28px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:16px; display:inline-block;">
+                                Reset My Password
+                            </a>
+                        </div>
+
+                        <p style="font-size:14px; color:#B0C4DE; margin-top:30px;">This link is valid for <strong>60 minutes</strong>. If you did not request this change, please ignore this email or contact support immediately.</p>
+                        
+                        <p style="margin-top:30px; font-size:12px; color:#888;">Shadow AI is registered on the NHS Evergreen Supplier Assessment | Ref: a0BPz0000GzZ65MAF20260528125015</p>
+                    </div>
+                </div>
+                """
+            }
+        )
+        return response.status_code == 200
+    except Exception as e:
+        st.error(f"❌ Email Error: {e}")
+        return False
+
 # --- CREATE ZIP FILE ---
 def create_zip_file(config_content):
     manifest_content = '''{
@@ -233,7 +282,7 @@ def create_zip_file(config_content):
         "https://claude.ai/*",
         "https://www.anthropic.com/*",
         "https://perplexity.ai/*",
-        "https://www.perplexity.ai/*",
+        "www.perplexity.ai/*",
         "https://www.bing.com/chat*",
         "https://poe.com/*",
         "https://chat.mistral.ai/*",
@@ -485,6 +534,68 @@ pause'''
     zip_buffer.seek(0)
     return zip_buffer
 
+# --- ✅ NEW: FORGOT PASSWORD PAGE ---
+def show_forgot_password():
+    st.markdown('<div class="login-card">', unsafe_allow_html=True)
+    st.subheader("🔑 Reset Your Password")
+    st.markdown("Enter your registered work email — we’ll send you a secure reset link.")
+
+    email = st.text_input("📧 Official Work Email Address")
+
+    if st.button("📩 Send Reset Link"):
+        if not email:
+            st.warning("⚠️ Please enter your email address")
+        else:
+            try:
+                # ✅ NO SUPABASE EMAIL TRIGGER — WE DO IT ALL
+                encoded_email = urllib.parse.quote(email)
+                reset_link = f"https://shadow-ai-platform-4ewudc2yankypfirbaej3.streamlit.app/?mode=reset&email={encoded_email}"
+
+                if send_reset_email(email, reset_link):
+                    st.success("✅ Reset link sent successfully!")
+                    st.info("📧 Email sent from: security@shadowaisecurity.co.uk — check your inbox/spam")
+                else:
+                    st.error("❌ Failed to send email — please try again")
+
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+
+    st.markdown("<br><p style='text-align:center;'><a href='/' style='color:#4da6ff;'>← Back to Login</a></p>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# --- ✅ NEW: RESET PASSWORD PAGE ---
+def show_reset_password(email):
+    st.markdown('<div class="login-card">', unsafe_allow_html=True)
+    st.subheader("🔑 Create New Password")
+    st.markdown(f"Setting new password for: **{email}**")
+
+    new_password = st.text_input("🔒 New Password", type="password")
+    confirm_password = st.text_input("🔒 Confirm New Password", type="password")
+
+    if st.button("✅ Update Password"):
+        if new_password != confirm_password:
+            st.error("❌ Passwords do not match")
+        elif len(new_password) < 8:
+            st.warning("⚠️ Password must be at least 8 characters")
+        else:
+            try:
+                # ✅ Find user and update password securely
+                users = supabase.auth.admin.list_users()
+                target_user = next((u for u in users if u.email == email), None)
+                if not target_user:
+                    st.error("❌ Account not found")
+                else:
+                    supabase.auth.admin.update_user_by_id(
+                        target_user.id,
+                        {"password": new_password}
+                    )
+                    st.success("✅ Password updated successfully! You can now log in.")
+                    st.markdown("<p style='text-align:center; margin-top:20px;'><a href='/' style='color:#4da6ff; font-weight:bold;'>← Go to Login</a></p>", unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
 # --- LOGIN SCREEN ---
 def show_login():
     st.title("🛡️ Shadow AI")
@@ -530,7 +641,7 @@ def show_login():
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown(
                     '<p style="text-align: center; margin-top: 8px;">'
-                    '<a href="/forgot-password" target="_self" style="color: #4da6ff; text-decoration: none;">🔑 Forgot your password?</a>'
+                    '<a href="/?page=forgot-password" target="_self" style="color: #4da6ff; text-decoration: none;">🔑 Forgot your password?</a>'
                     '</p>',
                     unsafe_allow_html=True
                 )
@@ -738,11 +849,24 @@ def show_dashboard():
             except Exception as e:
                 st.error(f"❌ Error loading registered users: {str(e)}")
 
-# --- FIXED ROUTING ---
+# --- ✅ ROUTING — NO MORE MISSING PAGES ---
 def main():
-    current_page = st.query_params.get("page", "")
-    if current_page in ["forgot-password", "reset-password"]:
+    params = st.query_params
+    page = params.get("page", "")
+    mode = params.get("mode", "")
+    reset_email = params.get("email", "")
+
+    # ✅ Handle forgot password
+    if page == "forgot-password":
+        show_forgot_password()
         return
+
+    # ✅ Handle reset password form
+    if mode == "reset" and reset_email:
+        show_reset_password(reset_email)
+        return
+
+    # ✅ Default flow
     if st.session_state.user is None:
         show_login()
     else:
