@@ -595,7 +595,9 @@ def show_login():
         
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("---")
-st.markdown('<a href="/forgot-password" target="_self">🔑 Forgot your password?</a>', unsafe_allow_html=True)
+# Remove your current line, use this instead
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown('<p style="text-align: center;"><a href="/forgot-password" target="_self">🔑 Forgot your password?</a></p>', unsafe_allow_html=True)
 
 # --- DASHBOARD FUNCTION ---
 def show_dashboard():
