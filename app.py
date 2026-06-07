@@ -10,22 +10,22 @@ import zipfile
 from io import BytesIO
 import string
 
-# --- CONFIGURATION — 100% FROM SECRETS ---
+# --- CONFIGURATION — EXACTLY AS YOU HAVE IN SECRETS ---
 try:
     SUPABASE_URL = st.secrets["SUPABASE_URL"]
     SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
     SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
+    RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
+    RESEND_FROM_EMAIL = st.secrets["RESEND_FROM_EMAIL"]
 except Exception as e:
-    st.error(f"❌ Secrets not loaded: {e}")
+    st.error(f"❌ Secrets Error: {e}")
     st.stop()
-
-RESEND_API_KEY = st.secrets.get("RESEND_API_KEY", "")
-RESEND_FROM_EMAIL = "security@shadowaisecurity.co.uk"
 
 ADMIN_EMAIL = "security.shadowai@gmail.com"
 
-# ✅ CREATE CLIENT WITH CORRECT KEYS
-supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# ✅ CRITICAL: Use ANON KEY for AUTH (login/register) — SERVICE KEY for DATABASE ONLY
+auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)   # ✅ FOR LOGIN
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)     # ✅ FOR DB ACCESS
 
 # --- PAGE SETUP ---
 st.set_page_config(
@@ -506,8 +506,7 @@ def show_login():
                 
                 if st.button("🚀 Login", type="primary"):
                     try:
-                        # ✅ LOGIN WITH CORRECT ANON KEY
-                        auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+                        # ✅ LOGIN WITH ANON KEY — THIS WAS THE BUG!
                         res = auth_client.auth.sign_in_with_password({"email": email, "password": password})
                         
                         st.session_state.temp_user_obj = res.user
@@ -572,8 +571,7 @@ def show_login():
             
             if st.button("✅ Create Account"):
                 try:
-                    # ✅ REGISTER WITH CORRECT ANON KEY
-                    auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+                    # ✅ REGISTER WITH ANON KEY — SAME FIX
                     res = auth_client.auth.sign_up({
                         "email": new_email,
                         "password": new_pass
