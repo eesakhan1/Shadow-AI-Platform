@@ -535,6 +535,15 @@ def show_login():
                     except Exception as e:
                         st.error(f"❌ Access Denied: {str(e)}")
 
+                # ✅ FORGOT PASSWORD LINK — RIGHT HERE, UNDER LOGIN BUTTON
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown(
+                    '<p style="text-align: center; margin-top: 8px;">'
+                    '<a href="/forgot-password" style="color: #4da6ff; text-decoration: none;">🔑 Forgot your password?</a>'
+                    '</p>',
+                    unsafe_allow_html=True
+                )
+
             elif st.session_state.auth_stage == "verify":
                 st.info(f"🔢 Verification code sent to: **{st.session_state.temp_user_obj.email}**")
                 user_code = st.text_input("Enter 6-Digit Security Code", max_chars=6)
@@ -595,9 +604,6 @@ def show_login():
         
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("---")
-# Remove your current line, use this instead
-st.markdown("<br>", unsafe_allow_html=True)
-st.markdown('<p style="text-align: center;"><a href="/forgot-password" target="_self">🔑 Forgot your password?</a></p>', unsafe_allow_html=True)
 
 # --- DASHBOARD FUNCTION ---
 def show_dashboard():
