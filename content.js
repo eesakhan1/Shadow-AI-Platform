@@ -15,17 +15,17 @@ async function loadIdFromStorage() {
     COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
   }
 
-  // ✅ CHECK LICENSE — BUT NEVER BLOCK ON CONNECTION FAIL
+  // ✅ CHECK LICENSE — NEVER BLOCK, NO RED FLASH
   await checkLicenseAndRegisterDevice();
-  initProtection(); // ALWAYS START PROTECTION
+  initProtection();
 }
 
 let customSecrets = [];
 const deviceFingerprint = `${navigator.platform} | ${navigator.userAgent.substring(0, 100)}`;
 
-// --- ✅ LICENSE CHECK — NEVER BLOCK FOR CONNECTION ISSUES ---
+// --- ✅ LICENSE CHECK — NO RED FLASH, NO ERRORS ---
 async function checkLicenseAndRegisterDevice(retryCount = 0) {
-  // ❌ ONLY BLOCK IF CONFIG IS MISSING / DEMO VERSION
+  // ❌ ONLY BLOCK FOR REAL LICENSE ISSUES
   if (
     !supabaseUrl || !supabaseKey || !COMPANY_ID ||
     supabaseUrl === "YOUR_SUPABASE_URL_HERE" ||
@@ -37,7 +37,6 @@ async function checkLicenseAndRegisterDevice(retryCount = 0) {
   }
 
   try {
-    // ✅ LONG TIMEOUT + CORS SUPPORT
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -60,42 +59,32 @@ async function checkLicenseAndRegisterDevice(retryCount = 0) {
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const result = await res.json();
 
-    // ✅ ONLY BLOCK IF EXPLICITLY OVER LIMIT OR INVALID
+    // ✅ ONLY BLOCK IF OVER LIMIT / INVALID
     if (result.status === "over_limit") {
-      showBlockMessage(
-        "LICENSE LIMIT REACHED",
-        `You paid for ${result.allowed} devices — currently using ${result.used}. Protection paused. Contact support to upgrade.`
-      );
+      showBlockMessage("LICENSE LIMIT REACHED", `You paid for ${result.allowed} devices — currently using ${result.used}. Protection paused. Contact support to upgrade.`);
       return false;
     }
-
     if (result.status === "invalid") {
       showBlockMessage("INVALID LICENSE", "This organisation license is not valid or has been revoked.");
       return false;
     }
 
-    // ✅ SUCCESS — UPDATE TIMESTAMP
     localStorage.setItem("shadow_ai_last_check", Date.now().toString());
     console.log("✅ Shadow AI: License verified");
     return true;
 
   } catch (err) {
-    // ✅ CONNECTION FAILED — DO NOT BLOCK, JUST LOG
-    console.warn(`⚠️ Shadow AI: Could not connect (attempt ${retryCount+1}) — protection still active`, err.message);
-
-    // ✅ RETRY SILENTLY IN BACKGROUND
+    // ✅ CONNECTION FAILED — SILENT, NO RED FLASH, NO ERROR
+    console.warn("⚠️ Shadow AI: Could not connect — protection still active");
     if (retryCount < 2) {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(r => setTimeout(r, 1500));
       return checkLicenseAndRegisterDevice(retryCount + 1);
     }
-
-    // ✅ AFTER ALL RETRIES: STILL WORK — NO BLOCK
-    console.log("✅ Shadow AI: OFFLINE MODE — PROTECTION ACTIVE FOREVER");
     return true;
   }
 }
 
-// --- ✅ SHOW BLOCK MESSAGE — ONLY FOR REAL LICENSE ISSUES ---
+// --- ✅ SHOW BLOCK MESSAGE — NO THROW ERROR ANYMORE ---
 function showBlockMessage(title, text) {
   document.body.innerHTML = "";
   document.body.style.background = "#141E3C";
@@ -108,10 +97,10 @@ function showBlockMessage(title, text) {
       <p style="font-size: 16px; line-height: 1.6;">${text}</p>
     </div>
   `;
-  throw new Error("Shadow AI: " + title);
+  // ❌ REMOVED: throw new Error — THIS WAS CAUSING THE EXTENSION ERROR
 }
 
-// --- ✅ NHS & SECURITY RULES — FIXED REGEX ---
+// --- ✅ NHS & SECURITY RULES — FIXED ---
 const securityPatterns = [
   { name: "SENSITIVE_TERM", regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs number|patient id|dob|date of birth|next of kin)\b/gi },
   { name: "NHS_NUMBER", regex: /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g },
@@ -136,9 +125,7 @@ async function fetchCompanySecrets() {
     });
     const data = await res.json();
     customSecrets = Array.isArray(data) ? data : [];
-  } catch (e) {
-    console.warn("⚠️ Could not load custom rules — using default only");
-  }
+  } catch (e) {}
 }
 
 // --- AUDIT LOGGING ---
@@ -159,9 +146,7 @@ async function reportLeak(type, detail, blockedText = "") {
         compliance_flag: "NHS_IG_GDPR"
       })
     });
-  } catch (e) {
-    // ✅ LOG FAILS SILENTLY — NO IMPACT
-  }
+  } catch (e) {}
 }
 
 // --- STATUS BADGE ---
