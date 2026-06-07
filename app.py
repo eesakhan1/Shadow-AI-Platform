@@ -9,7 +9,6 @@ import time
 import zipfile
 from io import BytesIO
 import string
-import json
 
 # --- CONFIGURATION ---
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -185,9 +184,8 @@ def send_verification_email(to_email, code):
         st.error(f"❌ Email Error: {e}")
         return False
 
-# --- ✅ FIXED ZIP GENERATOR — NO .BAT, NO ICON.PNG, CLEAN MANIFEST ---
+# --- ✅ UPDATED FUNCTION TO CREATE ZIP — FIXED FOR COPILOT + EDGE + CHROME ---
 def create_zip_file(config_content):
-    # ✅ CLEAN MANIFEST — NO ICONS, NO ERRORS
     manifest_content = '''{
   "manifest_version": 3,
   "name": "🛡️ Shadow AI Enterprise",
@@ -216,6 +214,9 @@ def create_zip_file(config_content):
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; trusted-types 'none';"
+  },
+  "icons": {
+    "128": "icon.png"
   },
   "content_scripts": [
     {
@@ -246,26 +247,250 @@ def create_zip_file(config_content):
       "world": "ISOLATED"
     }
   ],
-  "action": {},
+  "action": {
+    "default_icon": "icon.png"
+  },
   "browser_specific_settings": {
     "edge": {
-      "browser_action": {}
+      "browser_action": {
+        "default_icon": "icon.png"
+      }
     }
   }
 }'''
 
-    # ✅ Load the FIXED content.js (no errors)
-    with open("content.js", "r", encoding="utf-8") as f:
-        content_js_content = f.read()
+    content_js_content = '''// --- SHADOW AI CORE ENGINE — FIXED FOR ALL BROWSERS ---
+// --- NHS COMPLIANT | AI ONLY VERSION ---
+console.log("🚀 SHADOW AI: Script injected and RUNNING");
 
-    # ✅ ZIP CONTAINS ONLY 3 FILES — NO EXTRA STUFF
+// --- CONFIG ---
+const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
+const supabaseKey = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseKey : "";
+let COMPANY_ID = "";
+
+// --- LOAD COMPANY ID ---
+async function loadIdFromStorage() {
+  try {
+    const data = await (chrome || browser).storage.local.get(['shadow_company_id']);
+    COMPANY_ID = data.shadow_company_id || (typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "");
+  } catch (e) {
+    COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
+  }
+  initProtection();
+}
+
+let customSecrets = [];
+const deviceFingerprint = `${navigator.platform} | ${navigator.userAgent.substring(0, 100)}`;
+
+// --- NHS RULES ---
+const securityPatterns = [
+  { name: "SENSITIVE_TERM", regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs number|patient id|dob|date of birth|next of kin)\b/gi },
+  { name: "NHS_NUMBER", regex: /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g },
+  { name: "PATIENT_ID", regex: /\b(PAT|PT|patient)[-\s]?[A-Z0-9]{6,12}\b/gi },
+  { name: "ODS_CODE", regex: /\b[A-Z0-9]{3,5}\b/g },
+  { name: "CLINICAL_REF", regex: /\b(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}\b/gi },
+  { name: "DOB", regex: /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g },
+  { name: "EMAIL_ADDRESS", regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi },
+  { name: "PHONE_NUMBER", regex: /\b(?:\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
+  { name: "POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
+  { name: "FULL_NAME", regex: /\b[A-Z][a-z]+\s[A-Z][a-z]+\b/g },
+  { name: "CREDIT_CARD", regex: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g },
+  { name: "API_KEY", regex: /(api|key|token|secret|password|bearer|auth)[^\s]{0,10}['"]?[a-zA-Z0-9_\-+/]{10,}['"]?/gi }
+];
+
+// --- FETCH CUSTOM RULES ---
+async function fetchCompanySecrets() {
+  if (!COMPANY_ID) return;
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/company_secrets?select=*&company_id=eq.${COMPANY_ID}`, {
+      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+    });
+    const data = await res.json();
+    customSecrets = Array.isArray(data) ? data : [];
+  } catch (e) {}
+}
+
+// --- LOG EVENTS ---
+async function reportLeak(type, detail, blockedText = "") {
+  if (!COMPANY_ID) return;
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/security_logs`, {
+      method: "POST",
+      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_type: type,
+        user_device: deviceFingerprint,
+        violation_type: detail,
+        site_url: window.location.hostname,
+        blocked_content: blockedText.substring(0, 300),
+        created_at: new Date(),
+        company_id: COMPANY_ID,
+        compliance_flag: "NHS_IG_GDPR"
+      })
+    });
+  } catch (e) {}
+}
+
+// --- ✅ GUARANTEED BADGE — CSP SAFE ---
+function addBadge() {
+  if (document.getElementById('shadow-ai-badge')) return;
+  const badge = document.createElement('div');
+  badge.id = 'shadow-ai-badge';
+  badge.textContent = '🛡️ Shadow AI | AI PROTECTION ACTIVE';
+  // Safe style assignment (no cssText)
+  badge.style.position = 'fixed';
+  badge.style.top = '10px';
+  badge.style.right = '10px';
+  badge.style.background = '#003087';
+  badge.style.color = '#ffffff';
+  badge.style.padding = '8px 16px';
+  badge.style.borderRadius = '4px';
+  badge.style.fontWeight = 'bold';
+  badge.style.fontSize = '12px';
+  badge.style.zIndex = '2147483647';
+  badge.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+  badge.style.border = '2px solid #005EB8';
+  badge.style.fontFamily = 'Arial, sans-serif';
+  badge.style.pointerEvents = 'none';
+  (document.documentElement || document.body).appendChild(badge);
+}
+
+// --- ✅ SCAN & BLOCK — COPILOT + EDGE + CHROME COMPATIBLE ---
+function scanAndBlock() {
+  let leakFound = false;
+  addBadge();
+
+  const inputs = document.querySelectorAll(`
+    textarea, 
+    [contenteditable="true"], 
+    input[type="text"],
+    div[role="textbox"],
+    .cib-text-input,
+    .cib-serp-input,
+    div[class*="input"],
+    div[class*="prompt"]
+  `);
+  
+  inputs.forEach(input => {
+    const original = input.value || input.innerText || "";
+    if (original.length < 3) return;
+
+    let redacted = original;
+    let matched = false;
+
+    customSecrets.forEach(rule => {
+      try {
+        const regex = new RegExp(`\\b${rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
+        if (regex.test(original)) {
+          redacted = redacted.replace(regex, '██████████');
+          matched = true;
+          leakFound = true;
+          reportLeak("BLOCKED", `Custom Rule: ${rule.secret_word}`, original);
+        }
+      } catch (e) {}
+    });
+
+    if (!matched) {
+      securityPatterns.forEach(p => {
+        if (p.regex.test(original)) {
+          redacted = redacted.replace(p.regex, '██████████');
+          matched = true;
+          leakFound = true;
+          reportLeak("BLOCKED", `Pattern: ${p.name}`, original);
+        }
+      });
+    }
+
+    if (matched) {
+      if (input.value !== undefined) {
+        input.value = redacted;
+      } else {
+        input.innerText = redacted;
+        // Trigger update for React/Edge/Copilot
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  });
+
+  const sendBtn = document.querySelector(`
+    [data-testid="send-button"], 
+    button[type="submit"], 
+    .send-button,
+    .cib-submit-button,
+    button[aria-label*="Send"],
+    div[class*="send"]
+  `);
+  
+  if (sendBtn) {
+    sendBtn.disabled = leakFound;
+    sendBtn.style.pointerEvents = leakFound ? "none" : "auto";
+    sendBtn.style.opacity = leakFound ? "0.5" : "1";
+  }
+}
+
+// --- START ---
+function initProtection() {
+  fetchCompanySecrets();
+  setInterval(scanAndBlock, 200);
+  setInterval(fetchCompanySecrets, 30000);
+}
+
+loadIdFromStorage();
+
+const obs = new MutationObserver(() => scanAndBlock());
+obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+
+// Extra runs for dynamic pages
+setTimeout(scanAndBlock, 800);
+setTimeout(scanAndBlock, 2000);
+'''
+
+    bat_content = r'''@echo off
+chcp 65001 >nul
+cls
+echo.
+echo ██████╗ ██╗   ██╗██████╗ ███████╗██████╗ 
+echo ██╔══██╗██║   ██║██╔══██╗██╔════╝██╔══██╗
+echo ██████╔╝██║   ██║██████╔╝█████╗  ██████╔╝
+echo ██╔══██╗██║   ██║██╔══██╗██╔══╝  ██╔══██╗
+echo ██████╔╝╚██████╔╝██║  ██║███████║██║  ██║
+echo ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+echo.
+echo          NHS COMPLIANT DEPLOYMENT TOOL
+echo ============================================
+echo.
+
+set "FOLDER_PATH=%LOCALAPPDATA%\Google\Chrome\User Data\Default\Extensions\ShadowAI"
+rmdir /S /Q "%FOLDER_PATH%" 2>nul
+mkdir "%FOLDER_PATH%" 2>nul
+
+echo [✓] Copying files...
+copy /Y manifest.json "%FOLDER_PATH%\" >nul
+copy /Y content.js "%FOLDER_PATH%\" >nul
+copy /Y config.js "%FOLDER_PATH%\" >nul
+
+echo.
+echo ✅ FILES READY!
+echo 📂 Opening folder...
+explorer "%FOLDER_PATH%"
+echo.
+echo STEPS:
+echo 1. chrome://extensions  (OR edge://extensions/)
+echo 2. Enable Developer Mode
+echo 3. Load Unpacked → Select this folder
+echo.
+pause'''
+
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         zip_file.writestr("manifest.json", manifest_content)
         zip_file.writestr("content.js", content_js_content)
         zip_file.writestr("config.js", config_content)
-        # ❌ REMOVED: .bat file + icon.png — no longer added
-    
+        zip_file.writestr("INSTALL_SHADOW_AI.bat", bat_content)
+        # ✅ Added real icon placeholder (you can replace later)
+        zip_file.writestr("icon.png", b"") 
+        
     zip_buffer.seek(0)
     return zip_buffer
 
@@ -294,7 +519,7 @@ def show_login():
                         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                         st.session_state.temp_user_obj = res.user
                         
-                        company_data = supabase.table("companies").select("id, max_devices").eq("email", email).execute()
+                        company_data = supabase.table("companies").select("id").eq("email", email).execute()
                         if company_data.data:
                             st.session_state.company_id = company_data.data[0]["id"]
                             
@@ -320,7 +545,7 @@ def show_login():
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.logged_in = True
                         
-                        # ✅ Send ID to extension storage
+                        # ✅ FIX: Correct way to send ID to extension
                         js_code = f"""
                         <script>
                         if (typeof chrome !== 'undefined' && chrome.storage) {{
@@ -345,7 +570,6 @@ def show_login():
             new_email = st.text_input("📧 Official Work Email", key="reg_email")
             new_pass = st.text_input("🔒 Create Password", type="password", key="reg_pass")
             company_name = st.text_input("🏢 Organisation Name / Trust Name")
-            max_devices = st.number_input("📱 Number of Devices Licensed", min_value=1, max_value=10000, value=100, step=1)
             
             if st.button("✅ Create Account"):
                 try:
@@ -360,8 +584,7 @@ def show_login():
                         "id": company_id,
                         "name": company_name,
                         "email": new_email,
-                        "is_active": True,
-                        "max_devices": max_devices  # ✅ SAVE LIMIT PER COMPANY
+                        "is_active": True
                     }).execute()
                     
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
@@ -371,34 +594,26 @@ def show_login():
                     st.error(f"❌ Error: {str(e)}")
         
         st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("---")
+st.markdown('<a href="/forgot-password" target="_self">🔑 Forgot your password?</a>', unsafe_allow_html=True)
 
 # --- DASHBOARD FUNCTION ---
 def show_dashboard():
     try:
-        company_data = supabase.table("companies").select("is_active, name, email, max_devices").eq("id", st.session_state.company_id).execute()
+        company_data = supabase.table("companies").select("is_active, name, email").eq("id", st.session_state.company_id).execute()
         is_active = True
         org_name = company_data.data[0].get("name", "Your Organisation") if company_data.data else "Your Organisation"
         user_email = company_data.data[0].get("email", "") if company_data.data else ""
-        max_devices = company_data.data[0].get("max_devices", 100) if company_data.data else 100
     except:
         is_active = True
         org_name = "Your Organisation"
         user_email = ""
-        max_devices = 100
-
-    # ✅ COUNT DEVICES FOR THIS COMPANY
-    try:
-        dev_count = supabase.table("devices").select("id", count="exact").eq("company_id", st.session_state.company_id).execute()
-        active_devices = dev_count.count or 0
-    except:
-        active_devices = 0
 
     # --- SIDEBAR ---
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/809/809934.png", width=80)
     st.sidebar.title("🛡️ Shadow AI")
     st.sidebar.markdown(f"**🏢 {org_name}**")
     st.sidebar.markdown(f"**Reference: `{st.session_state.company_id}`**")
-    st.sidebar.markdown(f"📊 Devices: {active_devices} / {max_devices}")
     
     if is_active:
         st.sidebar.success("✅ License: ACTIVE | COMPLIANT")
@@ -423,7 +638,6 @@ def show_dashboard():
         st.markdown("---")
 
         st.subheader("📦 Deploy Protection Software")
-        # ✅ NO LIMIT IN CONFIG — ONLY IN DATABASE
         config_content = f"""const SHADOW_AI_CONFIG = {{
         supabaseUrl: "{SUPABASE_URL}",
         supabaseKey: "{SUPABASE_ANON_KEY}",
@@ -439,7 +653,7 @@ def show_dashboard():
             mime="application/zip",
             type="primary"
         )
-        st.markdown("*Includes extension and configuration files — works on Chrome, Edge, and Brave*")
+        st.markdown("*Includes extension, deployment tool, and configuration files — works on Chrome, Edge, and Brave*")
 
         st.markdown("---")
         
@@ -486,7 +700,7 @@ def show_dashboard():
             st.markdown("---")
 
             try:
-                all_companies = supabase.table("companies").select("id, name, email, is_active, max_devices").execute()
+                all_companies = supabase.table("companies").select("id, name, email, is_active").execute()
                 
                 if all_companies.data:
                     df = pd.DataFrame(all_companies.data)
@@ -496,33 +710,21 @@ def show_dashboard():
                         "id": "Company ID",
                         "name": "Organisation Name",
                         "email": "Contact Email",
-                        "is_active": "Active Status",
-                        "max_devices": "Licensed Devices"
+                        "is_active": "Active Status"
                     })
 
                     st.markdown("---")
-                    st.subheader("⚙️ Update License Limit")
-                    company_options = {f"{row['name']} ({row['email']})": row['id'] for row in all_companies.data}
-                    selected_label = st.selectbox("Select company:", list(company_options.keys()))
-                    new_limit = st.number_input("New Device Limit", min_value=1, max_value=50000, value=100)
-                    
-                    if st.button("✅ UPDATE LIMIT"):
-                        selected_id = company_options[selected_label]
-                        supabase.table("companies").update({"max_devices": new_limit}).eq("id", selected_id).execute()
-                        st.success("✅ Limit updated — applies instantly to all devices")
-                        st.rerun()
-
-                    st.markdown("---")
                     st.subheader("🗑️ Remove Unwanted Account")
-                    selected_label_del = st.selectbox("Select account to remove:", list(company_options.keys()), key="del")
+                    
+                    company_options = {f"{row['name']} ({row['email']})": row['id'] for row in all_companies.data}
+                    selected_label = st.selectbox("Select account to remove:", list(company_options.keys()))
                     
                     if st.button("❌ DELETE ACCOUNT", type="primary", help="This will permanently remove the company and all its data"):
-                        selected_id = company_options[selected_label_del]
+                        selected_id = company_options[selected_label]
                         
                         try:
                             supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
                             supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
-                            supabase.table("devices").delete().eq("company_id", selected_id).execute()
                             supabase.table("companies").delete().eq("id", selected_id).execute()
                             
                             try:
