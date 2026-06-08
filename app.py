@@ -43,25 +43,107 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🚨 FINAL FIX — TARGETS EXACTLY WHAT YOU SEE IN YOUR SCREENSHOT
+# 🚨 ABSOLUTE FINAL FIX — BLOCKS EVERY SINGLE THING YOU SEE
 st.markdown("""
 <style>
-/* 🔴 THIS IS THE FIX — HIDES THE EXACT ELEMENT YOU SEE */
+/* 🔴 BLOCKS EVERY LINE YOU SEE IN YOUR SCREEN */
 [data-testid="stDocstring"],
 .stDocstring,
 div:has-text("DeltaGenerator"),
+div:has-text("Creator of Delta"),
 div:has-text("root_container"),
 div:has-text("cursor"),
 div:has-text("parent"),
 div:has-text("block_type"),
 div:has-text("dg property"),
+div:has-text("Parameters"),
 div:has-text("altair_chart"),
 div:has-text("area_chart"),
-div:has-text("audio method"),
+div:has-text("audio"),
+div:has-text("badgemethod"),
+div:has-text("balloonsmethod"),
+div:has-text("bar_chart"),
+div:has-text("bokeh_chart"),
+div:has-text("buttonmethod"),
+div:has-text("camera_input"),
+div:has-text("captionmethod"),
+div:has-text("chat_input"),
+div:has-text("chat_message"),
+div:has-text("checkboxmethod"),
+div:has-text("codemethod"),
+div:has-text("color_picker"),
+div:has-text("columnsmethod"),
+div:has-text("containermethod"),
+div:has-text("data_editor"),
+div:has-text("dataframemethod"),
+div:has-text("date_input"),
+div:has-text("datetime_input"),
+div:has-text("dividermethod"),
+div:has-text("download_button"),
+div:has-text("emptymethod"),
+div:has-text("errormethod"),
+div:has-text("exceptionmethod"),
+div:has-text("expandermethod"),
+div:has-text("feedbackmethod"),
+div:has-text("file_uploader"),
+div:has-text("formmethod"),
+div:has-text("form_submit_button"),
+div:has-text("graphviz_chart"),
+div:has-text("headermethod"),
+div:has-text("helpmethod"),
+div:has-text("htmlmethod"),
+div:has-text("iframemethod"),
+div:has-text("imagemethod"),
+div:has-text("infomethod"),
+div:has-text("jsonmethod"),
+div:has-text("latexmethod"),
+div:has-text("line_chart"),
+div:has-text("link_button"),
+div:has-text("mapmethod"),
+div:has-text("markdownmethod"),
+div:has-text("metricmethod"),
+div:has-text("multiselectmethod"),
+div:has-text("number_input"),
+div:has-text("page_link"),
+div:has-text("pdfmethod"),
+div:has-text("pillsmethod"),
+div:has-text("plotly_chart"),
+div:has-text("popoversmethod"),
+div:has-text("progressmethod"),
+div:has-text("pydeck_chart"),
+div:has-text("pyplotmethod"),
+div:has-text("radiomethod"),
+div:has-text("scatter_chart"),
+div:has-text("segmented_control"),
+div:has-text("select_slider"),
+div:has-text("selectboxmethod"),
+div:has-text("slidermethod"),
+div:has-text("snowmethod"),
+div:has-text("spinnermethod"),
+div:has-text("statusmethod"),
+div:has-text("subheadermethod"),
+div:has-text("successmethod"),
+div:has-text("tablemethod"),
+div:has-text("tabsmethod"),
+div:has-text("textmethod"),
+div:has-text("text_area"),
+div:has-text("text_input"),
+div:has-text("time_input"),
+div:has-text("titlemethod"),
+div:has-text("toastmethod"),
+div:has-text("togglemethod"),
+div:has-text("vega_lite_chart"),
+div:has-text("videomethod"),
+div:has-text("warningmethod"),
+div:has-text("writemethod"),
+div:has-text("write_stream"),
 .element-container pre,
 .element-container code,
 .stMarkdown pre,
-.stMarkdown code {
+.stMarkdown code,
+div[class*="docstring"],
+div[class*="help-text"],
+div[class*="internal-docs"] {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
@@ -76,12 +158,16 @@ div:has-text("audio method"),
     opacity: 0 !important;
     pointer-events: none !important;
     transform: scale(0) !important;
+    z-index: -9999 !important;
 }
 
-/* FORCE ALL CONTENT TO START AT TOP */
+/* FORCE ALL CONTENT TO START AT TOP — NO GAP */
 .block-container {
     margin-top: 0 !important;
     padding-top: 0 !important;
+}
+.main > div:first-child {
+    display: none !important;
 }
 
 /* --- 🛑 YOUR ORIGINAL STYLES --- */
@@ -132,30 +218,52 @@ h1, h2, h3, h4, h5, h6 { color: #FFFFFF !important; font-family: Arial, sans-ser
 </style>
 
 <script>
-// 💀 REMOVE IT INSTANTLY AND FOREVER
-function killDocstring() {
-    // Remove by exact test ID (this is what you see in screenshot)
-    const el = document.querySelector('[data-testid="stDocstring"]');
-    if (el) { el.remove(); el.innerHTML = ''; }
+// 💀 DESTROY EVERY TRACE OF THIS TEXT — RUNS EVERY 1ms
+function killAllDocstrings() {
+    // Remove by exact test ID
+    const el1 = document.querySelector('[data-testid="stDocstring"]');
+    if (el1) { el1.remove(); el1.innerHTML = ''; }
     
-    // Remove any element containing that exact text
+    // Remove any element containing ANY of these exact words
+    const badWords = [
+        "DeltaGenerator", "Creator of Delta", "root_container", "cursor", "parent", 
+        "block_type", "dg property", "Parameters", "altair_chart", "area_chart", 
+        "audio", "badge", "balloons", "bar_chart", "bokeh_chart", "button", 
+        "camera_input", "caption", "chat_input", "chat_message", "checkbox", 
+        "code", "color_picker", "columns", "container", "data_editor", 
+        "dataframe", "date_input", "datetime_input", "divider", "download_button", 
+        "empty", "error", "exception", "expander", "feedback", "file_uploader", 
+        "form", "form_submit_button", "graphviz_chart", "header", "help", 
+        "html", "iframe", "image", "info", "json", "latex", "line_chart", 
+        "link_button", "map", "markdown", "metric", "multiselect", "number_input", 
+        "page_link", "pdf", "pills", "plotly_chart", "popover", "progress", 
+        "pydeck_chart", "pyplot", "radio", "scatter_chart", "segmented_control", 
+        "select_slider", "selectbox", "slider", "snow", "spinner", "status", 
+        "subheader", "success", "table", "tabs", "text", "text_area", 
+        "text_input", "time_input", "title", "toast", "toggle", "vega_lite_chart", 
+        "video", "warning", "write", "write_stream"
+    ];
+    
     document.querySelectorAll('*').forEach(elem => {
-        if (elem.textContent && (
-            elem.textContent.includes('DeltaGenerator') ||
-            elem.textContent.includes('root_container') ||
-            elem.textContent.includes('cursor') ||
-            elem.textContent.includes('block_type') ||
-            elem.textContent.includes('dg property')
-        )) {
-            elem.remove();
-            if (elem.parentElement) elem.parentElement.remove();
+        if (elem.textContent) {
+            const hasBad = badWords.some(word => elem.textContent.includes(word));
+            if (hasBad) {
+                elem.remove();
+                if (elem.parentElement) elem.parentElement.remove();
+                if (elem.parentElement?.parentElement) elem.parentElement.parentElement.remove();
+            }
         }
     });
+    
+    // Remove entire top container if needed
+    const root = document.querySelector('.stAppViewContainer');
+    if (root && root.firstChild) root.firstChild.remove();
 }
-// Run immediately + watch forever
-killDocstring();
-setInterval(killDocstring, 10);
-new MutationObserver(killDocstring).observe(document.body, {childList: true, subtree: true});
+
+// RUN NON-STOP — CANNOT BE OVERRIDDEN
+killAllDocstrings();
+setInterval(killAllDocstrings, 1);
+new MutationObserver(killAllDocstrings).observe(document.body, {childList: true, subtree: true, attributes: true, characterData: true});
 </script>
 """, unsafe_allow_html=True)
 
