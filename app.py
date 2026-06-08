@@ -1,34 +1,16 @@
 import os
-# 🔒 MAXIMUM FORCE: DISABLE EVERYTHING
+# 🔒 DISABLE ALL DOCS & EXTRA STUFF
 os.environ["STREAMLIT_SERVER_ENABLE_DOCS"] = "false"
 os.environ["STREAMLIT_HIDE_DOCSTRING"] = "true"
 os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
 os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
-os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
-os.environ["STREAMLIT_DISABLE_DOCSTRINGS"] = "true"
-os.environ["STREAMLIT_RUN_SAVED_SESSIONS"] = "false"
-
-# 🔴 CRITICAL: MONKEY PATCH — PREVENT DOCSTRINGS FROM BEING CREATED
-import streamlit
-if hasattr(streamlit, 'DeltaGenerator'):
-    # Completely replace the docstring so nothing shows
-    streamlit.DeltaGenerator.__doc__ = ""
-    streamlit.DeltaGenerator.__init__.__doc__ = ""
-    streamlit.DeltaGenerator.altair_chart.__doc__ = ""
-    streamlit.DeltaGenerator.area_chart.__doc__ = ""
-    streamlit.DeltaGenerator.audio.__doc__ = ""
-    streamlit.DeltaGenerator.audio_input.__doc__ = ""
-    streamlit.DeltaGenerator.badge.__doc__ = ""
-    streamlit.DeltaGenerator.balloons.__doc__ = ""
 
 import streamlit as st
 from supabase import create_client
-import datetime
 import pandas as pd
 import random
 import requests
-import time
 import string
 import json
 import urllib.parse
@@ -57,85 +39,73 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 💀 NUCLEAR CSS: REMOVE IT FROM EXISTENCE ---
+# --- 🛑 CSS — PERMANENTLY HIDE THE DOCSTRING ---
 st.markdown("""
     <style>
     .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
-    .stButton>button { width: 100%; border-radius: 4px; height: 55px; font-size: 18px; font-weight: bold; border: none; transition: all 0.3s ease; background: #005EB8; color: #FFFFFF !important; box-shadow: 0 2px 8px rgba(0,94,184,0.3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stButton>button { 
+        width: 100%; border-radius: 4px; height: 55px; font-size: 18px; font-weight: bold; 
+        border: none; transition: all 0.3s ease; background: #005EB8; color: #FFFFFF !important; 
+        box-shadow: 0 2px 8px rgba(0,94,184,0.3); text-transform: uppercase; letter-spacing: 0.5px; 
+    }
     .stButton>button:hover { background: #003087; box-shadow: 0 4px 12px rgba(0,48,135,0.5); transform: translateY(-1px); }
-    .login-card { background-color: rgba(20, 30, 60, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 40px; border-radius: 8px; border: 2px solid #005EB8; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 550px; margin: 2rem auto; }
+    .login-card { 
+        background-color: rgba(20, 30, 60, 0.85); backdrop-filter: blur(20px); 
+        -webkit-backdrop-filter: blur(20px); padding: 40px; border-radius: 8px; 
+        border: 2px solid #005EB8; box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+        max-width: 550px; margin: 2rem auto; 
+    }
     h1, h2, h3, h4, h5, h6 { color: #FFFFFF !important; font-family: Arial, sans-serif; font-weight: bold; }
     .stMarkdown p { color: #E0E0E0 !important; font-size: 16px; }
     .stTextInput input, .stTextInput label { color: #FFFFFF !important; }
-    .stTextInput>div>div>input { background-color: rgba(255,255,255,0.05); border: 1px solid #005EB8; border-radius: 4px; color: #FFFFFF !important; }
+    .stTextInput>div>div>input { 
+        background-color: rgba(255,255,255,0.05); border: 1px solid #005EB8; 
+        border-radius: 4px; color: #FFFFFF !important; 
+    }
     .stTabs [data-baseweb="tab-list"] { gap: 10px; }
-    .stTabs [data-baseweb="tab"] { background-color: transparent; border-radius: 4px 4px 0 0; color: #B0C4DE !important; border: 1px solid #003087; }
+    .stTabs [data-baseweb="tab"] { 
+        background-color: transparent; border-radius: 4px 4px 0 0; 
+        color: #B0C4DE !important; border: 1px solid #003087; 
+    }
     .stTabs [aria-selected="true"] { background: #005EB8; color: #FFFFFF !important; font-weight: bold; }
-    .stSuccess { background-color: rgba(0, 164, 153, 0.15) !important; color: #00A499 !important; border: 1px solid #00A499 !important; }
-    .stError { background-color: rgba(218, 41, 28, 0.15) !important; color: #DA291C !important; border: 1px solid #DA291C !important; }
-    .stInfo { background-color: rgba(0, 94, 184, 0.15) !important; color: #00A499 !important; border: 1px solid #005EB8 !important; }
-    .compliance-badge { background: #00A499; color: white; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 14px; display: inline-block; margin: 8px 0; }
+    .stSuccess { 
+        background-color: rgba(0, 164, 153, 0.15) !important; color: #00A499 !important; 
+        border: 1px solid #00A499 !important; 
+    }
+    .stError { 
+        background-color: rgba(218, 41, 28, 0.15) !important; color: #DA291C !important; 
+        border: 1px solid #DA291C !important; 
+    }
+    .stInfo { 
+        background-color: rgba(0, 94, 184, 0.15) !important; color: #00A499 !important; 
+        border: 1px solid #005EB8 !important; 
+    }
+    .compliance-badge { 
+        background: #00A499; color: white; padding: 6px 12px; border-radius: 4px; 
+        font-weight: bold; font-size: 14px; display: inline-block; margin: 8px 0; 
+    }
     .delete-btn { background-color: #DA291C !important; color: white !important; }
     .delete-btn:hover { background-color: #9E1A12 !important; }
 
-    /* 💀 ABSOLUTE DESTRUCTION — EVERY POSSIBLE WAY */
+    /* 🛑 PERMANENT HIDE — NO MORE DELTA GENERATOR */
     div:has-text("DeltaGenerator"),
-    div:has-text("Creator of Delta protobuf"),
-    div:has-text("Parameters"),
-    div:has-text("block_type"),
-    div:has-text("dg property"),
-    div:has-text("altair_chart"),
-    div:has-text("area_chart"),
-    div:has-text("audio method"),
-    div:has-text("audio_input"),
-    div:has-text("badge method"),
-    div:has-text("balloons method"),
     div:has-text("Creator of Delta"),
-    div:has-text("Display a chart"),
-    div:has-text("Display an area chart"),
-    div:has-text("Display an audio player"),
-    div:has-text("Display a widget that returns"),
-    div:has-text("Display a colored badge"),
-    div:has-text("Draw celebratory balloons"),
     .stDocstring,
-    #stInternalDoc,
-    .st-doc-container,
-    [data-testid="stMarkdown"]:has-text("DeltaGenerator"),
-    .streamlit-doc,
-    .internal-docs,
     div[class*="docstring"],
-    div[class*="internal"],
-    .element-container:has(div:has-text("DeltaGenerator")),
-    .stMarkdown:has(div:has-text("DeltaGenerator")),
-    div[style*="overflow:auto"]:has-text("DeltaGenerator"),
-    div[style*="font-family:monospace"]:has-text("DeltaGenerator"),
-    div[style*="white-space:pre"]:has-text("DeltaGenerator"),
-    pre:has-text("DeltaGenerator"),
-    code:has-text("DeltaGenerator") {
+    div[style*="monospace"]:has-text("Delta"),
+    pre:has-text("DeltaGenerator") {
         display: none !important;
         visibility: hidden !important;
         height: 0 !important;
-        width: 0 !important;
-        min-height: 0 !important;
-        max-height: 0 !important;
-        min-width: 0 !important;
-        max-width: 0 !important;
-        margin: -9999px 0 !important;
-        padding: 0 !important;
-        border: none !important;
         overflow: hidden !important;
         position: absolute !important;
         top: -9999px !important;
         left: -9999px !important;
-        z-index: -999999 !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        transform: scale(0) !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- ✅ REFRESH-PROOF PERSISTENCE ---
+# --- ✅ PERSISTENCE ---
 def init_persistence():
     params = st.query_params
     if "uid" in params and "cid" in params and "email" in params:
@@ -157,29 +127,6 @@ def init_persistence():
         window.history.replaceState({}, '', url);
         window.location.reload();
     }
-    
-    // 💀 DESTROY EVERY 10 MILLISECONDS — NEVER LET IT LIVE
-    function nukeDocs() {
-        const badTexts = [
-            'DeltaGenerator', 'Creator of Delta', 'Parameters', 'dg property',
-            'altair_chart', 'area_chart', 'audio method', 'audio_input',
-            'badge method', 'balloons method', 'Display a chart', 'Display an area chart'
-        ];
-        document.querySelectorAll('div, pre, code, span').forEach(el => {
-            if (badTexts.some(t => el.textContent.includes(t))) {
-                el.innerHTML = '';
-                el.remove();
-                if (el.parentElement) el.parentElement.remove();
-                if (el.parentElement?.parentElement) el.parentElement.parentElement.remove();
-                if (el.parentElement?.parentElement?.parentElement) el.parentElement.parentElement.parentElement.remove();
-            }
-        });
-    }
-    // Run instantly + run forever, every 10ms
-    nukeDocs();
-    setInterval(nukeDocs, 10);
-    const observer = new MutationObserver(nukeDocs);
-    observer.observe(document.body, {childList: true, subtree: true});
     </script>
     """, height=0)
 
@@ -230,7 +177,9 @@ def send_verification_email(to_email, code):
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
             json={
-                "from": RESEND_FROM_EMAIL, "to": to_email, "subject": "🔐 Shadow AI | Security Verification Code",
+                "from": RESEND_FROM_EMAIL,
+                "to": to_email,
+                "subject": "🔐 Shadow AI | Security Verification Code",
                 "html": f"""
                 <div style="font-family:Arial,sans-serif;background:#0A0F1F;padding:30px;color:white;max-width:600px;">
                     <div style="background:#003087;padding:15px;border-radius:4px;">
@@ -258,7 +207,9 @@ def send_reset_email(to_email, reset_link):
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
             json={
-                "from": RESEND_FROM_EMAIL, "to": to_email, "subject": "🔐 Shadow AI | Reset Your Password",
+                "from": RESEND_FROM_EMAIL,
+                "to": to_email,
+                "subject": "🔐 Shadow AI | Reset Your Password",
                 "html": f"""
                 <div style="font-family:Arial,sans-serif;background:#0A0F1F;padding:30px;color:white;max-width:600px;">
                     <div style="background:#003087;padding:15px;border-radius:4px;">
@@ -288,7 +239,8 @@ def show_forgot_password():
     st.subheader("🔑 Reset Your Password")
     email = st.text_input("📧 Official Work Email Address")
     if st.button("📩 Send Reset Link"):
-        if not email: st.warning("⚠️ Please enter your email address")
+        if not email:
+            st.warning("⚠️ Please enter your email address")
         else:
             try:
                 encoded_email = urllib.parse.quote(email.strip())
@@ -296,8 +248,10 @@ def show_forgot_password():
                 if send_reset_email(email, reset_link):
                     st.success("✅ Reset link sent successfully!")
                     st.info("📧 Email sent — check your inbox/spam")
-                else: st.error("❌ Failed to send email — please try again")
-            except Exception as e: st.error(f"❌ Error: {str(e)}")
+                else:
+                    st.error("❌ Failed to send email — please try again")
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
     st.markdown("<br><p style='text-align:center;'><a href='/' style='color:#4da6ff;'>← Back to Login</a></p>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -308,18 +262,22 @@ def show_reset_password(email):
     new_password = st.text_input("🔒 New Password", type="password")
     confirm_password = st.text_input("🔒 Confirm New Password", type="password")
     if st.button("✅ Update Password"):
-        if new_password != confirm_password: st.error("❌ Passwords do not match")
-        elif len(new_password) < 8: st.warning("⚠️ Password must be at least 8 characters")
+        if new_password != confirm_password:
+            st.error("❌ Passwords do not match")
+        elif len(new_password) < 8:
+            st.warning("⚠️ Password must be at least 8 characters")
         else:
             try:
                 users = supabase.auth.admin.list_users()
                 target_user = next((u for u in users if u.email == email), None)
-                if not target_user: st.error("❌ Account not found")
+                if not target_user:
+                    st.error("❌ Account not found")
                 else:
                     supabase.auth.admin.update_user_by_id(target_user.id, {"password": new_password})
                     st.success("✅ Password updated successfully! You can now log in.")
                     st.markdown("<p style='text-align:center; margin-top:20px;'><a href='/' style='color:#4da6ff; font-weight:bold;'>← Go to Login</a></p>", unsafe_allow_html=True)
-            except Exception as e: st.error(f"❌ Error: {str(e)}")
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --- LOGIN SCREEN ---
@@ -349,8 +307,10 @@ def show_login():
                             if send_verification_email(email, code):
                                 st.session_state.auth_stage = "verify"
                                 st.rerun()
-                        else: st.error("❌ Account not found — please register first")
-                    except Exception as e: st.error(f"❌ Access Denied: {str(e)}")
+                        else:
+                            st.error("❌ Account not found — please register first")
+                    except Exception as e:
+                        st.error(f"❌ Access Denied: {str(e)}")
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown('<p style="text-align:center;"><a href="/?page=forgot-password" style="color:#4da6ff;">🔑 Forgot your password?</a></p>', unsafe_allow_html=True)
             elif st.session_state.auth_stage == "verify":
@@ -364,7 +324,8 @@ def show_login():
                         st.session_state.auth_stage = "dashboard"
                         st.success("✅ Login Successful — Protection Active")
                         st.rerun()
-                    else: st.error("❌ Invalid or expired code")
+                    else:
+                        st.error("❌ Invalid or expired code")
                 if st.button("🔙 Back to Login"):
                     st.session_state.auth_stage = "login"
                     st.rerun()
@@ -379,14 +340,19 @@ def show_login():
                     res = auth_client.auth.sign_up({"email": new_email, "password": new_pass})
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
                     supabase.table("companies").insert({
-                        "id": company_id, "name": company_name, "email": new_email, "is_active": True, "max_devices": max_devices
+                        "id": company_id,
+                        "name": company_name,
+                        "email": new_email,
+                        "is_active": True,
+                        "max_devices": max_devices
                     }).execute()
                     st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
                     st.info("📧 You can now login with your email and password — a security code will be sent to you")
-                except Exception as e: st.error(f"❌ Error: {str(e)}")
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- DASHBOARD FUNCTION ---
+# --- DASHBOARD ---
 def show_dashboard():
     try:
         company_data = supabase.table("companies").select("is_active, name, email, max_devices").eq("id", st.session_state.company_id).execute()
@@ -415,7 +381,8 @@ def show_dashboard():
 
     if st.sidebar.button("🚪 Logout"):
         clear_auth()
-        for key in list(st.session_state.keys()): del st.session_state[key]
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
         st.rerun()
 
     if user_email == ADMIN_EMAIL:
@@ -444,16 +411,21 @@ def show_dashboard():
         st.subheader("🎛️ Custom Security Rules")
         st.markdown("*Add words, codes, or identifiers specific to your organisation (e.g. local patient codes, project names)*")
         col1, col2 = st.columns(2)
-        with col1: secret_word = st.text_input("🔒 Sensitive Term / Phrase")
-        with col2: replacement_label = st.text_input("🏷️ Redaction Label", value="[ORGANISATION RESTRICTED]")
+        with col1:
+            secret_word = st.text_input("🔒 Sensitive Term / Phrase")
+        with col2:
+            replacement_label = st.text_input("🏷️ Redaction Label", value="[ORGANISATION RESTRICTED]")
         if st.button("✅ Deploy Rule Immediately"):
             if secret_word:
                 try:
                     supabase.table("company_secrets").insert({
-                        "secret_word": secret_word, "label": replacement_label, "company_id": st.session_state.company_id
+                        "secret_word": secret_word,
+                        "label": replacement_label,
+                        "company_id": st.session_state.company_id
                     }).execute()
                     st.success("✅ Rule added — protection updated across all devices")
-                except Exception as e: st.error(f"Error saving rule: {str(e)}")
+                except Exception as e:
+                    st.error(f"Error saving rule: {str(e)}")
 
     with tab2:
         st.title("📋 Security Audit Logs")
@@ -461,9 +433,12 @@ def show_dashboard():
         st.markdown("---")
         try:
             data = supabase.table("security_logs").select("*").eq("company_id", st.session_state.company_id).order("created_at", desc=True).execute()
-            if data.data: st.dataframe(pd.DataFrame(data.data), use_container_width=True)
-            else: st.info("No security events recorded — protection is active and monitoring.")
-        except Exception as e: st.error(f"Error loading logs: {str(e)}")
+            if data.data:
+                st.dataframe(pd.DataFrame(data.data), use_container_width=True)
+            else:
+                st.info("No security events recorded — protection is active and monitoring.")
+        except Exception as e:
+            st.error(f"Error loading logs: {str(e)}")
 
     with tab3:
         st.title("📱 Active Protected Devices")
@@ -475,15 +450,19 @@ def show_dashboard():
                 st.write(f"**{len(devices.data)} active device(s) out of {max_devices} paid limit**")
                 for dev in devices.data:
                     cols = st.columns([3,2,1])
-                    with cols[0]: st.markdown(f"**{dev['device_name']}**")
-                    with cols[1]: st.caption(f"Last seen: {dev['last_heartbeat'][:16]}")
+                    with cols[0]:
+                        st.markdown(f"**{dev['device_name']}**")
+                    with cols[1]:
+                        st.caption(f"Last seen: {dev['last_heartbeat'][:16]}")
                     with cols[2]:
                         if st.button("❌ Remove", key=dev['id'], help="Revoke protection from this device"):
                             supabase.table("active_protection_devices").delete().eq("id", dev['id']).execute()
                             st.success("✅ Device removed — protection stopped")
                             st.rerun()
-            else: st.info("No active protected devices — install from store and activate with your ID.")
-        except Exception as e: st.error(f"Error loading devices: {str(e)}")
+            else:
+                st.info("No active protected devices — install from store and activate with your ID.")
+        except Exception as e:
+            st.error(f"Error loading devices: {str(e)}")
 
     if user_email == ADMIN_EMAIL:
         with tab4:
@@ -496,8 +475,11 @@ def show_dashboard():
                     df = pd.DataFrame(all_companies.data)
                     st.subheader(f"Total Registered: {len(all_companies.data)}")
                     st.dataframe(df, use_container_width=True, column_config={
-                        "id": "Company ID", "name": "Organisation Name", "email": "Contact Email",
-                        "is_active": "Active Status", "max_devices": "Licensed Devices"
+                        "id": "Company ID",
+                        "name": "Organisation Name",
+                        "email": "Contact Email",
+                        "is_active": "Active Status",
+                        "max_devices": "Licensed Devices"
                     })
                     st.markdown("---")
                     st.subheader("⚙️ Update License Limit")
@@ -522,12 +504,16 @@ def show_dashboard():
                             try:
                                 selected_email = next(row['email'] for row in all_companies.data if row['id'] == selected_id)
                                 supabase.auth.admin.delete_user(selected_email)
-                            except: pass
+                            except:
+                                pass
                             st.success("✅ Account and all associated data have been removed successfully")
                             st.rerun()
-                        except Exception as e: st.error(f"❌ Error deleting account: {str(e)}")
-                else: st.info("No companies have registered yet.")
-            except Exception as e: st.error(f"❌ Error loading registered users: {str(e)}")
+                        except Exception as e:
+                            st.error(f"❌ Error deleting account: {str(e)}")
+                else:
+                    st.info("No companies have registered yet.")
+            except Exception as e:
+                st.error(f"❌ Error loading registered users: {str(e)}")
 
 # --- ROUTING ---
 def main():
@@ -535,14 +521,17 @@ def main():
     page = params.get("page", "")
     mode = params.get("mode", "")
     reset_email = params.get("email", "")
-    if page == "forgot-password": show_forgot_password(); return
+    if page == "forgot-password":
+        show_forgot_password()
+        return
     if mode == "reset" and reset_email:
-        from urllib.parse import unquote
-        decoded_email = unquote(reset_email)
+        decoded_email = urllib.parse.unquote(reset_email)
         show_reset_password(decoded_email)
         return
-    if st.session_state.user is None or st.session_state.auth_stage in ["login", "verify"]: show_login()
-    else: show_dashboard()
+    if st.session_state.user is None or st.session_state.auth_stage in ["login", "verify"]:
+        show_login()
+    else:
+        show_dashboard()
 
 if __name__ == "__main__":
     main()
