@@ -171,41 +171,66 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- ✅ FIX 1: PERMANENT PERSISTENCE — RUNS FIRST EVERY TIME ---
-# This script loads login from localStorage BEFORE any page logic runs
-st.components.v1.html("""
-<script>
-// Load saved login immediately
-const saved = localStorage.getItem('shadow_auth');
-if (saved) {
-    const data = JSON.parse(saved);
-    // Inject into page so Streamlit can read it instantly
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.id = 'shadow_auth_restore';
-    input.value = saved;
-    document.body.appendChild(input);
-}
-</script>
-""", height=0)
-
-# --- ✅ FIX 2: READ RESTORED DATA IMMEDIATELY ---
-# Read from the injected input — works 100% on refresh
-auth_restore = st.text_input("", key="shadow_auth_restore", label_visibility="collapsed")
-
-# --- SESSION STATE — PRESERVE ACROSS REFRESH ---
-if auth_restore:
-    try:
-        auth_data = json.loads(auth_restore)
-        # Force session state to match saved data
-        st.session_state.user = {"id": auth_data["user_id"], "email": auth_data["user_email"]}
-        st.session_state.user_id = auth_data["user_id"]
-        st.session_state.company_id = auth_data["company_id"]
+# --- ✅ FINAL FIX: 100% REFRESH-PROOF PERSISTENCE ---
+# This uses URL params + localStorage — Streamlit CANNOT clear this
+def init_persistence():
+    # Step 1: Read from URL first (survives refresh)
+    params = st.query_params
+    if "uid" in params and "cid" in params and "email" in params:
+        st.session_state.user = {"id": params["uid"], "email": params["email"]}
+        st.session_state.user_id = params["uid"]
+        st.session_state.company_id = params["cid"]
         st.session_state.auth_stage = "dashboard"
-    except:
-        pass
+        return
 
-# Initialize defaults only if not restored
+    # Step 2: If no URL params, read from localStorage (backup)
+    st.components.v1.html("""
+    <script>
+    // On page load, check storage and update URL
+    const saved = localStorage.getItem('shadow_auth_v2');
+    if (saved) {
+        const data = JSON.parse(saved);
+        const url = new URL(window.location);
+        url.searchParams.set('uid', data.uid);
+        url.searchParams.set('cid', data.cid);
+        url.searchParams.set('email', data.email);
+        window.history.replaceState({}, '', url);
+        window.location.reload();
+    }
+    </script>
+    """, height=0)
+
+def save_auth(uid, cid, email):
+    """Save to BOTH URL and localStorage — permanent"""
+    # Save to URL
+    st.query_params["uid"] = uid
+    st.query_params["cid"] = cid
+    st.query_params["email"] = email
+    # Save to localStorage
+    auth_data = json.dumps({"uid": uid, "cid": cid, "email": email})
+    st.components.v1.html(f"""
+    <script>
+    localStorage.setItem('shadow_auth_v2', `{auth_data}`);
+    if (typeof chrome !== 'undefined' && chrome.storage) {{
+        chrome.storage.local.set({{ "shadow_company_id": "{cid}" }});
+    }}
+    </script>
+    """, height=0)
+
+def clear_auth():
+    """Only clear on explicit logout"""
+    st.query_params.clear()
+    st.components.v1.html("""
+    <script>
+    localStorage.removeItem('shadow_auth_v2');
+    if (typeof chrome !== 'undefined' && chrome.storage) {{
+        chrome.storage.local.remove('shadow_company_id');
+    }}
+    </script>
+    """, height=0)
+
+# --- INIT SESSION STATE ---
+init_persistence()
 if 'user' not in st.session_state:
     st.session_state.user = None
 if 'user_id' not in st.session_state:
@@ -218,35 +243,6 @@ if 'temp_user_obj' not in st.session_state:
     st.session_state.temp_user_obj = None
 if 'verification_code' not in st.session_state:
     st.session_state.verification_code = None
-
-# --- ✅ FIX 3: SAVE LOGIN TO PERMANENT STORAGE ---
-def save_auth_to_storage():
-    """Save login forever — survives refresh/close/reopen"""
-    auth_data = json.dumps({
-        "user_id": st.session_state.user_id,
-        "company_id": st.session_state.company_id,
-        "user_email": st.session_state.user["email"]
-    })
-    st.components.v1.html(f"""
-    <script>
-        localStorage.setItem('shadow_auth', `{auth_data}`);
-        // Also save to extension storage
-        if (typeof chrome !== 'undefined' && chrome.storage) {{
-            chrome.storage.local.set({{ "shadow_company_id": "{st.session_state.company_id}" }});
-        }}
-    </script>
-    """, height=0)
-
-def clear_auth_storage():
-    """Clear only on explicit logout"""
-    st.components.v1.html("""
-    <script>
-        localStorage.removeItem('shadow_auth');
-        if (typeof chrome !== 'undefined' && chrome.storage) {{
-            chrome.storage.local.remove('shadow_company_id');
-        }}
-    </script>
-    """, height=0)
 
 # --- EMAIL FUNCTIONS ---
 def send_verification_email(to_email, code):
@@ -323,7 +319,7 @@ def send_reset_email(to_email, reset_link):
         st.error(f"❌ Email Error: {e}")
         return False
 
-# --- ✅ DEVICE COUNTING FIXED ---
+# --- DEVICE COUNTING ---
 def create_zip_file(config_content):
     manifest_content = '''{
   "manifest_version": 3,
@@ -704,7 +700,7 @@ def show_reset_password(email):
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- ✅ LOGIN: 2FA ENFORCED + SAVE ON SUCCESS ---
+# --- LOGIN + 2FA ---
 def show_login():
     st.title("🛡️ Shadow AI")
     st.markdown("#### *NHS Compliant Data Protection & AI Security*")
@@ -738,7 +734,7 @@ def show_login():
                         st.session_state.user = {"id": res.user.id, "email": email}
                         st.session_state.user_id = res.user.id
                         
-                        # ALWAYS send 2FA code
+                        # Send 2FA code
                         code = str(random.randint(100000, 999999))
                         st.session_state.verification_code = code
                         
@@ -765,8 +761,12 @@ def show_login():
                 
                 if st.button("✅ Verify & Access Dashboard"):
                     if user_code == st.session_state.verification_code:
-                        # ✅ SAVE LOGIN PERMANENTLY — THIS IS WHAT FIXES REFRESH
-                        save_auth_to_storage()
+                        # ✅ SAVE PERMANENTLY — THIS IS THE FIX
+                        save_auth(
+                            st.session_state.user_id,
+                            st.session_state.company_id,
+                            st.session_state.temp_user_obj.email
+                        )
                         st.session_state.auth_stage = "dashboard"
                         st.success("✅ Login Successful — Protection Active")
                         st.rerun()
@@ -845,8 +845,7 @@ def show_dashboard():
         st.sidebar.error("❌ License: PENDING")
 
     if st.sidebar.button("🚪 Logout"):
-        # ✅ CLEAR ONLY ON LOGOUT
-        clear_auth_storage()
+        clear_auth()
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
@@ -1004,7 +1003,6 @@ def main():
         show_reset_password(decoded_email)
         return
 
-    # Only show login if NO saved auth
     if st.session_state.user is None or st.session_state.auth_stage in ["login", "verify"]:
         show_login()
     else:
