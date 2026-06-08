@@ -1,11 +1,10 @@
 import os
-# Disable all Streamlit help/docs completely
+# Disable all Streamlit documentation output
 os.environ["STREAMLIT_SERVER_ENABLE_DOCS"] = "false"
 os.environ["STREAMLIT_HIDE_DOCSTRING"] = "true"
-os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
 os.environ["STREAMLIT_DISABLE_DOCSTRINGS"] = "true"
-os.environ["STREAMLIT_DISABLE_DOCSTRING_RENDER"] = "true"
 os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
+os.environ["STREAMLIT_DISABLE_DOCSTRING_RENDER"] = "true"
 
 import streamlit as st
 from supabase import create_client
@@ -40,97 +39,17 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🚨 NUCLEAR FIX: BLOCK *EVERYTHING* BEFORE IT CAN SHOW
+# 🛡️ FINAL BLOCK: Hide any remaining docstring content
 st.markdown("""
 <style>
-/* Wipe out the entire top area if it contains bad text */
-div[data-testid="stAppViewContainer"] > div:first-child,
-div[data-testid="stDocstring"],
+/* Remove all Streamlit docstring/help text */
+[data-testid="stDocstring"],
 .stDocstring,
 div:has-text("DeltaGenerator"),
 div:has-text("Creator of Delta"),
 div:has-text("Parameters"),
 div:has-text("dg property"),
-div:has-text("altair_chart"),
-div:has-text("area_chart"),
-div:has-text("audio"),
-div:has-text("badge"),
-div:has-text("balloons"),
-div:has-text("bar_chart"),
-div:has-text("bokeh_chart"),
-div:has-text("button"),
-div:has-text("camera_input"),
-div:has-text("caption"),
-div:has-text("chat_input"),
-div:has-text("chat_message"),
-div:has-text("checkbox"),
-div:has-text("code"),
-div:has-text("color_picker"),
-div:has-text("columns"),
-div:has-text("container"),
-div:has-text("data_editor"),
-div:has-text("dataframe"),
-div:has-text("date_input"),
-div:has-text("datetime_input"),
-div:has-text("divider"),
-div:has-text("download_button"),
-div:has-text("empty"),
-div:has-text("error"),
-div:has-text("exception"),
-div:has-text("expander"),
-div:has-text("feedback"),
-div:has-text("file_uploader"),
-div:has-text("form"),
-div:has-text("form_submit_button"),
-div:has-text("graphviz_chart"),
-div:has-text("header"),
-div:has-text("help"),
-div:has-text("html"),
-div:has-text("iframe"),
-div:has-text("image"),
-div:has-text("info"),
-div:has-text("json"),
-div:has-text("latex"),
-div:has-text("line_chart"),
-div:has-text("link_button"),
-div:has-text("map"),
-div:has-text("markdown"),
-div:has-text("metric"),
-div:has-text("multiselect"),
-div:has-text("number_input"),
-div:has-text("page_link"),
-div:has-text("pdf"),
-div:has-text("pills"),
-div:has-text("plotly_chart"),
-div:has-text("popover"),
-div:has-text("progress"),
-div:has-text("pydeck_chart"),
-div:has-text("pyplot"),
-div:has-text("radio"),
-div:has-text("scatter_chart"),
-div:has-text("segmented_control"),
-div:has-text("select_slider"),
-div:has-text("selectbox"),
-div:has-text("slider"),
-div:has-text("snow"),
-div:has-text("spinner"),
-div:has-text("status"),
-div:has-text("subheader"),
-div:has-text("success"),
-div:has-text("table"),
-div:has-text("tabs"),
-div:has-text("text"),
-div:has-text("text_area"),
-div:has-text("text_input"),
-div:has-text("time_input"),
-div:has-text("title"),
-div:has-text("toast"),
-div:has-text("toggle"),
-div:has-text("vega_lite_chart"),
-div:has-text("video"),
-div:has-text("warning"),
-div:has-text("write"),
-div:has-text("write_stream"),
+div:has-text("method"),
 pre, code, .docstring, .help-text {
     display: none !important;
     visibility: hidden !important;
@@ -145,125 +64,79 @@ pre, code, .docstring, .help-text {
     border: none !important;
     opacity: 0 !important;
     pointer-events: none !important;
-    transform: scale(0) !important;
-    z-index: -9999 !important;
 }
-
-/* Force content to start at the very top */
+/* Fix page spacing */
 .block-container {
     margin-top: 0 !important;
-    padding-top: 0 !important;
+    padding-top: 1rem !important;
 }
-.stApp {
-    margin-top: 0 !important;
+/* Your original styles below */
+.main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
+.stButton>button { 
+    width: 100%; border-radius: 4px; height: 55px; font-size: 18px; font-weight: bold; 
+    border: none; transition: all 0.3s ease; background: #005EB8; color: #FFFFFF !important; 
+    box-shadow: 0 2px 8px rgba(0,94,184,0.3); text-transform: uppercase; letter-spacing: 0.5px; 
 }
+.stButton>button:hover { background: #003087; box-shadow: 0 4px 12px rgba(0,48,135,0.5); transform: translateY(-1px); }
+.login-card { 
+    background-color: rgba(20, 30, 60, 0.85); backdrop-filter: blur(20px); 
+    -webkit-backdrop-filter: blur(20px); padding: 40px; border-radius: 8px; 
+    border: 2px solid #005EB8; box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+    max-width: 550px; margin: 2rem auto; 
+}
+h1, h2, h3, h4, h5, h6 { color: #FFFFFF !important; font-family: Arial, sans-serif; font-weight: bold; }
+.stMarkdown p { color: #E0E0E0 !important; font-size: 16px; }
+.stTextInput input, .stTextInput label { color: #FFFFFF !important; }
+.stTextInput>div>div>input { 
+    background-color: rgba(255,255,255,0.05); border: 1px solid #005EB8; 
+    border-radius: 4px; color: #FFFFFF !important; 
+}
+.stTabs [data-baseweb="tab-list"] { gap: 10px; }
+.stTabs [data-baseweb="tab"] { 
+    background-color: transparent; border-radius: 4px 4px 0 0; 
+    color: #B0C4DE !important; border: 1px solid #003087; 
+}
+.stTabs [aria-selected="true"] { background: #005EB8; color: #FFFFFF !important; font-weight: bold; }
+.stSuccess { 
+    background-color: rgba(0, 164, 153, 0.15) !important; color: #00A499 !important; 
+    border: 1px solid #00A499 !important; 
+}
+.stError { 
+    background-color: rgba(218, 41, 28, 0.15) !important; color: #DA291C !important; 
+    border: 1px solid #DA291C !important; 
+}
+.stInfo { 
+    background-color: rgba(0, 94, 184, 0.15) !important; color: #00A499 !important; 
+    border: 1px solid #005EB8 !important; 
+}
+.compliance-badge { 
+    background: #00A499; color: white; padding: 6px 12px; border-radius: 4px; 
+    font-weight: bold; font-size: 14px; display: inline-block; margin: 8px 0; 
+}
+.delete-btn { background-color: #DA291C !important; color: white !important; }
+.delete-btn:hover { background-color: #9E1A12 !important; }
 </style>
 
 <script>
-function destroyBadText() {
-    // Remove by test ID
-    const docEl = document.querySelector('[data-testid="stDocstring"]');
-    if (docEl) docEl.remove();
-
-    // Remove any element containing the bad text
-    const badPatterns = [
-        "DeltaGenerator", "Creator of Delta", "Parameters", "root_container",
-        "cursor", "parent", "block_type", "dg property", "altair_chart",
-        "area_chart", "audio", "badge", "balloons", "bar_chart", "bokeh_chart",
-        "button", "camera_input", "caption", "chat_input", "chat_message",
-        "checkbox", "code", "color_picker", "columns", "container",
-        "data_editor", "dataframe", "date_input", "datetime_input", "divider",
-        "download_button", "empty", "error", "exception", "expander",
-        "feedback", "file_uploader", "form", "form_submit_button",
-        "graphviz_chart", "header", "help", "html", "iframe", "image",
-        "info", "json", "latex", "line_chart", "link_button", "map",
-        "markdown", "metric", "multiselect", "number_input", "page_link",
-        "pdf", "pills", "plotly_chart", "popover", "progress",
-        "pydeck_chart", "pyplot", "radio", "scatter_chart",
-        "segmented_control", "select_slider", "selectbox", "slider",
-        "snow", "spinner", "status", "subheader", "success", "table",
-        "tabs", "text", "text_area", "text_input", "time_input",
-        "title", "toast", "toggle", "vega_lite_chart", "video",
-        "warning", "write", "write_stream"
-    ];
-
-    document.querySelectorAll('*').forEach(el => {
-        if (!el.textContent) return;
-        if (badPatterns.some(p => el.textContent.includes(p))) {
+// Remove any docstring elements immediately
+function removeDocstrings() {
+    const badElements = document.querySelectorAll('[data-testid="stDocstring"], .stDocstring');
+    badElements.forEach(el => el.remove());
+    
+    // Also remove any element containing DeltaGenerator text
+    document.querySelectorAll('div').forEach(el => {
+        if (el.textContent.includes('DeltaGenerator') || el.textContent.includes('Parameters')) {
             el.remove();
-            if (el.parentElement) el.parentElement.remove();
         }
     });
-
-    // Also clear the entire top container if needed
-    const firstBlock = document.querySelector('.block-container > div:first-child');
-    if (firstBlock && badPatterns.some(p => firstBlock.textContent.includes(p))) {
-        firstBlock.remove();
-    }
 }
-
-// Run repeatedly to catch any late injection
-destroyBadText();
-setInterval(destroyBadText, 50);
-new MutationObserver(destroyBadText).observe(document.body, {
-    childList: true, subtree: true, attributes: true, characterData: true
-});
+removeDocstrings();
+setInterval(removeDocstrings, 100);
+new MutationObserver(removeDocstrings).observe(document.body, {childList: true, subtree: true});
 </script>
 """, unsafe_allow_html=True)
 
-# --- 🛑 YOUR ORIGINAL STYLES ---
-st.markdown("""
-    <style>
-    .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
-    .stButton>button { 
-        width: 100%; border-radius: 4px; height: 55px; font-size: 18px; font-weight: bold; 
-        border: none; transition: all 0.3s ease; background: #005EB8; color: #FFFFFF !important; 
-        box-shadow: 0 2px 8px rgba(0,94,184,0.3); text-transform: uppercase; letter-spacing: 0.5px; 
-    }
-    .stButton>button:hover { background: #003087; box-shadow: 0 4px 12px rgba(0,48,135,0.5); transform: translateY(-1px); }
-    .login-card { 
-        background-color: rgba(20, 30, 60, 0.85); backdrop-filter: blur(20px); 
-        -webkit-backdrop-filter: blur(20px); padding: 40px; border-radius: 8px; 
-        border: 2px solid #005EB8; box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-        max-width: 550px; margin: 2rem auto; 
-    }
-    h1, h2, h3, h4, h5, h6 { color: #FFFFFF !important; font-family: Arial, sans-serif; font-weight: bold; }
-    .stMarkdown p { color: #E0E0E0 !important; font-size: 16px; }
-    .stTextInput input, .stTextInput label { color: #FFFFFF !important; }
-    .stTextInput>div>div>input { 
-        background-color: rgba(255,255,255,0.05); border: 1px solid #005EB8; 
-        border-radius: 4px; color: #FFFFFF !important; 
-    }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
-    .stTabs [data-baseweb="tab"] { 
-        background-color: transparent; border-radius: 4px 4px 0 0; 
-        color: #B0C4DE !important; border: 1px solid #003087; 
-    }
-    .stTabs [aria-selected="true"] { background: #005EB8; color: #FFFFFF !important; font-weight: bold; }
-    .stSuccess { 
-        background-color: rgba(0, 164, 153, 0.15) !important; color: #00A499 !important; 
-        border: 1px solid #00A499 !important; 
-    }
-    .stError { 
-        background-color: rgba(218, 41, 28, 0.15) !important; color: #DA291C !important; 
-        border: 1px solid #DA291C !important; 
-    }
-    .stInfo { 
-        background-color: rgba(0, 94, 184, 0.15) !important; color: #00A499 !important; 
-        border: 1px solid #005EB8 !important; 
-    }
-    .compliance-badge { 
-        background: #00A499; color: white; padding: 6px 12px; border-radius: 4px; 
-        font-weight: bold; font-size: 14px; display: inline-block; margin: 8px 0; 
-    }
-    .delete-btn { background-color: #DA291C !important; color: white !important; }
-    .delete-btn:hover { background-color: #9E1A12 !important; }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- REST OF YOUR ORIGINAL CODE REMAINS EXACTLY THE SAME ---
-
-# --- ✅ PERSISTENCE ---
+# --- PERSISTENCE ---
 def init_persistence():
     params = st.query_params
     if "uid" in params and "cid" in params and "email" in params:
@@ -662,6 +535,6 @@ def main():
     else:
         show_dashboard()
 
-# --- CRITICAL FIX: NO TOP-LEVEL OBJECTS ---
+# --- 🚫 NO TOP-LEVEL OBJECTS HERE ---
 if __name__ == "__main__":
     main()
