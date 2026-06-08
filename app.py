@@ -170,62 +170,83 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- PERSISTENT LOGIN HELPER FUNCTIONS ---
-def get_storage_script():
+# --- ✅ FIXED: PERSISTENT LOGIN FUNCTIONS ---
+def get_storage_scripts():
     return """
     <script>
-    // Save login state
+    // Save login data to browser storage
     function saveLoginState(userId, companyId, userEmail) {
         localStorage.setItem('shadow_user_id', userId);
         localStorage.setItem('shadow_company_id', companyId);
         localStorage.setItem('shadow_user_email', userEmail);
+        console.log("✅ Login state saved");
     }
-    // Load login state
+
+    // Load login data from browser storage
     function loadLoginState() {
         const userId = localStorage.getItem('shadow_user_id');
         const companyId = localStorage.getItem('shadow_company_id');
         const userEmail = localStorage.getItem('shadow_user_email');
+        
         if(userId && companyId && userEmail) {
+            // Send data back to Streamlit
             window.parent.postMessage({
-                type: 'shadow_login_restore',
+                type: 'STREAMLIT_LOGIN_RESTORE',
                 userId: userId,
                 companyId: companyId,
                 userEmail: userEmail
             }, '*');
         }
     }
-    // Clear login state
+
+    // Clear login data on logout
     function clearLoginState() {
         localStorage.removeItem('shadow_user_id');
         localStorage.removeItem('shadow_company_id');
         localStorage.removeItem('shadow_user_email');
+        console.log("✅ Login state cleared");
     }
-    // Auto-load on page start
+
+    // Listen for messages from Streamlit
+    window.addEventListener('message', function(event) {
+        if(event.data.type === 'SAVE_LOGIN') {
+            saveLoginState(event.data.userId, event.data.companyId, event.data.userEmail);
+        }
+    });
+
+    // Auto-load when page opens
     loadLoginState();
     </script>
     """
 
-def restore_login_from_storage():
-    """Restore login state from browser storage on refresh"""
-    st.components.v1.html(get_storage_script(), height=0)
-    
-    # Listen for restored login data
+def restore_login_session():
+    """Restore login from storage BEFORE checking session state"""
+    st.components.v1.html(get_storage_scripts(), height=0)
+
+    # Receive data from JS
     if "login_restored" not in st.session_state:
         st.session_state.login_restored = False
-    
-    # If we already have data in session, skip
-    if st.session_state.get("user") and st.session_state.get("company_id"):
+
+    # If we already have session, skip
+    if st.session_state.get("user_id") and st.session_state.get("company_id"):
         return
 
-    # This will be populated from the JS above
-    if "restored_data" in st.session_state:
-        data = st.session_state.restored_data
-        if data.get("userId") and data.get("companyId") and data.get("userEmail"):
-            st.session_state.user = {"id": data["userId"], "email": data["userEmail"]}
-            st.session_state.user_id = data["userId"]
-            st.session_state.company_id = data["companyId"]
-            st.session_state.login_restored = True
-            st.rerun()
+    # This catches the data sent from JS
+    if not st.session_state.login_restored:
+        # We use a hidden input to pass data reliably
+        restore_data = st.text_input("", key="restore_data", label_visibility="collapsed")
+        if restore_data:
+            try:
+                import json
+                data = json.loads(restore_data)
+                if data.get("userId") and data.get("companyId"):
+                    st.session_state.user = {"id": data["userId"], "email": data["userEmail"]}
+                    st.session_state.user_id = data["userId"]
+                    st.session_state.company_id = data["companyId"]
+                    st.session_state.login_restored = True
+                    st.rerun()
+            except:
+                pass
 
 # --- SESSION STATE ---
 if 'user' not in st.session_state:
@@ -694,7 +715,7 @@ def show_reset_password(email):
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- LOGIN SCREEN ---
+# --- ✅ FIXED LOGIN SCREEN — 2FA BACK + PERSISTENT ---
 def show_login():
     st.title("🛡️ Shadow AI")
     st.markdown("#### *NHS Compliant Data Protection & AI Security*")
@@ -728,20 +749,15 @@ def show_login():
                         st.session_state.user = {"id": res.user.id, "email": email}
                         st.session_state.user_id = res.user.id
                         
-                        # Save login to browser storage
-                        save_script = f"""
-                        <script>
-                        saveLoginState('{res.user.id}', '{company_id}', '{email}');
-                        </script>
-                        """
-                        st.components.v1.html(save_script, height=0)
-                        
+                        # ✅ Generate and send 2FA code
                         code = str(random.randint(100000, 999999))
                         st.session_state.verification_code = code
                         
                         if send_verification_email(email, code):
                             st.session_state.auth_stage = "verify"
                             st.rerun()
+                        else:
+                            st.error("❌ Failed to send verification code — try again")
                             
                     except Exception as e:
                         st.error(f"❌ Access Denied: {str(e)}")
@@ -760,14 +776,23 @@ def show_login():
                 
                 if st.button("✅ Verify & Access Dashboard"):
                     if user_code == st.session_state.verification_code:
-                        js_code = f"""
+                        # ✅ SAVE LOGIN TO BROWSER STORAGE
+                        save_script = f"""
                         <script>
-                        if (typeof chrome !== 'undefined' && chrome.storage) {{
-                            chrome.storage.local.set({{ "shadow_company_id": "{st.session_state.company_id}" }});
-                        }}
+                            window.parent.postMessage({{
+                                type: 'SAVE_LOGIN',
+                                userId: '{st.session_state.user_id}',
+                                companyId: '{st.session_state.company_id}',
+                                userEmail: '{st.session_state.temp_user_obj.email}'
+                            }}, '*');
+                            
+                            if (typeof chrome !== 'undefined' && chrome.storage) {{
+                                chrome.storage.local.set({{ "shadow_company_id": "{st.session_state.company_id}" }});
+                            }}
                         </script>
                         """
-                        st.components.v1.html(js_code, height=0)
+                        st.components.v1.html(save_script, height=0)
+                        
                         st.success("✅ Login Successful — Protection Active")
                         st.rerun()
                     else:
@@ -845,10 +870,14 @@ def show_dashboard():
         st.sidebar.error("❌ License: PENDING")
 
     if st.sidebar.button("🚪 Logout"):
+        # ✅ CLEAR STORAGE ON LOGOUT
         clear_script = """<script>clearLoginState();</script>"""
         st.components.v1.html(clear_script, height=0)
         st.session_state.user = None
+        st.session_state.user_id = None
+        st.session_state.company_id = None
         st.session_state.auth_stage = "login"
+        st.session_state.login_restored = False
         st.rerun()
 
     if user_email == ADMIN_EMAIL:
@@ -989,8 +1018,8 @@ def show_dashboard():
 
 # --- ROUTING ---
 def main():
-    # Restore login before anything else
-    restore_login_from_storage()
+    # ✅ Restore login FIRST — before anything else
+    restore_login_session()
     
     params = st.query_params
     page = params.get("page", "")
