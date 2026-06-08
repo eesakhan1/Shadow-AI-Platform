@@ -280,7 +280,7 @@ def send_reset_email(to_email, reset_link):
         st.error(f"❌ Email Error: {e}")
         return False
 
-# --- ✅ FINAL FIXED ZIP GENERATOR ---
+# --- ✅ FINAL FIXED ZIP GENERATOR — REGEX ERROR FIXED ---
 def create_zip_file(config_content):
     # ✅ PERFECT MANIFEST — NO ERRORS, NO ICONS
     manifest_content = '''{
@@ -351,7 +351,7 @@ def create_zip_file(config_content):
   }
 }'''
 
-    # ✅ EMBEDDED CONTENT.JS — NO EXTERNAL FILE NEEDED
+    # ✅ EMBEDDED CONTENT.JS — ✅ REGEX ERROR FIXED (+ escaped properly)
     content_js_content = '''// --- SHADOW AI CORE ENGINE — NHS COMPLIANT ---
 console.log("🚀 SHADOW AI: Script injected and RUNNING");
 
@@ -414,7 +414,7 @@ const securityPatterns = [
   { name: "CLINICAL_REF", regex: /\b(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}\b/gi },
   { name: "DOB", regex: /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g },
   { name: "EMAIL_ADDRESS", regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi },
-  { name: "PHONE_NUMBER", regex: /\b(?:+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
+  { name: "PHONE_NUMBER", regex: /\b(?:\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
   { name: "POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
   { name: "FULL_NAME", regex: /\b[A-Z][a-z]+\s[A-Z][a-z]+\b/g },
   { name: "CREDIT_CARD", regex: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g },
@@ -561,13 +561,12 @@ setTimeout(scanAndBlock, 800);
 setTimeout(scanAndBlock, 2000);
 '''
 
-    # ✅ ZIP = ONLY 3 FILES — NO EXTRA STUFF
+    # ✅ ZIP = ONLY 3 FILES — NO EXTRA STUFF, NO ICONS
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         zip_file.writestr("manifest.json", manifest_content)
         zip_file.writestr("content.js", content_js_content)
         zip_file.writestr("config.js", config_content)
-        # ❌ NO .BAT, NO ICON.PNG
     
     zip_buffer.seek(0)
     return zip_buffer
