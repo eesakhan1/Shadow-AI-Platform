@@ -14,13 +14,17 @@ import uuid
 import base64
 import json
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION — ✅ FIXED FOR RENDER ---
 try:
-    SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
-    SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
-    RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
-    RESEND_FROM_EMAIL = st.secrets["RESEND_FROM_EMAIL"]
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+    SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+    RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL")
+
+    if not all([SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL]):
+        raise ValueError("Missing one or more required environment variables")
+
 except Exception as e:
     st.error(f"❌ Secrets Error: {e}")
     st.stop()
