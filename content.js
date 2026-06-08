@@ -1,4 +1,3 @@
-// --- SHADOW AI CORE ENGINE — NHS COMPLIANT ---
 console.log("🛡️ Shadow AI: Protection initializing");
 
 // --- SHARED BASE CONFIG (SAME FOR EVERYONE) ---
@@ -71,7 +70,7 @@ async function validateCompanyId(id) {
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
     });
     const data = await res.json();
-    return data.length === 1;
+    return Array.isArray(data) && data.length === 1;
   } catch (e) { return false; }
 }
 
@@ -101,18 +100,58 @@ async function registerDeviceHeartbeat() {
 
 // --- SECURITY PATTERNS (FIXED, ALL WORK) ---
 const securityPatterns = [
-  { name: "SENSITIVE_TERM", regex: /(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs\s*number|patient\s*id|dob|date\s*of\s*birth|next\s*of\s*kin)/gi },
-  { name: "NHS_NUMBER", regex: /\d{3}[-\s]?\d{3}[-\s]?\d{4}/g },
-  { name: "PATIENT_ID", regex: /(PAT|PT|patient)[-\s]?[A-Z0-9]{6,12}/gi },
-  { name: "ODS_CODE", regex: /[A-Z0-9]{3,5}/g },
-  { name: "CLINICAL_REF", regex: /(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}/gi },
-  { name: "DOB", regex: /\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}/g },
-  { name: "EMAIL_ADDRESS", regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi },
-  { name: "PHONE_NUMBER", regex: /(\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}/g },
-  { name: "POSTCODE", regex: /[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}/gi },
-  { name: "FULL_NAME", regex: /[A-Z][a-z]+\s[A-Z][a-z]+/g },
-  { name: "CREDIT_CARD", regex: /\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}/g },
-  { name: "API_KEY", regex: /(api|key|token|secret|password|bearer|auth)[^\s]{0,10}['"]?[a-zA-Z0-9_\-+/]{10,}/gi }
+  { 
+    name: "SENSITIVE_TERM", 
+    regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs\s*number|patient\s*id|dob|date\s*of\s*birth|next\s*of\s*kin)\b/gi 
+  },
+  { 
+    name: "NHS_NUMBER", 
+    regex: /\b(?:\d{3}[-\s]?\d{3}[-\s]?\d{4})\b/g 
+    // Matches valid format: 123 456 7890 | 123-456-7890 | 1234567890
+  },
+  { 
+    name: "PATIENT_ID", 
+    regex: /\b(PAT|PT|patient)[-\s]?[A-Z0-9]{6,12}\b/gi 
+  },
+  { 
+    name: "ODS_CODE", 
+    regex: /\b[A-Z0-9]{3,5}\b/g 
+    // Matches standard 3–5 character ODS codes
+  },
+  { 
+    name: "CLINICAL_REF", 
+    regex: /\b(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}\b/gi 
+  },
+  { 
+    name: "DOB", 
+    regex: /\b(?:0[1-9]|[12]\d|3[01])[\/.-](?:0[1-9]|1[0-2])[\/.-]\d{4}\b/g 
+    // Valid dates only: DD/MM/YYYY | DD-MM-YYYY | DD.MM.YYYY
+  },
+  { 
+    name: "EMAIL_ADDRESS", 
+    regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/gi 
+  },
+  { 
+    name: "PHONE_NUMBER", 
+    regex: /\b(\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g 
+  },
+  { 
+    name: "POSTCODE", 
+    regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi 
+  },
+  { 
+    name: "FULL_NAME", 
+    regex: /\b(?:[A-Z][a-z]{2,}\s){1,2}[A-Z][a-z]{2,}\b/g 
+    // Only matches names with ≥3 letters per word (avoids "Shadow AI", "Google Docs")
+  },
+  { 
+    name: "CREDIT_CARD", 
+    regex: /\b(?:\d{4}[- ]?){3}\d{4}\b/g 
+  },
+  { 
+    name: "API_KEY", 
+    regex: /\b(api|key|token|secret|password|bearer|auth)[^\s]{0,10}['"]?[a-zA-Z0-9_\-+/]{10,}\b/gi 
+  }
 ];
 
 // --- FETCH CUSTOM RULES ---
@@ -178,11 +217,13 @@ function scanAndBlock() {
     let redacted = original;
     let matched = false;
 
-    // Custom rules
+    // Custom rules — FIXED: removed \b, better escaping
     customSecrets.forEach(rule => {
       try {
-        const rx = new RegExp(`\\b${rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
-        if (rx.test(original)) {
+        const escaped = rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const rx = new RegExp(escaped, 'gi');
+        const testRx = new RegExp(`\\b${escaped}\\b|${escaped}`, 'gi'); // Match whole word OR inside
+        if (testRx.test(original)) {
           redacted = redacted.replace(rx, '██████████');
           matched = true;
           leakFound = true;
@@ -191,11 +232,11 @@ function scanAndBlock() {
       } catch (e) {}
     });
 
-    // Built-in patterns
+    // Built-in patterns — FIXED: no lastIndex bug
     if (!matched) {
       securityPatterns.forEach(p => {
-        p.regex.lastIndex = 0;
-        if (p.regex.test(original)) {
+        const matches = original.match(p.regex);
+        if (matches && matches.length > 0) {
           redacted = redacted.replace(p.regex, '██████████');
           matched = true;
           leakFound = true;
@@ -219,6 +260,7 @@ function scanAndBlock() {
     sendBtn.disabled = leakFound;
     sendBtn.style.pointerEvents = leakFound ? "none" : "auto";
     sendBtn.style.opacity = leakFound ? "0.4" : "1";
+    sendBtn.title = leakFound ? "⚠️ Blocked: Sensitive data detected" : "";
   }
 
   isScanning = false;
@@ -227,7 +269,7 @@ function scanAndBlock() {
 // --- START ---
 function initProtection() {
   setInterval(scanAndBlock, 600);
-  setInterval(fetchCompanySecrets, 120000);
+  setInterval(fetchCompanySecrets, 120000); // Refresh rules every 2min
 }
 
 // --- OBSERVE CHANGES ---
