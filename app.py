@@ -39,7 +39,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CUSTOM CSS ---
+# --- CUSTOM CSS — CLEAN, NO TRIGGERS ---
 st.markdown("""
     <style>
     .main {
@@ -656,7 +656,7 @@ def show_forgot_password():
         else:
             try:
                 encoded_email = urllib.parse.quote(email.strip())
-                reset_link = f"https://shadow-ai-platform-4ewudc2yankyvpfirbaej3.streamlit.app/?mode=reset&email={encoded_email}"
+                reset_link = f"https://shadow-ai-platform.onrender.com/?mode=reset&email={encoded_email}"
 
                 if send_reset_email(email, reset_link):
                     st.success("✅ Reset link sent successfully!")
@@ -875,13 +875,14 @@ def show_dashboard():
         
         zip_file = create_zip_file(config_content)
         
-        # ✅ FIX: Only increase count WHEN BUTTON IS CLICKED — NOT ON REFRESH
+        # ✅ FIXED: replaced use_container_width=True → width="stretch"
         if st.download_button(
             label="⬇️ DOWNLOAD ENTERPRISE PROTECTION PACKAGE",
             data=zip_file,
             file_name="ShadowAI_NHS_Protection.zip",
             mime="application/zip",
-            type="primary"
+            type="primary",
+            width="stretch"
         ):
             supabase.table("companies").update({"total_downloads": total_downloads + 1}).eq("id", st.session_state.company_id).execute()
             st.rerun()
@@ -918,7 +919,8 @@ def show_dashboard():
         try:
             data = supabase.table("security_logs").select("*").eq("company_id", st.session_state.company_id).order("created_at", desc=True).execute()
             if data.data:
-                st.dataframe(pd.DataFrame(data.data), use_container_width=True)
+                # ✅ FIXED: replaced use_container_width=True → width="stretch"
+                st.dataframe(pd.DataFrame(data.data), width="stretch")
             else:
                 st.info("No security events recorded — protection is active and monitoring.")
         except Exception as e:
@@ -964,7 +966,8 @@ def show_dashboard():
                     df = pd.DataFrame(all_companies.data)
                     st.subheader(f"Total Registered: {len(all_companies.data)}")
                     
-                    st.dataframe(df, use_container_width=True, column_config={
+                    # ✅ FIXED: replaced use_container_width=True → width="stretch"
+                    st.dataframe(df, width="stretch", column_config={
                         "id": "Company ID",
                         "name": "Organisation Name",
                         "email": "Contact Email",
@@ -1000,3 +1003,18 @@ def main():
     if page == "forgot-password":
         show_forgot_password()
         return
+
+    if mode == "reset" and reset_email:
+        from urllib.parse import unquote
+        decoded_email = unquote(reset_email)
+        show_reset_password(decoded_email)
+        return
+
+    if st.session_state.user is None or st.session_state.auth_stage in ["login", "verify"]:
+        show_login()
+    else:
+        show_dashboard()
+
+
+if __name__ == "__main__":
+    main()
