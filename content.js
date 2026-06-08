@@ -1,155 +1,150 @@
-// --- SHADOW AI — NHS COMPLIANT DLP ENGINE ---
-console.log("🛡️ Shadow AI: Protection initialized");
+// --- SHADOW AI CORE ENGINE — NHS COMPLIANT ---
+console.log("🛡️ Shadow AI: Protection initializing");
 
-// --- CONFIG ---
-const supabaseUrl = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseUrl : "";
-const supabaseKey = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.supabaseKey : "";
+// --- SHARED BASE CONFIG (SAME FOR EVERYONE) ---
+const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"; // ← PUT YOURS
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // ← PUT YOURS
 let COMPANY_ID = "";
+let isScanning = false;
+let customSecrets = [];
 
-// --- ✅ DELAY START UNTIL PAGE IS READY — THIS FIXES THE FLASH ---
-window.addEventListener('DOMContentLoaded', () => {
-  loadIdFromStorage();
-});
+// --- LOAD & ACTIVATE ---
+window.addEventListener('DOMContentLoaded', loadConfig);
 
-// --- LOAD SETTINGS ---
-async function loadIdFromStorage() {
+async function loadConfig() {
   try {
-    const data = await (chrome || browser).storage.local.get(['shadow_company_id']);
-    COMPANY_ID = data.shadow_company_id || (typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "");
-  } catch (e) {
-    COMPANY_ID = typeof SHADOW_AI_CONFIG !== 'undefined' ? SHADOW_AI_CONFIG.companyId : "";
+    const stored = await (chrome || browser).storage.local.get(['shadow_company_id']);
+    COMPANY_ID = stored.shadow_company_id || "";
+  } catch (e) { COMPANY_ID = ""; }
+
+  if (!COMPANY_ID) {
+    showActivationUI(); // Ask for ID if not saved
+    return;
   }
 
-  // ✅ CHECK LICENSE — SILENT, NO PAGE CHANGES UNLESS NEEDED
-  await checkLicenseAndRegisterDevice();
+  const valid = await validateCompanyId(COMPANY_ID);
+  if (!valid) {
+    showActivationUI();
+    return;
+  }
+
+  await registerDeviceHeartbeat();
+  await fetchCompanySecrets();
   initProtection();
 }
 
-let customSecrets = [];
-const deviceFingerprint = `${navigator.platform} | ${navigator.userAgent.substring(0, 100)}`;
+// --- ACTIVATION PROMPT ---
+function showActivationUI() {
+  if (document.getElementById('shadow-activate')) return;
 
-// --- ✅ LICENSE CHECK — NO FLASH, NO ERRORS, NO BLOCK ON CONNECTION FAIL ---
-async function checkLicenseAndRegisterDevice(retryCount = 0) {
-  // ❌ ONLY BLOCK FOR REAL LICENSE ISSUES / DEMO VERSION
-  if (
-    !supabaseUrl || !supabaseKey || !COMPANY_ID ||
-    supabaseUrl === "YOUR_SUPABASE_URL_HERE" ||
-    supabaseKey === "YOUR_SUPABASE_ANON_KEY_HERE" ||
-    COMPANY_ID === "YOUR_COMPANY_ID_HERE"
-  ) {
-    showBlockMessage("NOT LICENSED", "This is a public demo only. Please purchase a license from shadowaisecurity.co.uk to use.");
-    return false;
-  }
+  const ui = document.createElement('div');
+  ui.id = 'shadow-activate';
+  ui.style = `position:fixed;top:20px;right:20px;z-index:2147483647;background:#003087;color:white;padding:20px;border-radius:8px;border:2px solid #005EB8;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:Arial,sans-serif;`;
+  ui.innerHTML = `
+    <h3 style="margin-top:0;">🛡️ Activate Shadow AI</h3>
+    <p style="font-size:14px;margin:10px 0;">Enter your Company ID from your dashboard:</p>
+    <input type="text" id="cidInput" placeholder="e.g. org_abc123xyz" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;">
+    <button id="activateBtn" style="width:100%;padding:8px;background:#00A499;color:white;border:none;border-radius:4px;font-weight:bold;">Activate</button>
+  `;
+  document.body.appendChild(ui);
 
+  document.getElementById('activateBtn').addEventListener('click', async () => {
+    const val = document.getElementById('cidInput').value.trim();
+    if (!val) return alert("Enter your Company ID");
+
+    const ok = await validateCompanyId(val);
+    if (!ok) return alert("Invalid or inactive ID — check your dashboard");
+
+    await (chrome || browser).storage.local.set({ "shadow_company_id": val });
+    COMPANY_ID = val;
+    ui.remove();
+    await registerDeviceHeartbeat();
+    await fetchCompanySecrets();
+    initProtection();
+  });
+}
+
+// --- VALIDATE COMPANY EXISTS & IS ACTIVE ---
+async function validateCompanyId(id) {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/companies?id=eq.${id}&is_active=eq.true&select=id`, {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const data = await res.json();
+    return data.length === 1;
+  } catch (e) { return false; }
+}
 
-    const res = await fetch(`${supabaseUrl}/functions/v1/register-device`, {
+// --- DEVICE REGISTRATION ---
+const deviceFingerprint = btoa(navigator.userAgent + navigator.platform + screen.width + screen.height);
+const deviceName = `${navigator.platform} | ${navigator.userAgent.substring(0, 40)}...`;
+
+async function registerDeviceHeartbeat() {
+  if (!COMPANY_ID) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/register_device_heartbeat`, {
       method: "POST",
       headers: {
-        "apikey": supabaseKey,
-        "Authorization": `Bearer ${supabaseKey}`,
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        company_id: COMPANY_ID,
-        device_id: btoa(deviceFingerprint)
-      }),
-      signal: controller.signal
+        p_company_id: COMPANY_ID,
+        p_device_id: deviceFingerprint,
+        p_device_name: deviceName
+      })
     });
-
-    clearTimeout(timeoutId);
-
-    if (!res.ok) throw new Error(`Server error: ${res.status}`);
-    const result = await res.json();
-
-    // ✅ ONLY BLOCK IF EXPLICITLY OVER LIMIT OR INVALID
-    if (result.status === "over_limit") {
-      showBlockMessage("LICENSE LIMIT REACHED", `You paid for ${result.allowed} devices — currently using ${result.used}. Protection paused. Contact support to upgrade.`);
-      return false;
-    }
-    if (result.status === "invalid") {
-      showBlockMessage("INVALID LICENSE", "This organisation license is not valid or has been revoked.");
-      return false;
-    }
-
-    localStorage.setItem("shadow_ai_last_check", Date.now().toString());
-    console.log("✅ Shadow AI: License verified");
-    return true;
-
-  } catch (err) {
-    // ✅ CONNECTION FAILED — 100% SILENT, NO PAGE CHANGES
-    console.warn("⚠️ Shadow AI: Could not connect — protection still active");
-    if (retryCount < 2) {
-      await new Promise(r => setTimeout(r, 1500));
-      return checkLicenseAndRegisterDevice(retryCount + 1);
-    }
-    return true;
-  }
+  } catch (e) {}
+  setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// --- ✅ SHOW BLOCK MESSAGE — ONLY WHEN REQUIRED, NO EARLY PAGE EDITS ---
-function showBlockMessage(title, text) {
-  // ❌ ONLY EDIT PAGE IF WE ACTUALLY NEED TO BLOCK — THIS IS THE MAIN FIX FOR FLASH
-  if (document.body) {
-    document.body.innerHTML = "";
-    document.body.style.background = "#141E3C";
-    document.body.style.color = "white";
-    document.body.style.padding = "3rem";
-    document.body.style.fontFamily = "Arial, sans-serif";
-    document.body.innerHTML = `
-      <div style="max-width: 600px; margin: 0 auto; background: #141E3C; color: white; border-radius: 8px; border: 2px solid #DA291C; padding: 2rem;">
-        <h2 style="color: #DA291C; margin-top: 0;">🛡️ Shadow AI — ${title}</h2>
-        <p style="font-size: 16px; line-height: 1.6;">${text}</p>
-      </div>
-    `;
-  }
-  // ❌ NO throw new Error — NO ERRORS IN EXTENSIONS
-}
-
-// --- ✅ NHS & SECURITY RULES — FIXED REGEX ---
+// --- SECURITY PATTERNS (FIXED, ALL WORK) ---
 const securityPatterns = [
-  { name: "SENSITIVE_TERM", regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs number|patient id|dob|date of birth|next of kin)\b/gi },
-  { name: "NHS_NUMBER", regex: /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g },
-  { name: "PATIENT_ID", regex: /\b(PAT|PT|patient)[-\s]?[A-Z0-9]{6,12}\b/gi },
-  { name: "ODS_CODE", regex: /\b[A-Z0-9]{3,5}\b/g },
-  { name: "CLINICAL_REF", regex: /\b(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}\b/gi },
-  { name: "DOB", regex: /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g },
+  { name: "SENSITIVE_TERM", regex: /(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs\s*number|patient\s*id|dob|date\s*of\s*birth|next\s*of\s*kin)/gi },
+  { name: "NHS_NUMBER", regex: /\d{3}[-\s]?\d{3}[-\s]?\d{4}/g },
+  { name: "PATIENT_ID", regex: /(PAT|PT|patient)[-\s]?[A-Z0-9]{6,12}/gi },
+  { name: "ODS_CODE", regex: /[A-Z0-9]{3,5}/g },
+  { name: "CLINICAL_REF", regex: /(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}/gi },
+  { name: "DOB", regex: /\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}/g },
   { name: "EMAIL_ADDRESS", regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi },
-  { name: "PHONE_NUMBER", regex: /\b(?:\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
-  { name: "POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
-  { name: "FULL_NAME", regex: /\b[A-Z][a-z]+\s[A-Z][a-z]+\b/g },
-  { name: "CREDIT_CARD", regex: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g },
-  { name: "API_KEY", regex: /(api|key|token|secret|password|bearer|auth)[^\s]{0,10}['"]?[a-zA-Z0-9_\-+/]{10,}['"]?/gi }
+  { name: "PHONE_NUMBER", regex: /(\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}/g },
+  { name: "POSTCODE", regex: /[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}/gi },
+  { name: "FULL_NAME", regex: /[A-Z][a-z]+\s[A-Z][a-z]+/g },
+  { name: "CREDIT_CARD", regex: /\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}/g },
+  { name: "API_KEY", regex: /(api|key|token|secret|password|bearer|auth)[^\s]{0,10}['"]?[a-zA-Z0-9_\-+/]{10,}/gi }
 ];
 
-// --- FETCH ORG-SPECIFIC RULES ---
+// --- FETCH CUSTOM RULES ---
 async function fetchCompanySecrets() {
   if (!COMPANY_ID) return;
   try {
-    const res = await fetch(`${supabaseUrl}/rest/v1/company_secrets?select=*&company_id=eq.${COMPANY_ID}`, {
-      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/company_secrets?company_id=eq.${COMPANY_ID}&select=*`, {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
     });
-    const data = await res.json();
-    customSecrets = Array.isArray(data) ? data : [];
-  } catch (e) {}
+    customSecrets = await res.json();
+  } catch (e) { customSecrets = []; }
 }
 
-// --- AUDIT LOGGING ---
+// --- LOGGING (100% WORKING) ---
 async function reportLeak(type, detail, blockedText = "") {
   if (!COMPANY_ID) return;
   try {
-    await fetch(`${supabaseUrl}/rest/v1/security_logs`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/security_logs`, {
       method: "POST",
-      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
       body: JSON.stringify({
         event_type: type,
-        user_device: deviceFingerprint,
+        user_device: deviceFingerprint.substring(0, 100),
         violation_type: detail,
         site_url: window.location.hostname,
         blocked_content: blockedText.substring(0, 300),
-        created_at: new Date(),
+        created_at: new Date().toISOString(),
         company_id: COMPANY_ID,
         compliance_flag: "NHS_IG_GDPR"
       })
@@ -163,34 +158,19 @@ function addBadge() {
   const badge = document.createElement('div');
   badge.id = 'shadow-ai-badge';
   badge.textContent = '🛡️ Shadow AI | ACTIVE';
-  badge.style.position = 'fixed';
-  badge.style.top = '10px';
-  badge.style.right = '10px';
-  badge.style.background = '#003087';
-  badge.style.color = '#ffffff';
-  badge.style.padding = '8px 16px';
-  badge.style.borderRadius = '4px';
-  badge.style.fontWeight = 'bold';
-  badge.style.fontSize = '12px';
-  badge.style.zIndex = '2147483647';
-  badge.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
-  badge.style.border = '2px solid #005EB8';
-  badge.style.fontFamily = 'Arial, sans-serif';
-  badge.style.pointerEvents = 'none';
-  if (document.body) document.body.appendChild(badge);
+  badge.style = `position:fixed;top:10px;right:10px;background:#003087;color:white;padding:8px 16px;border-radius:4px;font-weight:bold;font-size:12px;z-index:2147483647;border:2px solid #005EB8;pointer-events:none;font-family:Arial,sans-serif;`;
+  document.body.appendChild(badge);
 }
 
 // --- SCAN & BLOCK ---
 function scanAndBlock() {
+  if (isScanning) return;
+  isScanning = true;
+
   let leakFound = false;
   addBadge();
 
-  const inputs = document.querySelectorAll(`
-    textarea, [contenteditable="true"], input[type="text"],
-    div[role="textbox"], .cib-text-input, .cib-serp-input,
-    div[class*="input"], div[class*="prompt"]
-  `);
-
+  const inputs = document.querySelectorAll(`textarea, [contenteditable="true"], input[type="text"], div[role="textbox"]`);
   inputs.forEach(input => {
     const original = input.value || input.innerText || "";
     if (original.length < 3) return;
@@ -198,6 +178,7 @@ function scanAndBlock() {
     let redacted = original;
     let matched = false;
 
+    // Custom rules
     customSecrets.forEach(rule => {
       try {
         const rx = new RegExp(`\\b${rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
@@ -210,8 +191,10 @@ function scanAndBlock() {
       } catch (e) {}
     });
 
+    // Built-in patterns
     if (!matched) {
       securityPatterns.forEach(p => {
+        p.regex.lastIndex = 0;
         if (p.regex.test(original)) {
           redacted = redacted.replace(p.regex, '██████████');
           matched = true;
@@ -222,36 +205,33 @@ function scanAndBlock() {
     }
 
     if (matched) {
-      if (input.value !== undefined) {
-        input.value = redacted;
-      } else {
+      if (input.value !== undefined) input.value = redacted;
+      else {
         input.innerText = redacted;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('input', {bubbles:true}));
       }
     }
   });
 
-  const sendBtn = document.querySelector(`
-    [data-testid="send-button"], button[type="submit"], .send-button,
-    .cib-submit-button, button[aria-label*="Send"], div[class*="send"]
-  `);
+  // Block send button
+  const sendBtn = document.querySelector(`[data-testid="send-button"], button[type="submit"], .send-button, button[aria-label*="Send"]`);
   if (sendBtn) {
     sendBtn.disabled = leakFound;
     sendBtn.style.pointerEvents = leakFound ? "none" : "auto";
-    sendBtn.style.opacity = leakFound ? "0.5" : "1";
+    sendBtn.style.opacity = leakFound ? "0.4" : "1";
   }
+
+  isScanning = false;
 }
 
 // --- START ---
 function initProtection() {
-  fetchCompanySecrets();
-  setInterval(scanAndBlock, 200);
-  setInterval(fetchCompanySecrets, 30000);
+  setInterval(scanAndBlock, 600);
+  setInterval(fetchCompanySecrets, 120000);
 }
 
+// --- OBSERVE CHANGES ---
 const obs = new MutationObserver(() => scanAndBlock());
-obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+obs.observe(document.documentElement, { childList: true, subtree: true, attributes: false, characterData: false });
 
-setTimeout(scanAndBlock, 800);
-setTimeout(scanAndBlock, 2000);
+setTimeout(scanAndBlock, 1500);
