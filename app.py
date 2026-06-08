@@ -13,7 +13,7 @@ import urllib.parse
 import uuid
 import base64
 
-# --- CONFIGURATION — EXACTLY AS YOU HAVE IN SECRETS ---
+# --- CONFIGURATION ---
 try:
     SUPABASE_URL = st.secrets["SUPABASE_URL"]
     SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
@@ -25,11 +25,10 @@ except Exception as e:
     st.stop()
 
 ADMIN_EMAIL = "security.shadowai@gmail.com"
-DEFAULT_MAX_DEVICES = 3  # Paid device limit per account
+DEFAULT_MAX_DEVICES = 3
 
-# ✅ CRITICAL: Use ANON KEY for AUTH (login/register) — SERVICE KEY for DATABASE ONLY
-auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)   # ✅ FOR LOGIN
-supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)     # ✅ FOR DB ACCESS
+auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # --- PAGE SETUP ---
 st.set_page_config(
@@ -39,7 +38,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CUSTOM CSS — NHS STANDARD DARK THEME ---
+# --- CUSTOM CSS ---
 st.markdown("""
     <style>
     .main {
@@ -171,6 +170,63 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- PERSISTENT LOGIN HELPER FUNCTIONS ---
+def get_storage_script():
+    return """
+    <script>
+    // Save login state
+    function saveLoginState(userId, companyId, userEmail) {
+        localStorage.setItem('shadow_user_id', userId);
+        localStorage.setItem('shadow_company_id', companyId);
+        localStorage.setItem('shadow_user_email', userEmail);
+    }
+    // Load login state
+    function loadLoginState() {
+        const userId = localStorage.getItem('shadow_user_id');
+        const companyId = localStorage.getItem('shadow_company_id');
+        const userEmail = localStorage.getItem('shadow_user_email');
+        if(userId && companyId && userEmail) {
+            window.parent.postMessage({
+                type: 'shadow_login_restore',
+                userId: userId,
+                companyId: companyId,
+                userEmail: userEmail
+            }, '*');
+        }
+    }
+    // Clear login state
+    function clearLoginState() {
+        localStorage.removeItem('shadow_user_id');
+        localStorage.removeItem('shadow_company_id');
+        localStorage.removeItem('shadow_user_email');
+    }
+    // Auto-load on page start
+    loadLoginState();
+    </script>
+    """
+
+def restore_login_from_storage():
+    """Restore login state from browser storage on refresh"""
+    st.components.v1.html(get_storage_script(), height=0)
+    
+    # Listen for restored login data
+    if "login_restored" not in st.session_state:
+        st.session_state.login_restored = False
+    
+    # If we already have data in session, skip
+    if st.session_state.get("user") and st.session_state.get("company_id"):
+        return
+
+    # This will be populated from the JS above
+    if "restored_data" in st.session_state:
+        data = st.session_state.restored_data
+        if data.get("userId") and data.get("companyId") and data.get("userEmail"):
+            st.session_state.user = {"id": data["userId"], "email": data["userEmail"]}
+            st.session_state.user_id = data["userId"]
+            st.session_state.company_id = data["companyId"]
+            st.session_state.login_restored = True
+            st.rerun()
+
 # --- SESSION STATE ---
 if 'user' not in st.session_state:
     st.session_state.user = None
@@ -185,7 +241,7 @@ if 'temp_user_obj' not in st.session_state:
 if 'verification_code' not in st.session_state:
     st.session_state.verification_code = None
 
-# --- EMAIL FUNCTION ---
+# --- EMAIL FUNCTIONS ---
 def send_verification_email(to_email, code):
     try:
         response = requests.post(
@@ -219,7 +275,6 @@ def send_verification_email(to_email, code):
         st.error(f"❌ Email Error: {e}")
         return False
 
-# --- ✅ RESET PASSWORD EMAIL FUNCTION — CORRECT URL ---
 def send_reset_email(to_email, reset_link):
     try:
         response = requests.post(
@@ -354,11 +409,9 @@ async function loadIdFromStorage() {
   initProtection();
 }
 
-// --- UNIQUE DEVICE ID FOR COUNTING ---
 const deviceFingerprint = btoa(navigator.userAgent + navigator.platform + screen.width + screen.height);
 const deviceName = `${navigator.platform} | ${navigator.userAgent.substring(0, 40)}...`;
 
-// --- SEND HEARTBEAT EVERY 30s — ONLY COUNTS REAL RUNNING DEVICES ---
 async function registerDeviceHeartbeat() {
   try {
     await fetch(`${supabaseUrl}/rest/v1/rpc/register_device_heartbeat`, {
@@ -581,7 +634,7 @@ pause'''
     zip_buffer.seek(0)
     return zip_buffer
 
-# --- ✅ FORGOT PASSWORD PAGE — CORRECT LINK ---
+# --- FORGOT PASSWORD PAGE ---
 def show_forgot_password():
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.subheader("🔑 Reset Your Password")
@@ -609,7 +662,7 @@ def show_forgot_password():
     st.markdown("<br><p style='text-align:center;'><a href='/' style='color:#4da6ff;'>← Back to Login</a></p>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- ✅ RESET PASSWORD PAGE ---
+# --- RESET PASSWORD PAGE ---
 def show_reset_password(email):
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.subheader("🔑 Create New Password")
@@ -641,7 +694,7 @@ def show_reset_password(email):
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- LOGIN SCREEN — ✅ NO DEVICE COUNT ON LOGIN ---
+# --- LOGIN SCREEN ---
 def show_login():
     st.title("🛡️ Shadow AI")
     st.markdown("#### *NHS Compliant Data Protection & AI Security*")
@@ -670,7 +723,19 @@ def show_login():
                             st.error("❌ Account not found — please register first")
                             st.stop()
 
-                        st.session_state.company_id = company_data.data[0]["id"]
+                        company_id = company_data.data[0]["id"]
+                        st.session_state.company_id = company_id
+                        st.session_state.user = {"id": res.user.id, "email": email}
+                        st.session_state.user_id = res.user.id
+                        
+                        # Save login to browser storage
+                        save_script = f"""
+                        <script>
+                        saveLoginState('{res.user.id}', '{company_id}', '{email}');
+                        </script>
+                        """
+                        st.components.v1.html(save_script, height=0)
+                        
                         code = str(random.randint(100000, 999999))
                         st.session_state.verification_code = code
                         
@@ -695,10 +760,6 @@ def show_login():
                 
                 if st.button("✅ Verify & Access Dashboard"):
                     if user_code == st.session_state.verification_code:
-                        st.session_state.user = st.session_state.temp_user_obj
-                        st.session_state.user_id = st.session_state.temp_user_obj.id
-                        st.session_state.logged_in = True
-                        
                         js_code = f"""
                         <script>
                         if (typeof chrome !== 'undefined' && chrome.storage) {{
@@ -746,7 +807,7 @@ def show_login():
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("---")
 
-# --- DASHBOARD — ✅ SHOWS ONLY WHAT YOU CARE ABOUT ---
+# --- DASHBOARD ---
 def show_dashboard():
     try:
         company_data = supabase.table("companies").select(
@@ -772,7 +833,6 @@ def show_dashboard():
     st.sidebar.markdown(f"**🏢 {org_name}**")
     st.sidebar.markdown(f"**Reference: `{st.session_state.company_id}`**")
     
-    # ✅ EXACTLY WHAT YOU WANT: Downloads + Active Protected Devices
     st.sidebar.markdown(f'<div class="device-badge">📥 Total Downloads: {total_downloads}</div>', unsafe_allow_html=True)
     if active_devices >= max_devices and user_email.lower() != ADMIN_EMAIL.lower():
         st.sidebar.markdown(f'<div class="device-badge limit-reached">🛡️ ACTIVE DEVICES: {active_devices} / {max_devices} (LIMIT REACHED)</div>', unsafe_allow_html=True)
@@ -785,6 +845,8 @@ def show_dashboard():
         st.sidebar.error("❌ License: PENDING")
 
     if st.sidebar.button("🚪 Logout"):
+        clear_script = """<script>clearLoginState();</script>"""
+        st.components.v1.html(clear_script, height=0)
         st.session_state.user = None
         st.session_state.auth_stage = "login"
         st.rerun()
@@ -811,7 +873,6 @@ def show_dashboard():
         companyId: "{st.session_state.company_id}"
         }};"""
         
-        # ✅ COUNT DOWNLOADS EVERY TIME
         supabase.table("companies").update({"total_downloads": total_downloads + 1}).eq("id", st.session_state.company_id).execute()
         zip_file = create_zip_file(config_content)
         
@@ -860,7 +921,6 @@ def show_dashboard():
         except Exception as e:
             st.error(f"Error loading logs: {str(e)}")
 
-    # ✅ SHOW ONLY REAL DEVICES RUNNING THE EXTENSION
     with tab3:
         st.title("📱 Active Protected Devices")
         st.markdown('<div class="compliance-badge">✅ Only devices with extension installed & running</div>', unsafe_allow_html=True)
@@ -927,8 +987,11 @@ def show_dashboard():
             except Exception as e:
                 st.error(f"❌ Error loading registered users: {str(e)}")
 
-# --- ✅ ROUTING — FINAL FIX ---
+# --- ROUTING ---
 def main():
+    # Restore login before anything else
+    restore_login_from_storage()
+    
     params = st.query_params
     page = params.get("page", "")
     mode = params.get("mode", "")
