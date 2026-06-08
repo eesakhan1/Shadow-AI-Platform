@@ -1,10 +1,12 @@
 import os
-# 🔒 DISABLE ALL DOCS & EXTRA STUFF
+# 🔒 FORCE DISABLE ALL INTERNAL DOCS - CRITICAL
 os.environ["STREAMLIT_SERVER_ENABLE_DOCS"] = "false"
 os.environ["STREAMLIT_HIDE_DOCSTRING"] = "true"
 os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
 os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
+os.environ["STREAMLIT_DISABLE_DOCSTRINGS"] = "true"
 
 import streamlit as st
 from supabase import create_client
@@ -39,7 +41,59 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 🛑 CSS — PERMANENTLY HIDE THE DOCSTRING ---
+# 🚨 NUCLEAR OPTION: REMOVE THE TEXT BEFORE IT EVEN RENDERS
+st.components.v1.html("""
+<script>
+// RUN IMMEDIATELY - REMOVE THE ELEMENT BEFORE USER SEES IT
+function destroyDocString() {
+    const badText = "DeltaGenerator";
+    const allElements = document.querySelectorAll('*');
+    
+    allElements.forEach(el => {
+        if(el.textContent && el.textContent.includes(badText)) {
+            el.innerHTML = '';
+            el.remove();
+            if(el.parentElement) el.parentElement.remove();
+            if(el.parentElement?.parentElement) el.parentElement.parentElement.remove();
+        }
+    });
+
+    // HIDE BY CLASS/ID - ALL POSSIBLE STREAMLIT INTERNAL CLASSES
+    const selectors = [
+        '.stDocstring', '[data-testid="stDocstring"]', '.docstring', 
+        '.internal-docs', '#stInternalDoc', '.streamlit-markdown',
+        '.element-container div pre', 'div[style*="overflow:auto"]',
+        'div[style*="font-family:monospace"]', 'div[style*="white-space:pre"]',
+        '.stMarkdown div pre', '.stMarkdown div code', '.block-container > div:first-child',
+        '.main > div:first-child', 'section > div:first-child'
+    ];
+
+    selectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+            if(el.textContent.includes("DeltaGenerator") || 
+               el.textContent.includes("Creator of Delta") ||
+               el.textContent.includes("Parameters") ||
+               el.textContent.includes("block_type")) {
+                el.style.display = 'none';
+                el.style.visibility = 'hidden';
+                el.style.height = '0px';
+                el.style.overflow = 'hidden';
+                el.remove();
+            }
+        });
+    });
+}
+
+// RUN INSTANTLY
+destroyDocString();
+// RUN EVERY 10MS FOREVER - IF IT POPS BACK, KILL IT
+setInterval(destroyDocString, 10);
+// WATCH FOR CHANGES AND KILL IMMEDIATELY
+new MutationObserver(destroyDocString).observe(document.body, {childList: true, subtree: true});
+</script>
+""", height=0)
+
+# --- 🛑 CSS: BLOCK IT FROM EVERY ANGLE ---
 st.markdown("""
     <style>
     .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
@@ -87,20 +141,55 @@ st.markdown("""
     .delete-btn { background-color: #DA291C !important; color: white !important; }
     .delete-btn:hover { background-color: #9E1A12 !important; }
 
-    /* 🛑 PERMANENT HIDE — NO MORE DELTA GENERATOR */
+    /* 💀 ABSOLUTE BLOCK - EVERY POSSIBLE CLASS, TAG, AND LOCATION */
     div:has-text("DeltaGenerator"),
     div:has-text("Creator of Delta"),
+    div:has-text("Parameters"),
+    div:has-text("block_type"),
+    div:has-text("dg property"),
+    div:has-text("altair_chart"),
+    div:has-text("area_chart"),
+    div:has-text("audio method"),
+    div:has-text("audio_input"),
+    div:has-text("badge method"),
+    div:has-text("balloons method"),
     .stDocstring,
+    [data-testid="stDocstring"],
+    .docstring,
+    .internal-docs,
+    #stInternalDoc,
+    .streamlit-doc,
     div[class*="docstring"],
-    div[style*="monospace"]:has-text("Delta"),
-    pre:has-text("DeltaGenerator") {
+    div[class*="internal"],
+    div[style*="overflow:auto"],
+    div[style*="font-family:monospace"],
+    div[style*="white-space:pre"],
+    pre, code,
+    .element-container:has(div:has-text("DeltaGenerator")),
+    .stMarkdown:has(div:has-text("DeltaGenerator")),
+    .block-container > div:first-child,
+    .main > div:first-child,
+    section > div:first-child,
+    div[style*="height: auto"]:has-text("DeltaGenerator") {
         display: none !important;
         visibility: hidden !important;
         height: 0 !important;
+        width: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        margin: -9999px 0 !important;
+        padding: 0 !important;
+        border: none !important;
         overflow: hidden !important;
         position: absolute !important;
         top: -9999px !important;
         left: -9999px !important;
+        z-index: -999999 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transform: scale(0) !important;
     }
     </style>
 """, unsafe_allow_html=True)
