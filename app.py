@@ -1,5 +1,5 @@
 import os
-# 🔒 MAXIMUM FORCE DISABLE
+# MAXIMUM FORCE DISABLE — EVERY POSSIBLE SETTING
 os.environ["STREAMLIT_SERVER_ENABLE_DOCS"] = "false"
 os.environ["STREAMLIT_HIDE_DOCSTRING"] = "true"
 os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
@@ -8,6 +8,7 @@ os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
 os.environ["STREAMLIT_DISABLE_DOCSTRINGS"] = "true"
 os.environ["STREAMLIT_DEVELOPMENT_MODE"] = "false"
+os.environ["STREAMLIT_DISABLE_DOCSTRING_RENDER"] = "true"
 
 import streamlit as st
 from supabase import create_client
@@ -42,48 +43,80 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🚨 THIS IS THE FIX — HIDE THE ENTIRE TOP CONTAINER AND BUILD OUR OWN
-st.markdown("""
-<script>
-// 1. NUKE THE ENTIRE TOP SECTION BEFORE ANYTHING LOADS
-function killDelta() {
-    // Remove every element containing the bad text
-    const badText = ["DeltaGenerator", "Creator of Delta", "docstring", "block_type"];
-    document.querySelectorAll('*').forEach(el => {
-        if (el.textContent && badText.some(t => el.textContent.includes(t))) {
-            el.remove();
-            if (el.parentElement) el.parentElement.remove();
-            if (el.parentElement?.parentElement) el.parentElement.parentElement.remove();
-        }
-    });
-
-    // 2. HIDE THE ENTIRE FIRST BLOCK CONTAINER — THIS IS WHERE IT LIVES
-    const containers = document.querySelectorAll('.block-container');
-    if (containers.length > 0) {
-        containers[0].style.marginTop = "-1000px";
-        containers[0].style.position = "absolute";
-        containers[0].style.top = "-9999px";
-    }
-
-    // 3. DELETE ALL STREAMLIT INTERNAL MARKDOWN WRAPPERS
-    document.querySelectorAll('[data-testid="stMarkdown"]').forEach(el => {
-        if (el.innerHTML.includes('Delta') || el.innerHTML.includes('docstring')) {
-            el.innerHTML = '';
-            el.remove();
-        }
-    });
+# 🚨 THE NUCLEAR OPTION — DELETE THE ENTIRE ELEMENT WHERE DELTAGENERATOR LIVES
+st.components.v1.html("""
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+/* HIDE STREAMLIT'S BROKEN TOP CONTAINER COMPLETELY */
+div[data-testid="stAppViewContainer"] > div:first-child,
+.block-container:first-child,
+div[class*="docstring"],
+div:has-text("DeltaGenerator"),
+div:has-text("Creator of Delta"),
+div:has-text("block_type"),
+div:has-text("Parameters") {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    position: absolute !important;
+    top: -9999px !important;
+    left: -9999px !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: scale(0) !important;
 }
 
-// RUN IT EVERY POSSIBLE MOMENT
-killDelta();
-setInterval(killDelta, 1);
-document.addEventListener('DOMContentLoaded', killDelta);
-window.addEventListener('load', killDelta);
-new MutationObserver(killDelta).observe(document.body, {childList: true, subtree: true});
-</script>
-""", unsafe_allow_html=True)
+/* FORCE ALL CONTENT TO START AT TOP */
+.block-container {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+</style>
+<script>
+function killDeltaForever() {
+    // 1. DELETE THE EXACT PARENT ELEMENT WHERE THIS TEXT IS INJECTED
+    const root = document.querySelector('.stAppViewContainer');
+    if (root && root.firstChild) {
+        root.firstChild.remove();
+    }
 
-# --- 🛑 CSS: ABSOLUTE BLOCK — NO EXCEPTIONS ---
+    // 2. REMOVE EVERY SINGLE ELEMENT THAT CONTAINS THE BAD TEXT
+    const badTexts = ["DeltaGenerator", "Creator of Delta", "docstring", "block_type", "dg property"];
+    document.querySelectorAll('*').forEach(el => {
+        if (el.textContent) {
+            const hasBad = badTexts.some(t => el.textContent.includes(t));
+            if (hasBad) {
+                el.innerHTML = '';
+                el.remove();
+                if (el.parentElement) el.parentElement.remove();
+                if (el.parentElement?.parentElement) el.parentElement.parentElement.remove();
+            }
+        }
+    });
+
+    // 3. DELETE ALL INTERNAL STREAMLIT DOC CLASSES
+    document.querySelectorAll('.stDocstring, [data-testid="stDocstring"], .docstring, .internal-docs').forEach(el => el.remove());
+}
+
+// RUN BEFORE ANYTHING LOADS, THEN EVERY 1MS FOREVER
+killDeltaForever();
+setInterval(killDeltaForever, 1);
+document.addEventListener('DOMContentLoaded', killDeltaForever);
+window.addEventListener('load', killDeltaForever);
+new MutationObserver(killDeltaForever).observe(document.body, {childList: true, subtree: true, attributes: true, characterData: true});
+</script>
+</head>
+<body>
+""", height=0)
+
+# --- 🛑 CSS: FULL OVERRIDE ---
 st.markdown("""
     <style>
     .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
@@ -130,50 +163,6 @@ st.markdown("""
     }
     .delete-btn { background-color: #DA291C !important; color: white !important; }
     .delete-btn:hover { background-color: #9E1A12 !important; }
-
-    /* 💀 THE FINAL KILL — HIDE EVERYTHING THAT COULD HOLD THAT TEXT */
-    div:has-text("DeltaGenerator"),
-    div:has-text("Creator of Delta"),
-    div:has-text("Parameters"),
-    div:has-text("block_type"),
-    .stDocstring,
-    [data-testid="stDocstring"],
-    .docstring,
-    .internal-docs,
-    div[class*="docstring"],
-    div[class*="internal"],
-    div[style*="monospace"],
-    div[style*="pre"],
-    pre, code,
-    .block-container:first-child,
-    .main > div:first-child,
-    section > div:first-child,
-    div[data-testid="stMarkdown"]:first-child,
-    .element-container:first-child,
-    .stMarkdown > div:first-child,
-    .stMarkdown > pre,
-    .stMarkdown > code {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0 !important;
-        width: 0 !important;
-        position: absolute !important;
-        top: -9999px !important;
-        left: -9999px !important;
-        overflow: hidden !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        transform: scale(0) !important;
-    }
-
-    /* 🛠️ MOVE ALL CONTENT UP TO FILL THE GAP */
-    .block-container {
-        margin-top: 0 !important;
-        padding-top: 0 !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -354,8 +343,8 @@ def show_reset_password(email):
 
 # --- LOGIN SCREEN ---
 def show_login():
-    # ⚠️ WE USE CUSTOM HTML HEADER HERE SO STREAMLIT CANNOT ATTACH ITS TEXT
-    st.markdown('<h1 style="color:white; text-align:center; margin-top:2rem;">🛡️ Shadow AI</h1>', unsafe_allow_html=True)
+    # ONLY CUSTOM HTML — NO STREAMLIT ELEMENTS HERE
+    st.markdown('<h1 style="color:white; text-align:center; margin-top:2rem; font-size:2.5rem;">🛡️ Shadow AI</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align:center; font-size:18px; color:#B0C4DE;">NHS Compliant Data Protection & AI Security</p>', unsafe_allow_html=True)
     st.markdown('<div style="text-align:center;" class="compliance-badge">✅ Evergreen Assessment Registered | Ref: a0BPz0000GzZ65MAF20260528125015</div>', unsafe_allow_html=True)
     st.markdown("---")
@@ -427,8 +416,8 @@ def show_login():
 
 # --- DASHBOARD ---
 def show_dashboard():
-    # ⚠️ CUSTOM HEADER — NO ST.TITLE() = NO ATTACHED DOCSTRING
-    st.markdown('<h1 style="color:white; margin-top:0;">🛡️ Security Command Center</h1>', unsafe_allow_html=True)
+    # CUSTOM HTML HEADER — NO STREAMLIT TRIGGER
+    st.markdown('<h1 style="color:white; margin-top:0; font-size:2rem;">🛡️ Security Command Center</h1>', unsafe_allow_html=True)
     st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
     st.markdown("---")
 
@@ -502,7 +491,7 @@ def show_dashboard():
                     st.error(f"Error saving rule: {str(e)}")
 
     with tab2:
-        st.title("📋 Security Audit Logs")
+        st.markdown('<h2 style="color:white;">📋 Security Audit Logs</h2>', unsafe_allow_html=True)
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
         st.markdown("---")
         try:
@@ -515,7 +504,7 @@ def show_dashboard():
             st.error(f"Error loading logs: {str(e)}")
 
     with tab3:
-        st.title("📱 Active Protected Devices")
+        st.markdown('<h2 style="color:white;">📱 Active Protected Devices</h2>', unsafe_allow_html=True)
         st.markdown('<div class="compliance-badge">✅ Only devices with extension installed & running</div>', unsafe_allow_html=True)
         st.markdown("---")
         try:
@@ -540,7 +529,7 @@ def show_dashboard():
 
     if user_email == ADMIN_EMAIL:
         with tab4:
-            st.title("👤 Registered Companies & Users")
+            st.markdown('<h2 style="color:white;">👤 Registered Companies & Users</h2>', unsafe_allow_html=True)
             st.markdown('<div class="compliance-badge">🔐 Admin Access — View and manage all accounts</div>', unsafe_allow_html=True)
             st.markdown("---")
             try:
