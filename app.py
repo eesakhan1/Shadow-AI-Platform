@@ -1,4 +1,12 @@
 import os
+# 🔒 FORCE DISABLE ALL STREAMLIT INTERNAL DOCS — NO EXCEPTIONS
+os.environ["STREAMLIT_SERVER_ENABLE_DOCS"] = "false"
+os.environ["STREAMLIT_HIDE_DOCSTRING"] = "true"
+os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
+os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
+os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
+
 import streamlit as st
 from supabase import create_client
 import datetime
@@ -13,17 +21,25 @@ import urllib.parse
 from streamlit.web.server import server_util
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
-# Block access to internal Streamlit docs/endpoints
+# 🔒 BLOCK ALL INTERNAL ROUTES / DOCS / API PATHS
 def block_internal_routes():
     ctx = get_script_run_ctx()
-    if ctx and ctx.page_script_hash is None:
+    if ctx:
         current_path = server_util.get_current_page_path()
-        # Block all internal documentation/API routes
-        blocked_paths = ["/docs", "/api", "/_stcore", "/streamlit", "/assets"]
+        blocked_paths = ["/docs", "/api", "/_stcore", "/streamlit", "/assets", "/delta", "/DeltaGenerator"]
+        blocked_keywords = ["DeltaGenerator", "docs", "api", "internal", "docstring"]
+        
+        # Block by path
         if any(current_path.startswith(p) for p in blocked_paths):
-            st.error("🔒 Access to this page is restricted.")
+            st.error("🔒 Access restricted — this page is not available")
+            st.stop()
+        
+        # Block by keyword in URL
+        if any(keyword in current_path.lower() for keyword in blocked_keywords):
+            st.error("🔒 Access restricted")
             st.stop()
 
+# Run block immediately
 block_internal_routes()
 
 # --- CONFIGURATION ---
@@ -50,7 +66,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CUSTOM CSS — NHS STANDARD DARK THEME ---
+# --- CUSTOM CSS — NHS STANDARD DARK THEME + 🔒 HIDE ALL INTERNAL DOCS/TRACES ---
 st.markdown("""
     <style>
     .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
@@ -70,6 +86,32 @@ st.markdown("""
     .compliance-badge { background: #00A499; color: white; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 14px; display: inline-block; margin: 8px 0; }
     .delete-btn { background-color: #DA291C !important; color: white !important; }
     .delete-btn:hover { background-color: #9E1A12 !important; }
+
+    /* 🔴 PERMANENTLY HIDE ALL STREAMLIT INTERNAL DOCUMENTATION / DELTA GENERATOR */
+    div:has-text("DeltaGenerator"),
+    div:has-text("Creator of Delta protobuf"),
+    div:has-text("Parameters"),
+    div:has-text("block_type"),
+    .stDocstring,
+    #stInternalDoc,
+    .st-doc-container,
+    [data-testid="stMarkdown"]:has-text("DeltaGenerator"),
+    .streamlit-doc,
+    .internal-docs,
+    div[class*="docstring"],
+    div[class*="internal"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        z-index: -9999 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -95,6 +137,17 @@ def init_persistence():
         window.history.replaceState({}, '', url);
         window.location.reload();
     }
+    
+    // 🔒 EXTRA: Remove any internal docs immediately if they appear
+    const observer = new MutationObserver(() => {
+        document.querySelectorAll('div').forEach(el => {
+            if (el.textContent.includes('DeltaGenerator') || 
+                el.textContent.includes('Creator of Delta protobuf')) {
+                el.remove();
+            }
+        });
+    });
+    observer.observe(document.body, {childList: true, subtree: true});
     </script>
     """, height=0)
 
@@ -343,7 +396,6 @@ def show_dashboard():
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
         st.markdown("---")
 
-        # ✅ REPLACED ZIP DOWNLOAD WITH STORE LINKS + COMPANY ID
         st.subheader("📱 Get Started — Official Store Version")
         st.info("✅ No Developer Mode required — safe for all managed devices.")
         st.markdown("""
@@ -432,7 +484,7 @@ def show_dashboard():
                         selected_id = company_options[selected_label_del]
                         try:
                             supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
-                            supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
+                            supabase.table("company_secrets").delete().eq("id", selected_id).execute()
                             supabase.table("active_protection_devices").delete().eq("company_id", selected_id).execute()
                             supabase.table("companies").delete().eq("id", selected_id).execute()
                             try:
