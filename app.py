@@ -26,7 +26,7 @@ except Exception as e:
     st.stop()
 
 ADMIN_EMAIL = "security.shadowai@gmail.com"
-DEFAULT_MAX_DEVICES = 3
+DEFAULT_MAX_DEVICES = 2  # ✅ Set to your limit
 
 auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -172,9 +172,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- ✅ FINAL FIX: 100% REFRESH-PROOF PERSISTENCE ---
-# This uses URL params + localStorage — Streamlit CANNOT clear this
 def init_persistence():
-    # Step 1: Read from URL first (survives refresh)
     params = st.query_params
     if "uid" in params and "cid" in params and "email" in params:
         st.session_state.user = {"id": params["uid"], "email": params["email"]}
@@ -183,10 +181,8 @@ def init_persistence():
         st.session_state.auth_stage = "dashboard"
         return
 
-    # Step 2: If no URL params, read from localStorage (backup)
     st.components.v1.html("""
     <script>
-    // On page load, check storage and update URL
     const saved = localStorage.getItem('shadow_auth_v2');
     if (saved) {
         const data = JSON.parse(saved);
@@ -201,12 +197,9 @@ def init_persistence():
     """, height=0)
 
 def save_auth(uid, cid, email):
-    """Save to BOTH URL and localStorage — permanent"""
-    # Save to URL
     st.query_params["uid"] = uid
     st.query_params["cid"] = cid
     st.query_params["email"] = email
-    # Save to localStorage
     auth_data = json.dumps({"uid": uid, "cid": cid, "email": email})
     st.components.v1.html(f"""
     <script>
@@ -218,7 +211,6 @@ def save_auth(uid, cid, email):
     """, height=0)
 
 def clear_auth():
-    """Only clear on explicit logout"""
     st.query_params.clear()
     st.components.v1.html("""
     <script>
@@ -417,7 +409,7 @@ const deviceName = `${navigator.platform} | ${navigator.userAgent.substring(0, 4
 
 async function registerDeviceHeartbeat() {
   try {
-    await fetch(`${supabaseUrl}/rest/v1/rpc/register_device_heartbeat`, {
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/register_device_heartbeat`, {
       method: "POST",
       headers: {
         "apikey": supabaseKey,
@@ -430,6 +422,16 @@ async function registerDeviceHeartbeat() {
         p_device_name: deviceName
       })
     });
+    const result = await res.json();
+    if (result.status === "blocked") {
+      console.log("❌ DEVICE LIMIT REACHED — Protection disabled");
+      const badge = document.getElementById('shadow-ai-badge');
+      if (badge) {
+        badge.textContent = "⚠️ LIMIT REACHED — NO PROTECTION";
+        badge.style.background = "#DA291C";
+      }
+      return;
+    }
     console.log("✅ Heartbeat sent — device active");
   } catch (e) {
     console.log("❌ Heartbeat failed", e);
@@ -761,7 +763,6 @@ def show_login():
                 
                 if st.button("✅ Verify & Access Dashboard"):
                     if user_code == st.session_state.verification_code:
-                        # ✅ SAVE PERMANENTLY — THIS IS THE FIX
                         save_auth(
                             st.session_state.user_id,
                             st.session_state.company_id,
@@ -872,16 +873,19 @@ def show_dashboard():
         companyId: "{st.session_state.company_id}"
         }};"""
         
-        supabase.table("companies").update({"total_downloads": total_downloads + 1}).eq("id", st.session_state.company_id).execute()
         zip_file = create_zip_file(config_content)
         
-        st.download_button(
+        # ✅ FIX: Only increase count WHEN BUTTON IS CLICKED — NOT ON REFRESH
+        if st.download_button(
             label="⬇️ DOWNLOAD ENTERPRISE PROTECTION PACKAGE",
             data=zip_file,
             file_name="ShadowAI_NHS_Protection.zip",
             mime="application/zip",
             type="primary"
-        )
+        ):
+            supabase.table("companies").update({"total_downloads": total_downloads + 1}).eq("id", st.session_state.company_id).execute()
+            st.rerun()
+
         st.markdown("*Includes extension, deployment tool, and configuration files — works on Chrome, Edge, and Brave*")
 
         st.markdown("---")
