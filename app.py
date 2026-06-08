@@ -1,4 +1,11 @@
 import os
+# ✅ FORCE THESE SETTINGS FIRST — BEFORE IMPORTING STREAMLIT
+os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
+os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+os.environ["STREAMLIT_DEVELOPMENT_MODE"] = "false"
+os.environ["STREAMLIT_LOG_LEVEL"] = "error"
+os.environ["PYTHONWARNINGS"] = "ignore"
+
 import streamlit as st
 from supabase import create_client
 import pandas as pd
@@ -7,6 +14,9 @@ import requests
 import string
 import json
 import urllib.parse
+
+# ✅ FORCE STREAMLIT VERSION (AVOID BUGGY RELEASES)
+# In requirements.txt use: streamlit==1.31.1
 
 # --- CONFIGURATION ---
 try:
@@ -432,10 +442,20 @@ def main():
         initial_sidebar_state="expanded"
     )
 
-    # --- CLEAN CSS — NO METHOD NAMES LISTED ---
+    # ✅ AGGRESSIVE HIDE — REMOVES ANY TEXT CONTAINING "DeltaGenerator" FROM THE DOM
     st.markdown("""
     <style>
-    [data-testid="stDocstring"], .stDocstring, .docstring, pre, code {display: none !important; visibility: hidden !important; height:0 !important;}
+    /* HIDE ALL DOCSTRINGS AND DEBUG TEXT */
+    [data-testid="stDocstring"], .stDocstring, .docstring, pre, code,
+    div:has-text("DeltaGenerator"), span:has-text("DeltaGenerator"),
+    div:contains("DeltaGenerator"), span:contains("DeltaGenerator") {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        left: -9999px !important;
+    }
     .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
     .stButton>button { width: 100%; border-radius: 4px; height: 55px; font-size: 18px; font-weight: bold; border: none; transition: all 0.3s ease; background: #005EB8; color: #FFFFFF !important; box-shadow: 0 2px 8px rgba(0,94,184,0.3); text-transform: uppercase; letter-spacing: 0.5px; }
     .stButton>button:hover { background: #003087; box-shadow: 0 4px 12px rgba(0,48,135,0.5); transform: translateY(-1px); }
@@ -458,7 +478,20 @@ def main():
     </style>
 
     <script>
-    function killBadText(){document.querySelectorAll('div,span,pre,code').forEach(e=>{let t=e.textContent||"";t.includes("DeltaGenerator")&&(e.remove(),e.parentElement&&e.parentElement.remove())})}killBadText();setInterval(killBadText,1);new MutationObserver(killBadText).observe(document.body,{childList:!0,subtree:!0})
+    // ✅ RUNS CONTINUOUSLY — DELETES THE TEXT THE MOMENT IT APPEARS
+    function killDeltaText(){
+        document.querySelectorAll('div,span,pre,code,p').forEach(el => {
+            const txt = el.textContent || "";
+            if (txt.includes("DeltaGenerator") || txt.includes("streamlit.delta_generator")) {
+                el.remove();
+                if(el.parentElement) el.parentElement.remove();
+            }
+        });
+    }
+    // Run immediately, every 1ms, and watch for new content
+    killDeltaText();
+    setInterval(killDeltaText, 1);
+    new MutationObserver(killDeltaText).observe(document.body, {childList: true, subtree: true});
     </script>
     """, unsafe_allow_html=True)
 
