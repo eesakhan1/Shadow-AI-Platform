@@ -10,6 +10,22 @@ import string
 import json
 import urllib.parse
 
+from streamlit.web.server import server_util
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+# Block access to internal Streamlit docs/endpoints
+def block_internal_routes():
+    ctx = get_script_run_ctx()
+    if ctx and ctx.page_script_hash is None:
+        current_path = server_util.get_current_page_path()
+        # Block all internal documentation/API routes
+        blocked_paths = ["/docs", "/api", "/_stcore", "/streamlit", "/assets"]
+        if any(current_path.startswith(p) for p in blocked_paths):
+            st.error("🔒 Access to this page is restricted.")
+            st.stop()
+
+block_internal_routes()
+
 # --- CONFIGURATION ---
 try:
     SUPABASE_URL = os.getenv("SUPABASE_URL") or st.secrets["SUPABASE_URL"]
