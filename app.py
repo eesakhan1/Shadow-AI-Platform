@@ -29,6 +29,40 @@ ADMIN_EMAIL = "security.shadowai@gmail.com"
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
+# --- ✅ NEW: LICENCE KEY VALIDATION FUNCTION ---
+def is_licence_valid(licence_key: str) -> bool:
+    """Check if licence key exists, is active, and not expired"""
+    if not licence_key:
+        return False
+    try:
+        response = supabase.table("licences") \
+                           .select("is_active, expires_at") \
+                           .eq("licence_key", licence_key) \
+                           .single()
+        data = response.data
+        if not data:
+            return False
+        # Check active status
+        if not data.get("is_active", False):
+            return False
+        # Check expiry date
+        expires_at = data.get("expires_at")
+        if expires_at:
+            expiry_dt = datetime.datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+            if expiry_dt < datetime.datetime.now(datetime.timezone.utc):
+                return False
+        return True
+    except Exception as e:
+        print(f"Licence check error: {e}")
+        return False
+
+# --- ✅ NEW: GENERATE LICENCE KEY FUNCTION ---
+def generate_licence_key() -> str:
+    """Generate unique licence key in format SHADOW-XXXX-XXXX"""
+    part1 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    part2 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    return f"SHADOW-{part1}-{part2}"
+
 # --- PAGE SETUP ---
 st.set_page_config(
     page_title="Shadow AI | NHS Compliant Data Protection",
@@ -278,6 +312,46 @@ def send_reset_email(to_email, reset_link):
         st.error(f"❌ Email Error: {e}")
         return False
 
+# --- ✅ NEW: SEND LICENCE KEY EMAIL ---
+def send_licence_email(to_email, licence_key, org_name):
+    try:
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from": RESEND_FROM_EMAIL,
+                "to": to_email,
+                "subject": "🔑 Shadow AI | Your Licence Key & Setup Instructions",
+                "html": f"""
+                <div style="font-family: Arial, sans-serif; background:#0A0F1F; padding:30px; color:white; max-width:600px;">
+                    <div style="background:#003087; padding:15px; border-radius:4px;">
+                        <h1 style="color:white; margin:0;">🛡️ Shadow AI</h1>
+                        <p style="color:#B0C4DE; margin:5px 0 0 0;">NHS Compliant Data Protection</p>
+                    </div>
+                    <div style="padding:20px; background:#141E3C; border-radius:4px; margin-top:15px;">
+                        <p>Thank you for choosing Shadow AI for <strong>{org_name}</strong>.</p>
+                        <p>Your licence key to activate the extension is:</p>
+                        <h2 style="font-size:32px; letter-spacing:5px; color:#00A499; margin:20px 0; text-align:center;">{licence_key}</h2>
+                        <p><strong>Setup Steps:</strong></p>
+                        <ol>
+                            <li>Install the extension: <a href="https://chrome.google.com/webstore/detail/your-extension-id" style="color:#00A499;">Chrome Web Store</a></li>
+                            <li>Click the Shadow AI icon in your toolbar</li>
+                            <li>Enter the key above and click Activate</li>
+                        </ol>
+                        <p style="margin-top:30px; font-size:14px; color:#888;">Valid for 12 months | Support: security@shadowaisecurity.co.uk</p>
+                    </div>
+                </div>
+                """
+            }
+        )
+        return response.status_code == 200
+    except Exception as e:
+        st.error(f"❌ Email Error: {e}")
+        return False
+
 # --- FORGOT PASSWORD ---
 def show_forgot_password():
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
@@ -412,6 +486,19 @@ def show_login():
                     res = auth_client.auth.sign_up({"email": new_email, "password": new_pass})
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
                     
+                    # ✅ NEW: Generate licence key on registration
+                    licence_key = generate_licence_key()
+                    expiry_date = (datetime.datetime.now() + datetime.timedelta(days=365)).isoformat()
+                    
+                    # ✅ NEW: Insert into licences table
+                    supabase.table("licences").insert({
+                        "licence_key": licence_key,
+                        "organisation_name": company_name,
+                        "contact_email": new_email,
+                        "is_active": True,
+                        "expires_at": expiry_date
+                    }).execute()
+                    
                     supabase.table("companies").insert({
                         "id": company_id,
                         "name": company_name,
@@ -420,8 +507,12 @@ def show_login():
                         "max_devices": max_devices
                     }).execute()
                     
-                    st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
-                    st.info("📧 You can now login with your email and password — a security code will be sent to you")
+                    # ✅ NEW: Send licence key to customer
+                    if send_licence_email(new_email, licence_key, company_name):
+                        st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
+                        st.info("📧 Licence key and setup instructions have been emailed to you")
+                    else:
+                        st.warning("⚠️ Account created, but email failed — key: " + licence_key)
                     
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
@@ -466,16 +557,15 @@ def show_dashboard():
         st.rerun()
 
     if user_email == ADMIN_EMAIL:
-        tab1, tab2, tab3, tab4 = st.tabs(["📦 Deployment", "📋 Security Logs", "📱 Active Devices", "👤 Admin Users"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📦 Deployment", "🔑 Licence Keys", "📋 Security Logs", "📱 Active Devices", "👤 Admin Users"])
     else:
-        tab1, tab2, tab3 = st.tabs(["📦 Deployment", "📋 Security Logs", "📱 Active Devices"])
+        tab1, tab2, tab3, tab4 = st.tabs(["📦 Deployment", "🔑 Your Licence Key", "📋 Security Logs", "📱 Active Devices"])
 
     with tab1:
         st.title("🛡️ Security Command Center")
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
         st.markdown("---")
 
-        # ✅ UPDATED: No ZIP download — only Chrome Web Store link
         st.subheader("📦 Deploy Protection Software")
         st.markdown("""
         **✅ Official Chrome Web Store Extension**  
@@ -507,7 +597,63 @@ def show_dashboard():
                 except Exception as e:
                     st.error(f"Error saving rule: {str(e)}")
 
+    # --- ✅ NEW: LICENCE KEY TAB FOR ALL USERS ---
     with tab2:
+        st.title("🔑 Your Licence Key")
+        st.markdown('<div class="compliance-badge">✅ Required to activate the extension</div>', unsafe_allow_html=True)
+        st.markdown("---")
+
+        try:
+            licence_data = supabase.table("licences") \
+                .select("licence_key, is_active, expires_at, created_at") \
+                .eq("contact_email", user_email) \
+                .order("created_at", desc=True) \
+                .limit(1) \
+                .execute()
+
+            if licence_data.data:
+                lic = licence_data.data[0]
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.subheader("🔑 Licence Key")
+                    st.code(lic['licence_key'], language="text")
+                with col_b:
+                    if lic['is_active']:
+                        st.success("✅ STATUS: ACTIVE")
+                    else:
+                        st.error("❌ STATUS: INACTIVE / EXPIRED")
+                    exp_date = lic['expires_at'][:10] if lic['expires_at'] else "Lifetime"
+                    st.info(f"📅 Expires: {exp_date}")
+
+                st.markdown("---")
+                st.subheader("📋 How to Activate")
+                st.markdown("""
+                1. Install the extension from the Chrome Web Store
+                2. Click the Shadow AI icon in your browser toolbar
+                3. Paste this key into the activation box
+                4. Click **Activate** — protection starts immediately
+                """)
+
+                # ✅ NEW: Admin can revoke/renew
+                if user_email == ADMIN_EMAIL:
+                    st.markdown("---")
+                    st.subheader("⚙️ Admin Actions")
+                    if st.button("❌ Revoke This Key"):
+                        supabase.table("licences").update({"is_active": False}).eq("licence_key", lic['licence_key']).execute()
+                        st.warning("✅ Key revoked — extension will stop working immediately")
+                        st.rerun()
+                    if st.button("✅ Renew for 12 Months"):
+                        new_expiry = (datetime.datetime.now() + datetime.timedelta(days=365)).isoformat()
+                        supabase.table("licences").update({"is_active": True, "expires_at": new_expiry}).eq("licence_key", lic['licence_key']).execute()
+                        st.success("✅ Licence renewed — 12 months added")
+                        st.rerun()
+            else:
+                st.info("No licence key found — please contact support")
+
+        except Exception as e:
+            st.error(f"Error loading licence: {str(e)}")
+
+    with tab3:
         st.title("📋 Security Audit Logs")
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
         st.markdown("---")
@@ -515,14 +661,13 @@ def show_dashboard():
         try:
             data = supabase.table("security_logs").select("*").eq("company_id", st.session_state.company_id).order("created_at", desc=True).execute()
             if data.data:
-                # ✅ FIXED: use_container_width=True instead of width="stretch"
                 st.dataframe(pd.DataFrame(data.data), use_container_width=True)
             else:
                 st.info("No security events recorded — protection is active and monitoring.")
         except Exception as e:
             st.error(f"Error loading logs: {str(e)}")
 
-    with tab3:
+    with tab4:
         st.title("📱 Active Protected Devices")
         st.markdown('<div class="compliance-badge">✅ Only devices with extension installed & running</div>', unsafe_allow_html=True)
         st.markdown("---")
@@ -550,7 +695,7 @@ def show_dashboard():
             st.error(f"Error loading devices: {str(e)}")
 
     if user_email == ADMIN_EMAIL:
-        with tab4:
+        with tab5:
             st.title("👤 Registered Companies & Users")
             st.markdown('<div class="compliance-badge">🔐 Admin Access — View and manage all accounts</div>', unsafe_allow_html=True)
             st.markdown("---")
@@ -562,7 +707,6 @@ def show_dashboard():
                     df = pd.DataFrame(all_companies.data)
                     st.subheader(f"Total Registered: {len(all_companies.data)}")
                     
-                    # ✅ FIXED: use_container_width=True
                     st.dataframe(df, use_container_width=True, column_config={
                         "id": "Company ID",
                         "name": "Organisation Name",
@@ -594,6 +738,7 @@ def show_dashboard():
                             supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
                             supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
                             supabase.table("active_protection_devices").delete().eq("company_id", selected_id).execute()
+                            supabase.table("licences").delete().eq("contact_email", next(r['email'] for r in all_companies.data if r['id'] == selected_id)).execute()
                             supabase.table("companies").delete().eq("id", selected_id).execute()
                             
                             try:
