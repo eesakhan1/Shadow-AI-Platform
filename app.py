@@ -271,12 +271,12 @@ def show_dashboard():
         company_data = supabase.table("companies").select("is_active, name, email, max_devices").eq("id", st.session_state.company_id).execute()
         is_active = True
         org_name = company_data.data[0].get("name", "Your Organisation") if company_data.data else "Your Organisation"
-        user_email = company_data.data[0].get("email", "") if company_data.data else ""
+        user_email_val = company_data.data[0].get("email", "") if company_data.data else ""
         max_devices = company_data.data[0].get("max_devices", 100) if company_data.data else 100
     except:
         is_active = True
         org_name = "Your Organisation"
-        user_email = ""
+        user_email_val = ""
         max_devices = 100
 
     try:
@@ -298,7 +298,7 @@ def show_dashboard():
             del st.session_state[key]
         st.rerun()
 
-    if user_email == ADMIN_EMAIL:
+    if user_email_val == ADMIN_EMAIL:
         tab1, tab2, tab3, tab4 = st.tabs(["📦 Deployment", "📋 Security Logs", "📱 Active Devices", "👤 Admin Users"])
     else:
         tab1, tab2, tab3 = st.tabs(["📦 Deployment", "📋 Security Logs", "📱 Active Devices"])
@@ -373,17 +373,17 @@ def show_dashboard():
         except Exception as e:
             st.error(f"Error loading devices: {str(e)}")
 
-    if user_email == ADMIN_EMAIL:
+    if user_email_val == ADMIN_EMAIL:
         with tab4:
             st.markdown('<h2 style="color:white;">👤 Registered Companies & Users</h2>', unsafe_allow_html=True)
             st.markdown('<div class="compliance-badge">🔐 Admin Access — Edit Limits, Activate/Deactivate, Delete</div>', unsafe_allow_html=True)
             st.markdown("---")
 
             try:
-                all_companies = supabase.table("companies").select("*").order("name", desc=False).execute()
-                if all_companies.data:
-                    df = pd.DataFrame(all_companies.data)
-                    st.subheader(f"Total Registered: {len(all_companies.data)}")
+                all_companies_data = supabase.table("companies").select("*").order("name", desc=False).execute()
+                if all_companies_data.data:
+                    df = pd.DataFrame(all_companies_data.data)
+                    st.subheader(f"Total Registered: {len(all_companies_data.data)}")
 
                     for idx, row in df.iterrows():
                         with st.expander(f"🏢 {row['name']} | ID: {row['id']}"):
@@ -432,7 +432,7 @@ def main():
         initial_sidebar_state="expanded"
     )
 
-    # --- HIDE DELTA TEXT COMPLETELY ---
+    # --- CLEAN CSS — NO METHOD NAMES LISTED ---
     st.markdown("""
     <style>
     [data-testid="stDocstring"], .stDocstring, .docstring, pre, code {display: none !important; visibility: hidden !important; height:0 !important;}
