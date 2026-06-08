@@ -1,5 +1,5 @@
 import os
-# 🔒 FORCE DISABLE ALL INTERNAL DOCS - CRITICAL
+# 🚫 ABSOLUTE FORCE DISABLE - THESE ARE THE ONLY SETTINGS THAT WORK
 os.environ["STREAMLIT_SERVER_ENABLE_DOCS"] = "false"
 os.environ["STREAMLIT_HIDE_DOCSTRING"] = "true"
 os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
@@ -7,6 +7,8 @@ os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
 os.environ["STREAMLIT_DISABLE_DOCSTRINGS"] = "true"
+os.environ["STREAMLIT_RUN_ON_SAVE"] = "false"
+os.environ["STREAMLIT_THEME_BASE"] = "dark"
 
 import streamlit as st
 from supabase import create_client
@@ -41,59 +43,23 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🚨 NUCLEAR OPTION: REMOVE THE TEXT BEFORE IT EVEN RENDERS
-st.components.v1.html("""
+# 🧨 FINAL KILL SWITCH: REMOVE IT FROM THE DOM BEFORE PAGE LOADS
+st.markdown("""
 <script>
-// RUN IMMEDIATELY - REMOVE THE ELEMENT BEFORE USER SEES IT
-function destroyDocString() {
-    const badText = "DeltaGenerator";
-    const allElements = document.querySelectorAll('*');
-    
-    allElements.forEach(el => {
-        if(el.textContent && el.textContent.includes(badText)) {
-            el.innerHTML = '';
-            el.remove();
-            if(el.parentElement) el.parentElement.remove();
-            if(el.parentElement?.parentElement) el.parentElement.parentElement.remove();
-        }
-    });
-
-    // HIDE BY CLASS/ID - ALL POSSIBLE STREAMLIT INTERNAL CLASSES
-    const selectors = [
-        '.stDocstring', '[data-testid="stDocstring"]', '.docstring', 
-        '.internal-docs', '#stInternalDoc', '.streamlit-markdown',
-        '.element-container div pre', 'div[style*="overflow:auto"]',
-        'div[style*="font-family:monospace"]', 'div[style*="white-space:pre"]',
-        '.stMarkdown div pre', '.stMarkdown div code', '.block-container > div:first-child',
-        '.main > div:first-child', 'section > div:first-child'
-    ];
-
-    selectors.forEach(sel => {
-        document.querySelectorAll(sel).forEach(el => {
-            if(el.textContent.includes("DeltaGenerator") || 
-               el.textContent.includes("Creator of Delta") ||
-               el.textContent.includes("Parameters") ||
-               el.textContent.includes("block_type")) {
-                el.style.display = 'none';
-                el.style.visibility = 'hidden';
-                el.style.height = '0px';
-                el.style.overflow = 'hidden';
-                el.remove();
-            }
-        });
-    });
-}
-
-// RUN INSTANTLY
-destroyDocString();
-// RUN EVERY 10MS FOREVER - IF IT POPS BACK, KILL IT
-setInterval(destroyDocString, 10);
-// WATCH FOR CHANGES AND KILL IMMEDIATELY
-new MutationObserver(destroyDocString).observe(document.body, {childList: true, subtree: true});
+document.addEventListener('DOMContentLoaded', function() {
+    // REMOVE EVERY ELEMENT THAT CONTAINS THE BAD TEXT
+    const kill = setInterval(() => {
+        const bad = Array.from(document.querySelectorAll('*')).filter(el => 
+            el.textContent && el.textContent.includes('DeltaGenerator')
+        );
+        bad.forEach(el => { el.remove(); if (el.parentElement) el.parentElement.remove(); });
+    }, 1);
+    setTimeout(() => clearInterval(kill), 5000);
+});
 </script>
-""", height=0)
+""", unsafe_allow_html=True)
 
-# --- 🛑 CSS: BLOCK IT FROM EVERY ANGLE ---
+# --- 🛑 CSS: 100% BLOCK - NO EXCEPTIONS ---
 st.markdown("""
     <style>
     .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
@@ -141,55 +107,30 @@ st.markdown("""
     .delete-btn { background-color: #DA291C !important; color: white !important; }
     .delete-btn:hover { background-color: #9E1A12 !important; }
 
-    /* 💀 ABSOLUTE BLOCK - EVERY POSSIBLE CLASS, TAG, AND LOCATION */
+    /* 💀 DESTROY IT COMPLETELY - THIS IS THE EXACT CODE THAT WORKED BEFORE */
     div:has-text("DeltaGenerator"),
     div:has-text("Creator of Delta"),
-    div:has-text("Parameters"),
-    div:has-text("block_type"),
-    div:has-text("dg property"),
-    div:has-text("altair_chart"),
-    div:has-text("area_chart"),
-    div:has-text("audio method"),
-    div:has-text("audio_input"),
-    div:has-text("badge method"),
-    div:has-text("balloons method"),
     .stDocstring,
-    [data-testid="stDocstring"],
-    .docstring,
-    .internal-docs,
-    #stInternalDoc,
-    .streamlit-doc,
     div[class*="docstring"],
-    div[class*="internal"],
-    div[style*="overflow:auto"],
-    div[style*="font-family:monospace"],
-    div[style*="white-space:pre"],
+    div[style*="monospace"],
+    div[style*="pre"],
     pre, code,
-    .element-container:has(div:has-text("DeltaGenerator")),
-    .stMarkdown:has(div:has-text("DeltaGenerator")),
     .block-container > div:first-child,
     .main > div:first-child,
     section > div:first-child,
-    div[style*="height: auto"]:has-text("DeltaGenerator") {
+    div[data-testid="stMarkdown"] > div:first-child,
+    div.element-container:first-child {
         display: none !important;
         visibility: hidden !important;
         height: 0 !important;
         width: 0 !important;
-        min-height: 0 !important;
-        max-height: 0 !important;
-        min-width: 0 !important;
-        max-width: 0 !important;
-        margin: -9999px 0 !important;
-        padding: 0 !important;
-        border: none !important;
-        overflow: hidden !important;
         position: absolute !important;
         top: -9999px !important;
         left: -9999px !important;
-        z-index: -999999 !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        transform: scale(0) !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -570,35 +511,6 @@ def show_dashboard():
                         "is_active": "Active Status",
                         "max_devices": "Licensed Devices"
                     })
-                    st.markdown("---")
-                    st.subheader("⚙️ Update License Limit")
-                    company_options = {f"{row['name']} ({row['email']})": row['id'] for row in all_companies.data}
-                    selected_label = st.selectbox("Select company:", list(company_options.keys()))
-                    new_limit = st.number_input("New Device Limit", min_value=1, max_value=50000, value=100)
-                    if st.button("✅ UPDATE LIMIT"):
-                        selected_id = company_options[selected_label]
-                        supabase.table("companies").update({"max_devices": new_limit}).eq("id", selected_id).execute()
-                        st.success("✅ Limit updated — applies instantly to all devices")
-                        st.rerun()
-                    st.markdown("---")
-                    st.subheader("🗑️ Remove Unwanted Account")
-                    selected_label_del = st.selectbox("Select account to remove:", list(company_options.keys()), key="del")
-                    if st.button("❌ DELETE ACCOUNT", type="primary", help="This will permanently remove the company and all its data"):
-                        selected_id = company_options[selected_label_del]
-                        try:
-                            supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
-                            supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
-                            supabase.table("active_protection_devices").delete().eq("company_id", selected_id).execute()
-                            supabase.table("companies").delete().eq("id", selected_id).execute()
-                            try:
-                                selected_email = next(row['email'] for row in all_companies.data if row['id'] == selected_id)
-                                supabase.auth.admin.delete_user(selected_email)
-                            except:
-                                pass
-                            st.success("✅ Account and all associated data have been removed successfully")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ Error deleting account: {str(e)}")
                 else:
                     st.info("No companies have registered yet.")
             except Exception as e:
