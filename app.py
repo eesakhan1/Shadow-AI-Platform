@@ -1,11 +1,13 @@
 import os
-# FORCE DISABLE ALL STREAMLIT DOCUMENTATION
+# 💥 MAXIMUM FORCE: DISABLE ALL STREAMLIT DOCUMENTATION
 os.environ["STREAMLIT_SERVER_ENABLE_DOCS"] = "false"
 os.environ["STREAMLIT_HIDE_DOCSTRING"] = "true"
 os.environ["STREAMLIT_DISABLE_DOCSTRINGS"] = "true"
 os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
 os.environ["STREAMLIT_DISABLE_DOCSTRING_RENDER"] = "true"
 os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
+os.environ["STREAMLIT_DISABLE_DOCS"] = "true"
+os.environ["STREAMLIT_DOCSTRING_HIDE"] = "true"
 
 import streamlit as st
 from supabase import create_client
@@ -27,7 +29,7 @@ except Exception as e:
     st.error(f"❌ Missing Secrets: {e}")
     st.stop()
 
-ADMIN_EMAIL = "security.shadowai@gmail.com"  # ← YOUR ADMIN EMAIL
+ADMIN_EMAIL = "security.shadowai@gmail.com"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -40,98 +42,100 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🚨 NUCLEAR BLOCK: REMOVE DELTA TEXT BEFORE IT SHOWS
+# 🚨 NUCLEAR OPTION: DELETE DELTA TEXT BEFORE IT EVEN LOADS
 st.markdown("""
 <style>
-/* WIPE OUT ALL DOCSTRING / HELP TEXT */
+/* DESTROY EVERY TRACE OF DOCSTRING / DELTA TEXT */
+*:has-text("DeltaGenerator"),
+*:has-text("Creator of Delta"),
+*:has-text("Parameters"),
+*:has-text("dg property"),
+*:has-text("method"),
+*:has-text("altair_chart"),
+*:has-text("area_chart"),
+*:has-text("audio"),
+*:has-text("badge"),
+*:has-text("balloons"),
+*:has-text("bar_chart"),
+*:has-text("bokeh_chart"),
+*:has-text("button"),
+*:has-text("camera_input"),
+*:has-text("caption"),
+*:has-text("chat_input"),
+*:has-text("chat_message"),
+*:has-text("checkbox"),
+*:has-text("code"),
+*:has-text("color_picker"),
+*:has-text("columns"),
+*:has-text("container"),
+*:has-text("data_editor"),
+*:has-text("dataframe"),
+*:has-text("date_input"),
+*:has-text("datetime_input"),
+*:has-text("divider"),
+*:has-text("download_button"),
+*:has-text("empty"),
+*:has-text("error"),
+*:has-text("exception"),
+*:has-text("expander"),
+*:has-text("feedback"),
+*:has-text("file_uploader"),
+*:has-text("form"),
+*:has-text("form_submit_button"),
+*:has-text("graphviz_chart"),
+*:has-text("header"),
+*:has-text("help"),
+*:has-text("html"),
+*:has-text("iframe"),
+*:has-text("image"),
+*:has-text("info"),
+*:has-text("json"),
+*:has-text("latex"),
+*:has-text("line_chart"),
+*:has-text("link_button"),
+*:has-text("map"),
+*:has-text("markdown"),
+*:has-text("metric"),
+*:has-text("multiselect"),
+*:has-text("number_input"),
+*:has-text("page_link"),
+*:has-text("pdf"),
+*:has-text("pills"),
+*:has-text("plotly_chart"),
+*:has-text("popover"),
+*:has-text("progress"),
+*:has-text("pydeck_chart"),
+*:has-text("pyplot"),
+*:has-text("radio"),
+*:has-text("scatter_chart"),
+*:has-text("segmented_control"),
+*:has-text("select_slider"),
+*:has-text("selectbox"),
+*:has-text("slider"),
+*:has-text("snow"),
+*:has-text("spinner"),
+*:has-text("status"),
+*:has-text("subheader"),
+*:has-text("success"),
+*:has-text("table"),
+*:has-text("tabs"),
+*:has-text("text"),
+*:has-text("text_area"),
+*:has-text("text_input"),
+*:has-text("time_input"),
+*:has-text("title"),
+*:has-text("toast"),
+*:has-text("toggle"),
+*:has-text("vega_lite_chart"),
+*:has-text("video"),
+*:has-text("warning"),
+*:has-text("write"),
+*:has-text("write_stream"),
 [data-testid="stDocstring"],
 .stDocstring,
-div:has-text("DeltaGenerator"),
-div:has-text("Creator of Delta"),
-div:has-text("Parameters"),
-div:has-text("dg property"),
-div:has-text("method"),
-div:has-text("altair_chart"),
-div:has-text("area_chart"),
-div:has-text("audio"),
-div:has-text("badge"),
-div:has-text("balloons"),
-div:has-text("bar_chart"),
-div:has-text("bokeh_chart"),
-div:has-text("button"),
-div:has-text("camera_input"),
-div:has-text("caption"),
-div:has-text("chat_input"),
-div:has-text("chat_message"),
-div:has-text("checkbox"),
-div:has-text("code"),
-div:has-text("color_picker"),
-div:has-text("columns"),
-div:has-text("container"),
-div:has-text("data_editor"),
-div:has-text("dataframe"),
-div:has-text("date_input"),
-div:has-text("datetime_input"),
-div:has-text("divider"),
-div:has-text("download_button"),
-div:has-text("empty"),
-div:has-text("error"),
-div:has-text("exception"),
-div:has-text("expander"),
-div:has-text("feedback"),
-div:has-text("file_uploader"),
-div:has-text("form"),
-div:has-text("form_submit_button"),
-div:has-text("graphviz_chart"),
-div:has-text("header"),
-div:has-text("help"),
-div:has-text("html"),
-div:has-text("iframe"),
-div:has-text("image"),
-div:has-text("info"),
-div:has-text("json"),
-div:has-text("latex"),
-div:has-text("line_chart"),
-div:has-text("link_button"),
-div:has-text("map"),
-div:has-text("markdown"),
-div:has-text("metric"),
-div:has-text("multiselect"),
-div:has-text("number_input"),
-div:has-text("page_link"),
-div:has-text("pdf"),
-div:has-text("pills"),
-div:has-text("plotly_chart"),
-div:has-text("popover"),
-div:has-text("progress"),
-div:has-text("pydeck_chart"),
-div:has-text("pyplot"),
-div:has-text("radio"),
-div:has-text("scatter_chart"),
-div:has-text("segmented_control"),
-div:has-text("select_slider"),
-div:has-text("selectbox"),
-div:has-text("slider"),
-div:has-text("snow"),
-div:has-text("spinner"),
-div:has-text("status"),
-div:has-text("subheader"),
-div:has-text("success"),
-div:has-text("table"),
-div:has-text("tabs"),
-div:has-text("text"),
-div:has-text("text_area"),
-div:has-text("text_input"),
-div:has-text("time_input"),
-div:has-text("title"),
-div:has-text("toast"),
-div:has-text("toggle"),
-div:has-text("vega_lite_chart"),
-div:has-text("video"),
-div:has-text("warning"),
-div:has-text("write"),
-div:has-text("write_stream"),
-pre, code, .docstring, .help-text {
+.docstring,
+.help-text,
+pre, code {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
@@ -149,13 +153,13 @@ pre, code, .docstring, .help-text {
     z-index: -9999 !important;
 }
 
-/* Fix page spacing */
+/* Fix spacing */
 .block-container {
     margin-top: 0 !important;
     padding-top: 1rem !important;
 }
 
-/* YOUR ORIGINAL STYLES */
+/* YOUR STYLES */
 .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
 .stButton>button { 
     width: 100%; border-radius: 4px; height: 55px; font-size: 18px; font-weight: bold; 
@@ -205,21 +209,25 @@ h1, h2, h3, h4, h5, h6 { color: #FFFFFF !important; font-family: Arial, sans-ser
 </style>
 
 <script>
-// DESTROY BAD TEXT PERMANENTLY
+// 💥 DESTROY BAD TEXT INSTANTLY
 function killBadText() {
+    // Remove by selector
     const bad = document.querySelectorAll('[data-testid="stDocstring"], .stDocstring');
     bad.forEach(el => el.remove());
     
-    document.querySelectorAll('div').forEach(el => {
-        if (el.textContent.includes('DeltaGenerator') || el.textContent.includes('Parameters') || el.textContent.includes('method')) {
+    // Remove ANY element containing bad text
+    document.querySelectorAll('div, span, pre, code').forEach(el => {
+        const txt = el.textContent || "";
+        if (txt.includes("DeltaGenerator") || txt.includes("Parameters") || txt.includes("method") || txt.includes("Creator of Delta")) {
             el.remove();
             if (el.parentElement) el.parentElement.remove();
         }
     });
 }
+// Run immediately + every millisecond
 killBadText();
 setInterval(killBadText, 1);
-new MutationObserver(killBadText).observe(document.body, {childList: true, subtree: true, attributes: true});
+new MutationObserver(killBadText).observe(document.body, {childList: true, subtree: true, attributes: true, characterData: true});
 </script>
 """, unsafe_allow_html=True)
 
@@ -582,7 +590,6 @@ def show_dashboard():
         except Exception as e:
             st.error(f"Error loading devices: {str(e)}")
 
-    # --- ✅ NEW FULL ADMIN PANEL ---
     if user_email == ADMIN_EMAIL:
         with tab4:
             st.markdown('<h2 style="color:white;">👤 Registered Companies & Users</h2>', unsafe_allow_html=True)
@@ -595,7 +602,6 @@ def show_dashboard():
                     df = pd.DataFrame(all_companies.data)
                     st.subheader(f"Total Registered: {len(all_companies.data)}")
 
-                    # EDIT EACH COMPANY
                     for idx, row in df.iterrows():
                         with st.expander(f"🏢 {row['name']} | ID: {row['id']}"):
                             col_a, col_b, col_c, col_d = st.columns([2,1,1,1])
@@ -650,6 +656,6 @@ def main():
     else:
         show_dashboard()
 
-# --- 🚫 NOTHING ELSE HERE — NO TOP-LEVEL CODE ---
+
 if __name__ == "__main__":
     main()
