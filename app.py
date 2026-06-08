@@ -1,10 +1,11 @@
 import os
-# Disable all Streamlit documentation output
+# FORCE DISABLE ALL STREAMLIT DOCUMENTATION
 os.environ["STREAMLIT_SERVER_ENABLE_DOCS"] = "false"
 os.environ["STREAMLIT_HIDE_DOCSTRING"] = "true"
 os.environ["STREAMLIT_DISABLE_DOCSTRINGS"] = "true"
 os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
 os.environ["STREAMLIT_DISABLE_DOCSTRING_RENDER"] = "true"
+os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
 
 import streamlit as st
 from supabase import create_client
@@ -26,7 +27,7 @@ except Exception as e:
     st.error(f"❌ Missing Secrets: {e}")
     st.stop()
 
-ADMIN_EMAIL = "security.shadowai@gmail.com"
+ADMIN_EMAIL = "security.shadowai@gmail.com"  # ← YOUR ADMIN EMAIL
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -39,10 +40,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🛡️ FINAL BLOCK: Hide any remaining docstring content
+# 🚨 NUCLEAR BLOCK: REMOVE DELTA TEXT BEFORE IT SHOWS
 st.markdown("""
 <style>
-/* Remove all Streamlit docstring/help text */
+/* WIPE OUT ALL DOCSTRING / HELP TEXT */
 [data-testid="stDocstring"],
 .stDocstring,
 div:has-text("DeltaGenerator"),
@@ -50,6 +51,86 @@ div:has-text("Creator of Delta"),
 div:has-text("Parameters"),
 div:has-text("dg property"),
 div:has-text("method"),
+div:has-text("altair_chart"),
+div:has-text("area_chart"),
+div:has-text("audio"),
+div:has-text("badge"),
+div:has-text("balloons"),
+div:has-text("bar_chart"),
+div:has-text("bokeh_chart"),
+div:has-text("button"),
+div:has-text("camera_input"),
+div:has-text("caption"),
+div:has-text("chat_input"),
+div:has-text("chat_message"),
+div:has-text("checkbox"),
+div:has-text("code"),
+div:has-text("color_picker"),
+div:has-text("columns"),
+div:has-text("container"),
+div:has-text("data_editor"),
+div:has-text("dataframe"),
+div:has-text("date_input"),
+div:has-text("datetime_input"),
+div:has-text("divider"),
+div:has-text("download_button"),
+div:has-text("empty"),
+div:has-text("error"),
+div:has-text("exception"),
+div:has-text("expander"),
+div:has-text("feedback"),
+div:has-text("file_uploader"),
+div:has-text("form"),
+div:has-text("form_submit_button"),
+div:has-text("graphviz_chart"),
+div:has-text("header"),
+div:has-text("help"),
+div:has-text("html"),
+div:has-text("iframe"),
+div:has-text("image"),
+div:has-text("info"),
+div:has-text("json"),
+div:has-text("latex"),
+div:has-text("line_chart"),
+div:has-text("link_button"),
+div:has-text("map"),
+div:has-text("markdown"),
+div:has-text("metric"),
+div:has-text("multiselect"),
+div:has-text("number_input"),
+div:has-text("page_link"),
+div:has-text("pdf"),
+div:has-text("pills"),
+div:has-text("plotly_chart"),
+div:has-text("popover"),
+div:has-text("progress"),
+div:has-text("pydeck_chart"),
+div:has-text("pyplot"),
+div:has-text("radio"),
+div:has-text("scatter_chart"),
+div:has-text("segmented_control"),
+div:has-text("select_slider"),
+div:has-text("selectbox"),
+div:has-text("slider"),
+div:has-text("snow"),
+div:has-text("spinner"),
+div:has-text("status"),
+div:has-text("subheader"),
+div:has-text("success"),
+div:has-text("table"),
+div:has-text("tabs"),
+div:has-text("text"),
+div:has-text("text_area"),
+div:has-text("text_input"),
+div:has-text("time_input"),
+div:has-text("title"),
+div:has-text("toast"),
+div:has-text("toggle"),
+div:has-text("vega_lite_chart"),
+div:has-text("video"),
+div:has-text("warning"),
+div:has-text("write"),
+div:has-text("write_stream"),
 pre, code, .docstring, .help-text {
     display: none !important;
     visibility: hidden !important;
@@ -64,13 +145,17 @@ pre, code, .docstring, .help-text {
     border: none !important;
     opacity: 0 !important;
     pointer-events: none !important;
+    transform: scale(0) !important;
+    z-index: -9999 !important;
 }
+
 /* Fix page spacing */
 .block-container {
     margin-top: 0 !important;
     padding-top: 1rem !important;
 }
-/* Your original styles below */
+
+/* YOUR ORIGINAL STYLES */
 .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
 .stButton>button { 
     width: 100%; border-radius: 4px; height: 55px; font-size: 18px; font-weight: bold; 
@@ -78,6 +163,8 @@ pre, code, .docstring, .help-text {
     box-shadow: 0 2px 8px rgba(0,94,184,0.3); text-transform: uppercase; letter-spacing: 0.5px; 
 }
 .stButton>button:hover { background: #003087; box-shadow: 0 4px 12px rgba(0,48,135,0.5); transform: translateY(-1px); }
+.stButton>button.danger { background: #DA291C !important; }
+.stButton>button.danger:hover { background: #9E1A12 !important; }
 .login-card { 
     background-color: rgba(20, 30, 60, 0.85); backdrop-filter: blur(20px); 
     -webkit-backdrop-filter: blur(20px); padding: 40px; border-radius: 8px; 
@@ -91,6 +178,8 @@ h1, h2, h3, h4, h5, h6 { color: #FFFFFF !important; font-family: Arial, sans-ser
     background-color: rgba(255,255,255,0.05); border: 1px solid #005EB8; 
     border-radius: 4px; color: #FFFFFF !important; 
 }
+.stNumberInput input { color: #FFFFFF !important; background-color: rgba(255,255,255,0.05); border: 1px solid #005EB8; border-radius:4px; }
+.stCheckbox label { color: #FFFFFF !important; }
 .stTabs [data-baseweb="tab-list"] { gap: 10px; }
 .stTabs [data-baseweb="tab"] { 
     background-color: transparent; border-radius: 4px 4px 0 0; 
@@ -113,26 +202,24 @@ h1, h2, h3, h4, h5, h6 { color: #FFFFFF !important; font-family: Arial, sans-ser
     background: #00A499; color: white; padding: 6px 12px; border-radius: 4px; 
     font-weight: bold; font-size: 14px; display: inline-block; margin: 8px 0; 
 }
-.delete-btn { background-color: #DA291C !important; color: white !important; }
-.delete-btn:hover { background-color: #9E1A12 !important; }
 </style>
 
 <script>
-// Remove any docstring elements immediately
-function removeDocstrings() {
-    const badElements = document.querySelectorAll('[data-testid="stDocstring"], .stDocstring');
-    badElements.forEach(el => el.remove());
+// DESTROY BAD TEXT PERMANENTLY
+function killBadText() {
+    const bad = document.querySelectorAll('[data-testid="stDocstring"], .stDocstring');
+    bad.forEach(el => el.remove());
     
-    // Also remove any element containing DeltaGenerator text
     document.querySelectorAll('div').forEach(el => {
-        if (el.textContent.includes('DeltaGenerator') || el.textContent.includes('Parameters')) {
+        if (el.textContent.includes('DeltaGenerator') || el.textContent.includes('Parameters') || el.textContent.includes('method')) {
             el.remove();
+            if (el.parentElement) el.parentElement.remove();
         }
     });
 }
-removeDocstrings();
-setInterval(removeDocstrings, 100);
-new MutationObserver(removeDocstrings).observe(document.body, {childList: true, subtree: true});
+killBadText();
+setInterval(killBadText, 1);
+new MutationObserver(killBadText).observe(document.body, {childList: true, subtree: true, attributes: true});
 </script>
 """, unsafe_allow_html=True)
 
@@ -495,23 +582,51 @@ def show_dashboard():
         except Exception as e:
             st.error(f"Error loading devices: {str(e)}")
 
+    # --- ✅ NEW FULL ADMIN PANEL ---
     if user_email == ADMIN_EMAIL:
         with tab4:
             st.markdown('<h2 style="color:white;">👤 Registered Companies & Users</h2>', unsafe_allow_html=True)
-            st.markdown('<div class="compliance-badge">🔐 Admin Access — View and manage all accounts</div>', unsafe_allow_html=True)
+            st.markdown('<div class="compliance-badge">🔐 Admin Access — Edit Limits, Activate/Deactivate, Delete</div>', unsafe_allow_html=True)
             st.markdown("---")
+
             try:
-                all_companies = supabase.table("companies").select("id, name, email, is_active, max_devices").execute()
+                all_companies = supabase.table("companies").select("*").order("name", desc=False).execute()
                 if all_companies.data:
                     df = pd.DataFrame(all_companies.data)
                     st.subheader(f"Total Registered: {len(all_companies.data)}")
-                    st.dataframe(df, use_container_width=True, column_config={
-                        "id": "Company ID",
-                        "name": "Organisation Name",
-                        "email": "Contact Email",
-                        "is_active": "Active Status",
-                        "max_devices": "Licensed Devices"
-                    })
+
+                    # EDIT EACH COMPANY
+                    for idx, row in df.iterrows():
+                        with st.expander(f"🏢 {row['name']} | ID: {row['id']}"):
+                            col_a, col_b, col_c, col_d = st.columns([2,1,1,1])
+                            with col_a:
+                                new_name = st.text_input("Organisation Name", value=row['name'], key=f"name_{idx}")
+                            with col_b:
+                                new_email = st.text_input("Contact Email", value=row['email'], key=f"email_{idx}")
+                            with col_c:
+                                new_max = st.number_input("Max Devices", min_value=1, max_value=10000, value=row['max_devices'], key=f"max_{idx}")
+                            with col_d:
+                                new_active = st.checkbox("Active", value=row['is_active'], key=f"active_{idx}")
+
+                            save_col, del_col = st.columns([1,1])
+                            with save_col:
+                                if st.button("💾 Save Changes", key=f"save_{idx}"):
+                                    supabase.table("companies").update({
+                                        "name": new_name,
+                                        "email": new_email,
+                                        "max_devices": new_max,
+                                        "is_active": new_active
+                                    }).eq("id", row['id']).execute()
+                                    st.success("✅ Updated successfully")
+                                    st.rerun()
+                            with del_col:
+                                if st.button("🗑️ DELETE COMPANY", key=f"del_{idx}", type="primary", help="Permanent delete"):
+                                    supabase.table("companies").delete().eq("id", row['id']).execute()
+                                    supabase.table("active_protection_devices").delete().eq("company_id", row['id']).execute()
+                                    supabase.table("company_secrets").delete().eq("company_id", row['id']).execute()
+                                    supabase.table("security_logs").delete().eq("company_id", row['id']).execute()
+                                    st.success("✅ Company and all data deleted")
+                                    st.rerun()
                 else:
                     st.info("No companies have registered yet.")
             except Exception as e:
@@ -535,6 +650,6 @@ def main():
     else:
         show_dashboard()
 
-# --- 🚫 NO TOP-LEVEL OBJECTS HERE ---
+# --- 🚫 NOTHING ELSE HERE — NO TOP-LEVEL CODE ---
 if __name__ == "__main__":
     main()
