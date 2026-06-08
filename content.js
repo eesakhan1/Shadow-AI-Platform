@@ -4,6 +4,7 @@ console.log("🛡️ Shadow AI: Protection initializing");
 const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"; // ← PUT YOURS
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // ← PUT YOURS
 let COMPANY_ID = "";
+let LICENCE_KEY = ""; // ✅ NEW
 let isScanning = false;
 let customSecrets = [];
 
@@ -12,17 +13,20 @@ window.addEventListener('DOMContentLoaded', loadConfig);
 
 async function loadConfig() {
   try {
-    const stored = await (chrome || browser).storage.local.get(['shadow_company_id']);
+    const stored = await (chrome || browser).storage.local.get(['shadow_company_id', 'shadow_licence_key']); // ✅ NEW
     COMPANY_ID = stored.shadow_company_id || "";
-  } catch (e) { COMPANY_ID = ""; }
+    LICENCE_KEY = stored.shadow_licence_key || ""; // ✅ NEW
+  } catch (e) { COMPANY_ID = ""; LICENCE_KEY = ""; }
 
-  if (!COMPANY_ID) {
-    showActivationUI(); // Ask for ID if not saved
+  if (!COMPANY_ID || !LICENCE_KEY) { // ✅ CHANGED: REQUIRE BOTH
+    showActivationUI();
     return;
   }
 
-  const valid = await validateCompanyId(COMPANY_ID);
-  if (!valid) {
+  const validCompany = await validateCompanyId(COMPANY_ID);
+  const validLicence = await validateLicenceKey(LICENCE_KEY); // ✅ NEW
+
+  if (!validCompany || !validLicence) { // ✅ CHANGED
     showActivationUI();
     return;
   }
@@ -32,7 +36,24 @@ async function loadConfig() {
   initProtection();
 }
 
-// --- ACTIVATION PROMPT ---
+// --- ✅ NEW: LICENCE KEY VALIDATION ---
+async function validateLicenceKey(key) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/licences?licence_key=eq.${encodeURIComponent(key)}&is_active=eq.true&select=licence_key,expires_at`, {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length !== 1) return false;
+
+    // Check expiry
+    const exp = data[0].expires_at;
+    if (exp && new Date(exp) < new Date()) return false;
+
+    return true;
+  } catch (e) { return false; }
+}
+
+// --- ACTIVATION PROMPT — ✅ UPDATED TO ASK FOR BOTH ---
 function showActivationUI() {
   if (document.getElementById('shadow-activate')) return;
 
@@ -41,21 +62,30 @@ function showActivationUI() {
   ui.style = `position:fixed;top:20px;right:20px;z-index:2147483647;background:#003087;color:white;padding:20px;border-radius:8px;border:2px solid #005EB8;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:Arial,sans-serif;`;
   ui.innerHTML = `
     <h3 style="margin-top:0;">🛡️ Activate Shadow AI</h3>
-    <p style="font-size:14px;margin:10px 0;">Enter your Company ID from your dashboard:</p>
-    <input type="text" id="cidInput" placeholder="e.g. org_abc123xyz" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;">
+    <p style="font-size:14px;margin:10px 0;">Enter your details from your dashboard:</p>
+    <input type="text" id="cidInput" placeholder="Company ID e.g. org_abc123xyz" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;">
+    <input type="text" id="licenceInput" placeholder="Licence Key e.g. SHADOW-XXXX-XXXX" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;">
     <button id="activateBtn" style="width:100%;padding:8px;background:#00A499;color:white;border:none;border-radius:4px;font-weight:bold;">Activate</button>
   `;
   document.body.appendChild(ui);
 
   document.getElementById('activateBtn').addEventListener('click', async () => {
-    const val = document.getElementById('cidInput').value.trim();
-    if (!val) return alert("Enter your Company ID");
+    const cid = document.getElementById('cidInput').value.trim();
+    const lic = document.getElementById('licenceInput').value.trim();
+    if (!cid || !lic) return alert("Enter both Company ID and Licence Key");
 
-    const ok = await validateCompanyId(val);
-    if (!ok) return alert("Invalid or inactive ID — check your dashboard");
+    const okCompany = await validateCompanyId(cid);
+    const okLicence = await validateLicenceKey(lic);
 
-    await (chrome || browser).storage.local.set({ "shadow_company_id": val });
-    COMPANY_ID = val;
+    if (!okCompany) return alert("Invalid Company ID — check your dashboard");
+    if (!okLicence) return alert("Invalid/expired Licence Key — contact support");
+
+    await (chrome || browser).storage.local.set({ 
+      "shadow_company_id": cid,
+      "shadow_licence_key": lic // ✅ NEW
+    });
+    COMPANY_ID = cid;
+    LICENCE_KEY = lic;
     ui.remove();
     await registerDeviceHeartbeat();
     await fetchCompanySecrets();
@@ -79,7 +109,7 @@ const deviceFingerprint = btoa(navigator.userAgent + navigator.platform + screen
 const deviceName = `${navigator.platform} | ${navigator.userAgent.substring(0, 40)}...`;
 
 async function registerDeviceHeartbeat() {
-  if (!COMPANY_ID) return;
+  if (!COMPANY_ID || !LICENCE_KEY) return; // ✅ CHANGED
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/rpc/register_device_heartbeat`, {
       method: "POST",
@@ -156,7 +186,7 @@ const securityPatterns = [
 
 // --- FETCH CUSTOM RULES ---
 async function fetchCompanySecrets() {
-  if (!COMPANY_ID) return;
+  if (!COMPANY_ID || !LICENCE_KEY) return; // ✅ CHANGED
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/company_secrets?company_id=eq.${COMPANY_ID}&select=*`, {
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
@@ -167,7 +197,7 @@ async function fetchCompanySecrets() {
 
 // --- LOGGING (100% WORKING) ---
 async function reportLeak(type, detail, blockedText = "") {
-  if (!COMPANY_ID) return;
+  if (!COMPANY_ID || !LICENCE_KEY) return; // ✅ CHANGED
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/security_logs`, {
       method: "POST",
@@ -185,6 +215,7 @@ async function reportLeak(type, detail, blockedText = "") {
         blocked_content: blockedText.substring(0, 300),
         created_at: new Date().toISOString(),
         company_id: COMPANY_ID,
+        licence_key: LICENCE_KEY, // ✅ NEW: LOG WHICH KEY WAS USED
         compliance_flag: "NHS_IG_GDPR"
       })
     });
@@ -203,7 +234,7 @@ function addBadge() {
 
 // --- SCAN & BLOCK ---
 function scanAndBlock() {
-  if (isScanning) return;
+  if (isScanning || !LICENCE_KEY) return; // ✅ CHANGED: ONLY RUN IF LICENCE EXISTS
   isScanning = true;
 
   let leakFound = false;
