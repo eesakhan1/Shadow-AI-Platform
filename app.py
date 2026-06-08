@@ -18,30 +18,6 @@ import string
 import json
 import urllib.parse
 
-from streamlit.web.server import server_util
-from streamlit.runtime.scriptrunner import get_script_run_ctx
-
-# 🔒 BLOCK ALL INTERNAL ROUTES / DOCS / API PATHS
-def block_internal_routes():
-    ctx = get_script_run_ctx()
-    if ctx:
-        current_path = server_util.get_current_page_path()
-        blocked_paths = ["/docs", "/api", "/_stcore", "/streamlit", "/assets", "/delta", "/DeltaGenerator"]
-        blocked_keywords = ["DeltaGenerator", "docs", "api", "internal", "docstring"]
-        
-        # Block by path
-        if any(current_path.startswith(p) for p in blocked_paths):
-            st.error("🔒 Access restricted — this page is not available")
-            st.stop()
-        
-        # Block by keyword in URL
-        if any(keyword in current_path.lower() for keyword in blocked_keywords):
-            st.error("🔒 Access restricted")
-            st.stop()
-
-# Run block immediately
-block_internal_routes()
-
 # --- CONFIGURATION ---
 try:
     SUPABASE_URL = os.getenv("SUPABASE_URL") or st.secrets["SUPABASE_URL"]
@@ -484,7 +460,7 @@ def show_dashboard():
                         selected_id = company_options[selected_label_del]
                         try:
                             supabase.table("security_logs").delete().eq("company_id", selected_id).execute()
-                            supabase.table("company_secrets").delete().eq("id", selected_id).execute()
+                            supabase.table("company_secrets").delete().eq("company_id", selected_id).execute()
                             supabase.table("active_protection_devices").delete().eq("company_id", selected_id).execute()
                             supabase.table("companies").delete().eq("id", selected_id).execute()
                             try:
