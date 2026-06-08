@@ -15,14 +15,16 @@ import base64
 import json
 
 # --- CONFIGURATION ---
+# ✅ FIXED: Now reads from ENVIRONMENT VARIABLES first (Render), then local secrets
 try:
-    SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
-    SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
-    RESEND_API_KEY = st.secrets["RESEND_API_KEY"]
-    RESEND_FROM_EMAIL = st.secrets["RESEND_FROM_EMAIL"]
+    # Try environment variables first (Render / production)
+    SUPABASE_URL = os.getenv("SUPABASE_URL") or st.secrets["SUPABASE_URL"]
+    SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY") or st.secrets["SUPABASE_ANON_KEY"]
+    SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY") or st.secrets["SUPABASE_SERVICE_KEY"]
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY") or st.secrets["RESEND_API_KEY"]
+    RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL") or st.secrets["RESEND_FROM_EMAIL"]
 except Exception as e:
-    st.error(f"❌ Secrets Error: {e}")
+    st.error(f"❌ Secrets Error: Missing one or more keys — {e}")
     st.stop()
 
 ADMIN_EMAIL = "security.shadowai@gmail.com"
@@ -656,7 +658,7 @@ def show_forgot_password():
         else:
             try:
                 encoded_email = urllib.parse.quote(email.strip())
-                reset_link = f"https://shadow-ai-platform-4ewudc2yankyvpfirbaej3.streamlit.app/?mode=reset&email={encoded_email}"
+                reset_link = f"https://shadow-ai-platform.onrender.com/?mode=reset&email={encoded_email}"
 
                 if send_reset_email(email, reset_link):
                     st.success("✅ Reset link sent successfully!")
