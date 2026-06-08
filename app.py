@@ -1,14 +1,4 @@
 import os
-# 💥 MAXIMUM FORCE: DISABLE ALL STREAMLIT DOCUMENTATION
-os.environ["STREAMLIT_SERVER_ENABLE_DOCS"] = "false"
-os.environ["STREAMLIT_HIDE_DOCSTRING"] = "true"
-os.environ["STREAMLIT_DISABLE_DOCSTRINGS"] = "true"
-os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
-os.environ["STREAMLIT_DISABLE_DOCSTRING_RENDER"] = "true"
-os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
-os.environ["STREAMLIT_DISABLE_DOCS"] = "true"
-os.environ["STREAMLIT_DOCSTRING_HIDE"] = "true"
-
 import streamlit as st
 from supabase import create_client
 import pandas as pd
@@ -34,204 +24,8 @@ ADMIN_EMAIL = "security.shadowai@gmail.com"
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 auth_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-# --- PAGE SETUP ---
-st.set_page_config(
-    page_title="Shadow AI | NHS Compliant Data Protection",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
-# 🚨 NUCLEAR OPTION: DELETE DELTA TEXT BEFORE IT EVEN LOADS
-st.markdown("""
-<style>
-/* DESTROY EVERY TRACE OF DOCSTRING / DELTA TEXT */
-*:has-text("DeltaGenerator"),
-*:has-text("Creator of Delta"),
-*:has-text("Parameters"),
-*:has-text("dg property"),
-*:has-text("method"),
-*:has-text("altair_chart"),
-*:has-text("area_chart"),
-*:has-text("audio"),
-*:has-text("badge"),
-*:has-text("balloons"),
-*:has-text("bar_chart"),
-*:has-text("bokeh_chart"),
-*:has-text("button"),
-*:has-text("camera_input"),
-*:has-text("caption"),
-*:has-text("chat_input"),
-*:has-text("chat_message"),
-*:has-text("checkbox"),
-*:has-text("code"),
-*:has-text("color_picker"),
-*:has-text("columns"),
-*:has-text("container"),
-*:has-text("data_editor"),
-*:has-text("dataframe"),
-*:has-text("date_input"),
-*:has-text("datetime_input"),
-*:has-text("divider"),
-*:has-text("download_button"),
-*:has-text("empty"),
-*:has-text("error"),
-*:has-text("exception"),
-*:has-text("expander"),
-*:has-text("feedback"),
-*:has-text("file_uploader"),
-*:has-text("form"),
-*:has-text("form_submit_button"),
-*:has-text("graphviz_chart"),
-*:has-text("header"),
-*:has-text("help"),
-*:has-text("html"),
-*:has-text("iframe"),
-*:has-text("image"),
-*:has-text("info"),
-*:has-text("json"),
-*:has-text("latex"),
-*:has-text("line_chart"),
-*:has-text("link_button"),
-*:has-text("map"),
-*:has-text("markdown"),
-*:has-text("metric"),
-*:has-text("multiselect"),
-*:has-text("number_input"),
-*:has-text("page_link"),
-*:has-text("pdf"),
-*:has-text("pills"),
-*:has-text("plotly_chart"),
-*:has-text("popover"),
-*:has-text("progress"),
-*:has-text("pydeck_chart"),
-*:has-text("pyplot"),
-*:has-text("radio"),
-*:has-text("scatter_chart"),
-*:has-text("segmented_control"),
-*:has-text("select_slider"),
-*:has-text("selectbox"),
-*:has-text("slider"),
-*:has-text("snow"),
-*:has-text("spinner"),
-*:has-text("status"),
-*:has-text("subheader"),
-*:has-text("success"),
-*:has-text("table"),
-*:has-text("tabs"),
-*:has-text("text"),
-*:has-text("text_area"),
-*:has-text("text_input"),
-*:has-text("time_input"),
-*:has-text("title"),
-*:has-text("toast"),
-*:has-text("toggle"),
-*:has-text("vega_lite_chart"),
-*:has-text("video"),
-*:has-text("warning"),
-*:has-text("write"),
-*:has-text("write_stream"),
-[data-testid="stDocstring"],
-.stDocstring,
-.docstring,
-.help-text,
-pre, code {
-    display: none !important;
-    visibility: hidden !important;
-    height: 0 !important;
-    width: 0 !important;
-    position: absolute !important;
-    top: -9999px !important;
-    left: -9999px !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transform: scale(0) !important;
-    z-index: -9999 !important;
-}
-
-/* Fix spacing */
-.block-container {
-    margin-top: 0 !important;
-    padding-top: 1rem !important;
-}
-
-/* YOUR STYLES */
-.main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
-.stButton>button { 
-    width: 100%; border-radius: 4px; height: 55px; font-size: 18px; font-weight: bold; 
-    border: none; transition: all 0.3s ease; background: #005EB8; color: #FFFFFF !important; 
-    box-shadow: 0 2px 8px rgba(0,94,184,0.3); text-transform: uppercase; letter-spacing: 0.5px; 
-}
-.stButton>button:hover { background: #003087; box-shadow: 0 4px 12px rgba(0,48,135,0.5); transform: translateY(-1px); }
-.stButton>button.danger { background: #DA291C !important; }
-.stButton>button.danger:hover { background: #9E1A12 !important; }
-.login-card { 
-    background-color: rgba(20, 30, 60, 0.85); backdrop-filter: blur(20px); 
-    -webkit-backdrop-filter: blur(20px); padding: 40px; border-radius: 8px; 
-    border: 2px solid #005EB8; box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-    max-width: 550px; margin: 2rem auto; 
-}
-h1, h2, h3, h4, h5, h6 { color: #FFFFFF !important; font-family: Arial, sans-serif; font-weight: bold; }
-.stMarkdown p { color: #E0E0E0 !important; font-size: 16px; }
-.stTextInput input, .stTextInput label { color: #FFFFFF !important; }
-.stTextInput>div>div>input { 
-    background-color: rgba(255,255,255,0.05); border: 1px solid #005EB8; 
-    border-radius: 4px; color: #FFFFFF !important; 
-}
-.stNumberInput input { color: #FFFFFF !important; background-color: rgba(255,255,255,0.05); border: 1px solid #005EB8; border-radius:4px; }
-.stCheckbox label { color: #FFFFFF !important; }
-.stTabs [data-baseweb="tab-list"] { gap: 10px; }
-.stTabs [data-baseweb="tab"] { 
-    background-color: transparent; border-radius: 4px 4px 0 0; 
-    color: #B0C4DE !important; border: 1px solid #003087; 
-}
-.stTabs [aria-selected="true"] { background: #005EB8; color: #FFFFFF !important; font-weight: bold; }
-.stSuccess { 
-    background-color: rgba(0, 164, 153, 0.15) !important; color: #00A499 !important; 
-    border: 1px solid #00A499 !important; 
-}
-.stError { 
-    background-color: rgba(218, 41, 28, 0.15) !important; color: #DA291C !important; 
-    border: 1px solid #DA291C !important; 
-}
-.stInfo { 
-    background-color: rgba(0, 94, 184, 0.15) !important; color: #00A499 !important; 
-    border: 1px solid #005EB8 !important; 
-}
-.compliance-badge { 
-    background: #00A499; color: white; padding: 6px 12px; border-radius: 4px; 
-    font-weight: bold; font-size: 14px; display: inline-block; margin: 8px 0; 
-}
-</style>
-
-<script>
-// 💥 DESTROY BAD TEXT INSTANTLY
-function killBadText() {
-    // Remove by selector
-    const bad = document.querySelectorAll('[data-testid="stDocstring"], .stDocstring');
-    bad.forEach(el => el.remove());
-    
-    // Remove ANY element containing bad text
-    document.querySelectorAll('div, span, pre, code').forEach(el => {
-        const txt = el.textContent || "";
-        if (txt.includes("DeltaGenerator") || txt.includes("Parameters") || txt.includes("method") || txt.includes("Creator of Delta")) {
-            el.remove();
-            if (el.parentElement) el.parentElement.remove();
-        }
-    });
-}
-// Run immediately + every millisecond
-killBadText();
-setInterval(killBadText, 1);
-new MutationObserver(killBadText).observe(document.body, {childList: true, subtree: true, attributes: true, characterData: true});
-</script>
-""", unsafe_allow_html=True)
-
-# --- PERSISTENCE ---
+# --- FUNCTIONS ---
 def init_persistence():
     params = st.query_params
     if "uid" in params and "cid" in params and "email" in params:
@@ -256,6 +50,7 @@ def init_persistence():
     </script>
     """, height=0)
 
+
 def save_auth(uid, cid, email):
     st.query_params["uid"] = uid
     st.query_params["cid"] = cid
@@ -270,6 +65,7 @@ def save_auth(uid, cid, email):
     </script>
     """, height=0)
 
+
 def clear_auth():
     st.query_params.clear()
     st.components.v1.html("""
@@ -281,22 +77,7 @@ def clear_auth():
     </script>
     """, height=0)
 
-# --- SESSION STATE ---
-init_persistence()
-if 'user' not in st.session_state:
-    st.session_state.user = None
-if 'user_id' not in st.session_state:
-    st.session_state.user_id = None
-if 'company_id' not in st.session_state:
-    st.session_state.company_id = None
-if 'auth_stage' not in st.session_state:
-    st.session_state.auth_stage = "login"
-if 'temp_user_obj' not in st.session_state:
-    st.session_state.temp_user_obj = None
-if 'verification_code' not in st.session_state:
-    st.session_state.verification_code = None
 
-# --- EMAIL FUNCTIONS ---
 def send_verification_email(to_email, code):
     try:
         response = requests.post(
@@ -326,6 +107,7 @@ def send_verification_email(to_email, code):
     except Exception as e:
         st.error(f"❌ Email Error: {e}")
         return False
+
 
 def send_reset_email(to_email, reset_link):
     try:
@@ -359,7 +141,7 @@ def send_reset_email(to_email, reset_link):
         st.error(f"❌ Email Error: {str(e)}")
         return False
 
-# --- FORGOT PASSWORD ---
+
 def show_forgot_password():
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.subheader("🔑 Reset Your Password")
@@ -380,6 +162,7 @@ def show_forgot_password():
                 st.error(f"❌ Error: {str(e)}")
     st.markdown("<br><p style='text-align:center;'><a href='/' style='color:#4da6ff;'>← Back to Login</a></p>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
 
 def show_reset_password(email):
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
@@ -406,7 +189,7 @@ def show_reset_password(email):
                 st.error(f"❌ Error: {str(e)}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- LOGIN SCREEN ---
+
 def show_login():
     st.markdown('<h1 style="color:white; text-align:center; margin-top:2rem; font-size:2.5rem;">🛡️ Shadow AI</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align:center; font-size:18px; color:#B0C4DE;">NHS Compliant Data Protection & AI Security</p>', unsafe_allow_html=True)
@@ -478,7 +261,7 @@ def show_login():
                     st.error(f"❌ Error: {str(e)}")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- DASHBOARD ---
+
 def show_dashboard():
     st.markdown('<h1 style="color:white; margin-top:0; font-size:2rem;">🛡️ Security Command Center</h1>', unsafe_allow_html=True)
     st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
@@ -638,8 +421,63 @@ def show_dashboard():
             except Exception as e:
                 st.error(f"❌ Error loading registered users: {str(e)}")
 
-# --- ROUTING ---
+
+# --- MAIN ---
 def main():
+    # --- PAGE SETUP ---
+    st.set_page_config(
+        page_title="Shadow AI | NHS Compliant Data Protection",
+        page_icon="🛡️",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+
+    # --- HIDE DELTA TEXT COMPLETELY ---
+    st.markdown("""
+    <style>
+    [data-testid="stDocstring"], .stDocstring, .docstring, pre, code {display: none !important; visibility: hidden !important; height:0 !important;}
+    .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
+    .stButton>button { width: 100%; border-radius: 4px; height: 55px; font-size: 18px; font-weight: bold; border: none; transition: all 0.3s ease; background: #005EB8; color: #FFFFFF !important; box-shadow: 0 2px 8px rgba(0,94,184,0.3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stButton>button:hover { background: #003087; box-shadow: 0 4px 12px rgba(0,48,135,0.5); transform: translateY(-1px); }
+    .stButton>button.danger { background: #DA291C !important; }
+    .stButton>button.danger:hover { background: #9E1A12 !important; }
+    .login-card { background-color: rgba(20, 30, 60, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 40px; border-radius: 8px; border: 2px solid #005EB8; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 550px; margin: 2rem auto; }
+    h1, h2, h3, h4, h5, h6 { color: #FFFFFF !important; font-family: Arial, sans-serif; font-weight: bold; }
+    .stMarkdown p { color: #E0E0E0 !important; font-size: 16px; }
+    .stTextInput input, .stTextInput label { color: #FFFFFF !important; }
+    .stTextInput>div>div>input { background-color: rgba(255,255,255,0.05); border: 1px solid #005EB8; border-radius: 4px; color: #FFFFFF !important; }
+    .stNumberInput input { color: #FFFFFF !important; background-color: rgba(255,255,255,0.05); border: 1px solid #005EB8; border-radius:4px; }
+    .stCheckbox label { color: #FFFFFF !important; }
+    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
+    .stTabs [data-baseweb="tab"] { background-color: transparent; border-radius: 4px 4px 0 0; color: #B0C4DE !important; border: 1px solid #003087; }
+    .stTabs [aria-selected="true"] { background: #005EB8; color: #FFFFFF !important; font-weight: bold; }
+    .stSuccess { background-color: rgba(0, 164, 153, 0.15) !important; color: #00A499 !important; border: 1px solid #00A499 !important; }
+    .stError { background-color: rgba(218, 41, 28, 0.15) !important; color: #DA291C !important; border: 1px solid #DA291C !important; }
+    .stInfo { background-color: rgba(0, 94, 184, 0.15) !important; color: #00A499 !important; border: 1px solid #005EB8 !important; }
+    .compliance-badge { background: #00A499; color: white; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 14px; display: inline-block; margin: 8px 0; }
+    </style>
+
+    <script>
+    function killBadText(){document.querySelectorAll('div,span,pre,code').forEach(e=>{let t=e.textContent||"";t.includes("DeltaGenerator")&&(e.remove(),e.parentElement&&e.parentElement.remove())})}killBadText();setInterval(killBadText,1);new MutationObserver(killBadText).observe(document.body,{childList:!0,subtree:!0})
+    </script>
+    """, unsafe_allow_html=True)
+
+    # --- SESSION STATE ---
+    init_persistence()
+    if 'user' not in st.session_state:
+        st.session_state.user = None
+    if 'user_id' not in st.session_state:
+        st.session_state.user_id = None
+    if 'company_id' not in st.session_state:
+        st.session_state.company_id = None
+    if 'auth_stage' not in st.session_state:
+        st.session_state.auth_stage = "login"
+    if 'temp_user_obj' not in st.session_state:
+        st.session_state.temp_user_obj = None
+    if 'verification_code' not in st.session_state:
+        st.session_state.verification_code = None
+
+    # --- ROUTING ---
     params = st.query_params
     page = params.get("page", "")
     mode = params.get("mode", "")
@@ -655,5 +493,7 @@ def main():
         show_login()
     else:
         show_dashboard()
+
+
 if __name__ == "__main__":
     main()
