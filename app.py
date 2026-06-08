@@ -6,6 +6,7 @@ os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
 os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
+os.environ["STREAMLIT_DISABLE_DOCSTRINGS"] = "true"
 
 import streamlit as st
 from supabase import create_client
@@ -42,7 +43,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CUSTOM CSS — NHS STANDARD DARK THEME + 🔒 HIDE ALL INTERNAL DOCS/TRACES ---
+# --- CUSTOM CSS — NHS STANDARD DARK THEME + 🔒 ABSOLUTE REMOVAL OF DOCS ---
 st.markdown("""
     <style>
     .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
@@ -63,11 +64,18 @@ st.markdown("""
     .delete-btn { background-color: #DA291C !important; color: white !important; }
     .delete-btn:hover { background-color: #9E1A12 !important; }
 
-    /* 🔴 PERMANENTLY HIDE ALL STREAMLIT INTERNAL DOCUMENTATION / DELTA GENERATOR */
+    /* 🔴 ABSOLUTE REMOVAL — EVERY POSSIBLE SELECTOR */
     div:has-text("DeltaGenerator"),
     div:has-text("Creator of Delta protobuf"),
     div:has-text("Parameters"),
     div:has-text("block_type"),
+    div:has-text("dg property"),
+    div:has-text("altair_chart"),
+    div:has-text("area_chart"),
+    div:has-text("audio method"),
+    div:has-text("audio_input"),
+    div:has-text("badge method"),
+    div:has-text("balloons method"),
     .stDocstring,
     #stInternalDoc,
     .st-doc-container,
@@ -75,18 +83,25 @@ st.markdown("""
     .streamlit-doc,
     .internal-docs,
     div[class*="docstring"],
-    div[class*="internal"] {
+    div[class*="internal"],
+    .element-container:has(div:has-text("DeltaGenerator")),
+    .stMarkdown:has(div:has-text("DeltaGenerator")),
+    div[style*="overflow:auto"]:has-text("DeltaGenerator") {
         display: none !important;
         visibility: hidden !important;
         height: 0 !important;
         min-height: 0 !important;
         max-height: 0 !important;
-        margin: 0 !important;
+        margin: -9999px 0 !important;
         padding: 0 !important;
         border: none !important;
         overflow: hidden !important;
         position: absolute !important;
+        top: -9999px !important;
+        left: -9999px !important;
         z-index: -9999 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -114,15 +129,22 @@ def init_persistence():
         window.location.reload();
     }
     
-    // 🔒 EXTRA: Remove any internal docs immediately if they appear
-    const observer = new MutationObserver(() => {
+    // 🔒 DESTROY ANY DOC ELEMENTS THE SECOND THEY APPEAR
+    function removeDocs() {
         document.querySelectorAll('div').forEach(el => {
             if (el.textContent.includes('DeltaGenerator') || 
-                el.textContent.includes('Creator of Delta protobuf')) {
+                el.textContent.includes('Creator of Delta protobuf') ||
+                el.textContent.includes('dg property') ||
+                el.textContent.includes('Parameters')) {
                 el.remove();
+                if (el.parentElement) el.parentElement.remove();
+                if (el.parentElement?.parentElement) el.parentElement.parentElement.remove();
             }
         });
-    });
+    }
+    // Run immediately + watch forever
+    removeDocs();
+    const observer = new MutationObserver(removeDocs);
     observer.observe(document.body, {childList: true, subtree: true});
     </script>
     """, height=0)
