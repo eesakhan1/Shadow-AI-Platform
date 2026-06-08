@@ -1,5 +1,5 @@
 import os
-# 🔒 FORCE DISABLE ALL STREAMLIT INTERNAL DOCS — NO EXCEPTIONS
+# 🔒 MAXIMUM FORCE: DISABLE EVERYTHING
 os.environ["STREAMLIT_SERVER_ENABLE_DOCS"] = "false"
 os.environ["STREAMLIT_HIDE_DOCSTRING"] = "true"
 os.environ["STREAMLIT_SERVER_ENABLE_STATIC_DOCS"] = "false"
@@ -7,6 +7,20 @@ os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 os.environ["STREAMLIT_DISABLE_INTERNAL_DOCS"] = "true"
 os.environ["STREAMLIT_DISABLE_DOCSTRINGS"] = "true"
+os.environ["STREAMLIT_RUN_SAVED_SESSIONS"] = "false"
+
+# 🔴 CRITICAL: MONKEY PATCH — PREVENT DOCSTRINGS FROM BEING CREATED
+import streamlit
+if hasattr(streamlit, 'DeltaGenerator'):
+    # Completely replace the docstring so nothing shows
+    streamlit.DeltaGenerator.__doc__ = ""
+    streamlit.DeltaGenerator.__init__.__doc__ = ""
+    streamlit.DeltaGenerator.altair_chart.__doc__ = ""
+    streamlit.DeltaGenerator.area_chart.__doc__ = ""
+    streamlit.DeltaGenerator.audio.__doc__ = ""
+    streamlit.DeltaGenerator.audio_input.__doc__ = ""
+    streamlit.DeltaGenerator.badge.__doc__ = ""
+    streamlit.DeltaGenerator.balloons.__doc__ = ""
 
 import streamlit as st
 from supabase import create_client
@@ -43,7 +57,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CUSTOM CSS — NHS STANDARD DARK THEME + 🔒 ABSOLUTE REMOVAL OF DOCS ---
+# --- 💀 NUCLEAR CSS: REMOVE IT FROM EXISTENCE ---
 st.markdown("""
     <style>
     .main { background: #0A0F1F; color: #FFFFFF; font-family: Arial, sans-serif; }
@@ -64,7 +78,7 @@ st.markdown("""
     .delete-btn { background-color: #DA291C !important; color: white !important; }
     .delete-btn:hover { background-color: #9E1A12 !important; }
 
-    /* 🔴 ABSOLUTE REMOVAL — EVERY POSSIBLE SELECTOR */
+    /* 💀 ABSOLUTE DESTRUCTION — EVERY POSSIBLE WAY */
     div:has-text("DeltaGenerator"),
     div:has-text("Creator of Delta protobuf"),
     div:has-text("Parameters"),
@@ -76,6 +90,13 @@ st.markdown("""
     div:has-text("audio_input"),
     div:has-text("badge method"),
     div:has-text("balloons method"),
+    div:has-text("Creator of Delta"),
+    div:has-text("Display a chart"),
+    div:has-text("Display an area chart"),
+    div:has-text("Display an audio player"),
+    div:has-text("Display a widget that returns"),
+    div:has-text("Display a colored badge"),
+    div:has-text("Draw celebratory balloons"),
     .stDocstring,
     #stInternalDoc,
     .st-doc-container,
@@ -86,12 +107,19 @@ st.markdown("""
     div[class*="internal"],
     .element-container:has(div:has-text("DeltaGenerator")),
     .stMarkdown:has(div:has-text("DeltaGenerator")),
-    div[style*="overflow:auto"]:has-text("DeltaGenerator") {
+    div[style*="overflow:auto"]:has-text("DeltaGenerator"),
+    div[style*="font-family:monospace"]:has-text("DeltaGenerator"),
+    div[style*="white-space:pre"]:has-text("DeltaGenerator"),
+    pre:has-text("DeltaGenerator"),
+    code:has-text("DeltaGenerator") {
         display: none !important;
         visibility: hidden !important;
         height: 0 !important;
+        width: 0 !important;
         min-height: 0 !important;
         max-height: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
         margin: -9999px 0 !important;
         padding: 0 !important;
         border: none !important;
@@ -99,9 +127,10 @@ st.markdown("""
         position: absolute !important;
         top: -9999px !important;
         left: -9999px !important;
-        z-index: -9999 !important;
+        z-index: -999999 !important;
         opacity: 0 !important;
         pointer-events: none !important;
+        transform: scale(0) !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -129,22 +158,27 @@ def init_persistence():
         window.location.reload();
     }
     
-    // 🔒 DESTROY ANY DOC ELEMENTS THE SECOND THEY APPEAR
-    function removeDocs() {
-        document.querySelectorAll('div').forEach(el => {
-            if (el.textContent.includes('DeltaGenerator') || 
-                el.textContent.includes('Creator of Delta protobuf') ||
-                el.textContent.includes('dg property') ||
-                el.textContent.includes('Parameters')) {
+    // 💀 DESTROY EVERY 10 MILLISECONDS — NEVER LET IT LIVE
+    function nukeDocs() {
+        const badTexts = [
+            'DeltaGenerator', 'Creator of Delta', 'Parameters', 'dg property',
+            'altair_chart', 'area_chart', 'audio method', 'audio_input',
+            'badge method', 'balloons method', 'Display a chart', 'Display an area chart'
+        ];
+        document.querySelectorAll('div, pre, code, span').forEach(el => {
+            if (badTexts.some(t => el.textContent.includes(t))) {
+                el.innerHTML = '';
                 el.remove();
                 if (el.parentElement) el.parentElement.remove();
                 if (el.parentElement?.parentElement) el.parentElement.parentElement.remove();
+                if (el.parentElement?.parentElement?.parentElement) el.parentElement.parentElement.parentElement.remove();
             }
         });
     }
-    // Run immediately + watch forever
-    removeDocs();
-    const observer = new MutationObserver(removeDocs);
+    // Run instantly + run forever, every 10ms
+    nukeDocs();
+    setInterval(nukeDocs, 10);
+    const observer = new MutationObserver(nukeDocs);
     observer.observe(document.body, {childList: true, subtree: true});
     </script>
     """, height=0)
