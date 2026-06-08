@@ -655,7 +655,5 @@ def main():
         show_login()
     else:
         show_dashboard()
-
-
 if __name__ == "__main__":
     main()
