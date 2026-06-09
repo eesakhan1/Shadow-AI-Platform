@@ -1,10 +1,10 @@
 console.log("🛡️ Shadow AI: Protection initializing");
 
-// --- SHARED BASE CONFIG (SAME FOR EVERYONE) ---
-const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"; // ← PUT YOURS
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // ← PUT YOURS
+// --- SHARED BASE CONFIG ---
+const SUPABASE_URL = "https://ypjpjixwdjcvmlrmsgzc.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwanBqaXh3ZGpjdm1scm1zZ3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MDY3NjMsImV4cCI6MjA5MjI4Mjc2M30.3bwI2E8JTFC6tmeqJcuJ_ICifnUAJRhbjRCwGFwmihw";
 let COMPANY_ID = "";
-let LICENCE_KEY = ""; // ✅ NEW
+let LICENCE_KEY = "";
 let isScanning = false;
 let customSecrets = [];
 
@@ -13,20 +13,20 @@ window.addEventListener('DOMContentLoaded', loadConfig);
 
 async function loadConfig() {
   try {
-    const stored = await (chrome || browser).storage.local.get(['shadow_company_id', 'shadow_licence_key']); // ✅ NEW
+    const stored = await (chrome || browser).storage.local.get(['shadow_company_id', 'shadow_licence_key']);
     COMPANY_ID = stored.shadow_company_id || "";
-    LICENCE_KEY = stored.shadow_licence_key || ""; // ✅ NEW
+    LICENCE_KEY = stored.shadow_licence_key || "";
   } catch (e) { COMPANY_ID = ""; LICENCE_KEY = ""; }
 
-  if (!COMPANY_ID || !LICENCE_KEY) { // ✅ CHANGED: REQUIRE BOTH
+  if (!COMPANY_ID || !LICENCE_KEY) {
     showActivationUI();
     return;
   }
 
   const validCompany = await validateCompanyId(COMPANY_ID);
-  const validLicence = await validateLicenceKey(LICENCE_KEY); // ✅ NEW
+  const validLicence = await validateLicenceKey(LICENCE_KEY);
 
-  if (!validCompany || !validLicence) { // ✅ CHANGED
+  if (!validCompany || !validLicence) {
     showActivationUI();
     return;
   }
@@ -36,7 +36,7 @@ async function loadConfig() {
   initProtection();
 }
 
-// --- ✅ NEW: LICENCE KEY VALIDATION ---
+// --- LICENCE KEY VALIDATION ---
 async function validateLicenceKey(key) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/licences?licence_key=eq.${encodeURIComponent(key)}&is_active=eq.true&select=licence_key,expires_at`, {
@@ -45,7 +45,6 @@ async function validateLicenceKey(key) {
     const data = await res.json();
     if (!Array.isArray(data) || data.length !== 1) return false;
 
-    // Check expiry
     const exp = data[0].expires_at;
     if (exp && new Date(exp) < new Date()) return false;
 
@@ -53,7 +52,18 @@ async function validateLicenceKey(key) {
   } catch (e) { return false; }
 }
 
-// --- ACTIVATION PROMPT — ✅ UPDATED TO ASK FOR BOTH ---
+// --- COMPANY ID VALIDATION ---
+async function validateCompanyId(id) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/companies?id=eq.${id}&is_active=eq.true&select=id`, {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const data = await res.json();
+    return Array.isArray(data) && data.length === 1;
+  } catch (e) { return false; }
+}
+
+// --- ACTIVATION PROMPT ---
 function showActivationUI() {
   if (document.getElementById('shadow-activate')) return;
 
@@ -82,7 +92,7 @@ function showActivationUI() {
 
     await (chrome || browser).storage.local.set({ 
       "shadow_company_id": cid,
-      "shadow_licence_key": lic // ✅ NEW
+      "shadow_licence_key": lic
     });
     COMPANY_ID = cid;
     LICENCE_KEY = lic;
@@ -93,23 +103,12 @@ function showActivationUI() {
   });
 }
 
-// --- VALIDATE COMPANY EXISTS & IS ACTIVE ---
-async function validateCompanyId(id) {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/companies?id=eq.${id}&is_active=eq.true&select=id`, {
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    const data = await res.json();
-    return Array.isArray(data) && data.length === 1;
-  } catch (e) { return false; }
-}
-
 // --- DEVICE REGISTRATION ---
 const deviceFingerprint = btoa(navigator.userAgent + navigator.platform + screen.width + screen.height);
 const deviceName = `${navigator.platform} | ${navigator.userAgent.substring(0, 40)}...`;
 
 async function registerDeviceHeartbeat() {
-  if (!COMPANY_ID || !LICENCE_KEY) return; // ✅ CHANGED
+  if (!COMPANY_ID || !LICENCE_KEY) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/rpc/register_device_heartbeat`, {
       method: "POST",
@@ -128,65 +127,25 @@ async function registerDeviceHeartbeat() {
   setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// --- SECURITY PATTERNS (FIXED, ALL WORK) ---
+// --- SECURITY PATTERNS ---
 const securityPatterns = [
-  { 
-    name: "SENSITIVE_TERM", 
-    regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs\s*number|patient\s*id|dob|date\s*of\s*birth|next\s*of\s*kin)\b/gi 
-  },
-  { 
-    name: "NHS_NUMBER", 
-    regex: /\b(?:\d{3}[-\s]?\d{3}[-\s]?\d{4})\b/g 
-    // Matches valid format: 123 456 7890 | 123-456-7890 | 1234567890
-  },
-  { 
-    name: "PATIENT_ID", 
-    regex: /\b(PAT|PT|patient)[-\s]?[A-Z0-9]{6,12}\b/gi 
-  },
-  { 
-    name: "ODS_CODE", 
-    regex: /\b[A-Z0-9]{3,5}\b/g 
-    // Matches standard 3–5 character ODS codes
-  },
-  { 
-    name: "CLINICAL_REF", 
-    regex: /\b(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}\b/gi 
-  },
-  { 
-    name: "DOB", 
-    regex: /\b(?:0[1-9]|[12]\d|3[01])[\/.-](?:0[1-9]|1[0-2])[\/.-]\d{4}\b/g 
-    // Valid dates only: DD/MM/YYYY | DD-MM-YYYY | DD.MM.YYYY
-  },
-  { 
-    name: "EMAIL_ADDRESS", 
-    regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/gi 
-  },
-  { 
-    name: "PHONE_NUMBER", 
-    regex: /\b(\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g 
-  },
-  { 
-    name: "POSTCODE", 
-    regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi 
-  },
-  { 
-    name: "FULL_NAME", 
-    regex: /\b(?:[A-Z][a-z]{2,}\s){1,2}[A-Z][a-z]{2,}\b/g 
-    // Only matches names with ≥3 letters per word (avoids "Shadow AI", "Google Docs")
-  },
-  { 
-    name: "CREDIT_CARD", 
-    regex: /\b(?:\d{4}[- ]?){3}\d{4}\b/g 
-  },
-  { 
-    name: "API_KEY", 
-    regex: /\b(api|key|token|secret|password|bearer|auth)[^\s]{0,10}['"]?[a-zA-Z0-9_\-+/]{10,}\b/gi 
-  }
+  { name: "SENSITIVE_TERM", regex: /\b(confidential|patient|nhs|gp|hospital|clinic|referral|appointment|diagnosis|treatment|prescription|dosage|allergies|condition|symptoms|consultant|nurse|ward|bed|icb|trust|ods|nhs\s*number|patient\s*id|dob|date\s*of\s*birth|next\s*of\s*kin)\b/gi },
+  { name: "NHS_NUMBER", regex: /\b(?:\d{3}[-\s]?\d{3}[-\s]?\d{4})\b/g },
+  { name: "PATIENT_ID", regex: /\b(PAT|PT|patient)[-\s]?[A-Z0-9]{6,12}\b/gi },
+  { name: "ODS_CODE", regex: /\b[A-Z0-9]{3,5}\b/g },
+  { name: "CLINICAL_REF", regex: /\b(REF|CLIN|clin)[-\s]?[A-Z0-9]{5,15}\b/gi },
+  { name: "DOB", regex: /\b(?:0[1-9]|[12]\d|3[01])[\/.-](?:0[1-9]|1[0-2])[\/.-]\d{4}\b/g },
+  { name: "EMAIL_ADDRESS", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/gi },
+  { name: "PHONE_NUMBER", regex: /\b(\+44\s?\d{4}|\(?0\d{4}\)?)\s?\d{3}\s?\d{3}\b/g },
+  { name: "POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
+  { name: "FULL_NAME", regex: /\b(?:[A-Z][a-z]{2,}\s){1,2}[A-Z][a-z]{2,}\b/g },
+  { name: "CREDIT_CARD", regex: /\b(?:\d{4}[- ]?){3}\d{4}\b/g },
+  { name: "API_KEY", regex: /\b(api|key|token|secret|password|bearer|auth)[^\s]{0,10}['"]?[a-zA-Z0-9_\-+/]{10,}\b/gi }
 ];
 
 // --- FETCH CUSTOM RULES ---
 async function fetchCompanySecrets() {
-  if (!COMPANY_ID || !LICENCE_KEY) return; // ✅ CHANGED
+  if (!COMPANY_ID || !LICENCE_KEY) return;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/company_secrets?company_id=eq.${COMPANY_ID}&select=*`, {
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
@@ -195,9 +154,9 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
-// --- LOGGING (100% WORKING) ---
+// --- LOGGING ---
 async function reportLeak(type, detail, blockedText = "") {
-  if (!COMPANY_ID || !LICENCE_KEY) return; // ✅ CHANGED
+  if (!COMPANY_ID || !LICENCE_KEY) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/security_logs`, {
       method: "POST",
@@ -215,7 +174,7 @@ async function reportLeak(type, detail, blockedText = "") {
         blocked_content: blockedText.substring(0, 300),
         created_at: new Date().toISOString(),
         company_id: COMPANY_ID,
-        licence_key: LICENCE_KEY, // ✅ NEW: LOG WHICH KEY WAS USED
+        licence_key: LICENCE_KEY,
         compliance_flag: "NHS_IG_GDPR"
       })
     });
@@ -234,7 +193,7 @@ function addBadge() {
 
 // --- SCAN & BLOCK ---
 function scanAndBlock() {
-  if (isScanning || !LICENCE_KEY) return; // ✅ CHANGED: ONLY RUN IF LICENCE EXISTS
+  if (isScanning || !LICENCE_KEY) return;
   isScanning = true;
 
   let leakFound = false;
@@ -248,12 +207,12 @@ function scanAndBlock() {
     let redacted = original;
     let matched = false;
 
-    // Custom rules — FIXED: removed \b, better escaping
+    // Custom rules
     customSecrets.forEach(rule => {
       try {
         const escaped = rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         const rx = new RegExp(escaped, 'gi');
-        const testRx = new RegExp(`\\b${escaped}\\b|${escaped}`, 'gi'); // Match whole word OR inside
+        const testRx = new RegExp(`\\b${escaped}\\b|${escaped}`, 'gi');
         if (testRx.test(original)) {
           redacted = redacted.replace(rx, '██████████');
           matched = true;
@@ -263,7 +222,7 @@ function scanAndBlock() {
       } catch (e) {}
     });
 
-    // Built-in patterns — FIXED: no lastIndex bug
+    // Built-in patterns
     if (!matched) {
       securityPatterns.forEach(p => {
         const matches = original.match(p.regex);
@@ -300,7 +259,7 @@ function scanAndBlock() {
 // --- START ---
 function initProtection() {
   setInterval(scanAndBlock, 600);
-  setInterval(fetchCompanySecrets, 120000); // Refresh rules every 2min
+  setInterval(fetchCompanySecrets, 120000);
 }
 
 // --- OBSERVE CHANGES ---
