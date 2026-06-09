@@ -74,7 +74,7 @@ async function validateCompanyId(id) {
   } catch (e) { return false; }
 }
 
-// --- ACTIVATION UI ---
+// --- ACTIVATION UI — ✅ FIXED TEXT VISIBILITY ---
 function showActivationUI() {
   if (document.getElementById('shadow-activate')) return;
 
@@ -84,8 +84,8 @@ function showActivationUI() {
   ui.innerHTML = `
     <h3 style="margin-top:0;">🛡️ Activate Shadow AI</h3>
     <p style="font-size:14px;margin:10px 0;">Enter your details:</p>
-    <input type="text" id="cidInput" placeholder="Company ID" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;">
-    <input type="text" id="licenceInput" placeholder="Licence Key" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;">
+    <input type="text" id="cidInput" placeholder="Company ID" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
+    <input type="text" id="licenceInput" placeholder="Licence Key" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
     <button id="activateBtn" style="width:100%;padding:8px;background:#00A499;color:white;border:none;border-radius:4px;font-weight:bold;">Activate</button>
   `;
   document.documentElement.appendChild(ui);
