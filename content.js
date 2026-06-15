@@ -8,9 +8,9 @@ let COMPANY_ID = "";
 let LICENCE_KEY = "";
 let isScanning = false;
 let customSecrets = [];
-let LICENCE_VALID = false; // ✅ NEW: Global licence status
+let LICENCE_VALID = false;
 
-// ✅ ALWAYS SHOW BADGE — UPDATES STATUS
+// ✅ BADGE
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   const badge = document.createElement('div');
@@ -18,10 +18,8 @@ function addBadge() {
   badge.style = `position:fixed;top:10px;right:10px;background:#666;color:white;padding:8px 16px;border-radius:4px;font-weight:bold;font-size:12px;z-index:99999999;border:2px solid #999;pointer-events:none;font-family:Arial,sans-serif;`;
   badge.textContent = '🛡️ SHADOW AI | INACTIVE';
   document.documentElement.appendChild(badge);
-  console.log("🔵 Shadow AI: Badge added — INACTIVE");
 }
 
-// ✅ UPDATE BADGE WHEN ACTIVE
 function setBadgeActive() {
   const b = document.getElementById('shadow-ai-badge');
   if (b) {
@@ -31,80 +29,69 @@ function setBadgeActive() {
   }
 }
 
-// ✅ RUN IMMEDIATELY — NO WAITING
 addBadge();
 initProtection();
 
-// --- LOAD SETTINGS ---
+// --- LOAD & VALIDATE ---
 async function loadConfig() {
   try {
     const stored = await (chrome || browser).storage.local.get(['shadow_company_id', 'shadow_licence_key']);
     COMPANY_ID = stored.shadow_company_id || "";
     LICENCE_KEY = stored.shadow_licence_key || "";
-    console.log("🟢 Shadow AI: Config loaded", {COMPANY_ID, LICENCE_KEY});
   } catch (e) {
-    console.error("🔴 Shadow AI: Storage error", e);
     COMPANY_ID = ""; LICENCE_KEY = "";
     LICENCE_VALID = false;
     return;
   }
 
-  // ✅ NO DETAILS = STOP EVERYTHING
   if (!COMPANY_ID || !LICENCE_KEY) {
     LICENCE_VALID = false;
     showActivationUI();
     return;
   }
 
-  // ✅ VALIDATE BEFORE ENABLING
-  const validCompany = await validateCompanyId(COMPANY_ID);
-  const validLicence = await validateLicenceKey(LICENCE_KEY);
-
-  if (!validCompany || !validLicence) {
+  // ✅ VALIDATE BOTH IN ONE CALL — NO companies TABLE NEEDED
+  const valid = await validateLicenceAndOrg(LICENCE_KEY, COMPANY_ID);
+  if (!valid) {
     LICENCE_VALID = false;
     showActivationUI();
     return;
   }
 
-  // ✅ ONLY NOW — LICENCE IS GOOD
   LICENCE_VALID = true;
   setBadgeActive();
   await registerDeviceHeartbeat();
   await fetchCompanySecrets();
 }
 
-// --- VALIDATION ---
-async function validateLicenceKey(key) {
+// ✅ SINGLE VALIDATION FUNCTION
+async function validateLicenceAndOrg(key, orgName) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/licences?licence_key=eq.${encodeURIComponent(key)}&is_active=eq.true&select=licence_key,expires_at`, {
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-    });
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/licences?licence_key=eq.${encodeURIComponent(key)}&organisation_name=eq.${encodeURIComponent(orgName)}&is_active=eq.true&select=id,expires_at`,
+      {
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      }
+    );
     const data = await res.json();
-    return Array.isArray(data) && data.length === 1 && (!data[0].expires_at || new Date(data[0].expires_at) > new Date());
+    return Array.isArray(data) && data.length === 1 &&
+      (!data[0].expires_at || new Date(data[0].expires_at) > new Date());
   } catch (e) { return false; }
 }
 
-async function validateCompanyId(id) {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/companies?id=eq.${id}&is_active=eq.true&select=id`, {
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    const data = await res.json();
-    return Array.isArray(data) && data.length === 1;
-  } catch (e) { return false; }
-}
-
-// --- ACTIVATION UI — ✅ FIXED TEXT VISIBILITY ---
+// --- ACTIVATION UI ---
 function showActivationUI() {
   if (document.getElementById('shadow-activate')) return;
-
   const ui = document.createElement('div');
   ui.id = 'shadow-activate';
   ui.style = `position:fixed;top:60px;right:20px;z-index:99999999;background:#003087;color:white;padding:20px;border-radius:8px;border:2px solid #005EB8;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:Arial,sans-serif;`;
   ui.innerHTML = `
     <h3 style="margin-top:0;">🛡️ Activate Shadow AI</h3>
     <p style="font-size:14px;margin:10px 0;">Enter your details:</p>
-    <input type="text" id="cidInput" placeholder="Company ID" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
+    <input type="text" id="cidInput" placeholder="Organisation Name" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
     <input type="text" id="licenceInput" placeholder="Licence Key" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
     <button id="activateBtn" style="width:100%;padding:8px;background:#00A499;color:white;border:none;border-radius:4px;font-weight:bold;">Activate</button>
   `;
@@ -115,11 +102,8 @@ function showActivationUI() {
     const lic = document.getElementById('licenceInput').value.trim();
     if (!cid || !lic) return alert("Enter both values");
 
-    const okCompany = await validateCompanyId(cid);
-    const okLicence = await validateLicenceKey(lic);
-
-    if (!okCompany) return alert("Invalid Company ID");
-    if (!okLicence) return alert("Invalid/Expired Licence");
+    const ok = await validateLicenceAndOrg(lic, cid);
+    if (!ok) return alert("❌ Invalid — check your details");
 
     await (chrome || browser).storage.local.set({ 
       "shadow_company_id": cid,
@@ -127,7 +111,7 @@ function showActivationUI() {
     });
     COMPANY_ID = cid;
     LICENCE_KEY = lic;
-    LICENCE_VALID = true; // ✅ ENABLE PROTECTION
+    LICENCE_VALID = true;
     setBadgeActive();
     ui.remove();
     await registerDeviceHeartbeat();
@@ -140,7 +124,7 @@ const deviceFingerprint = btoa(navigator.userAgent + navigator.platform + screen
 const deviceName = `${navigator.platform} | ${navigator.userAgent.substring(0, 40)}...`;
 
 async function registerDeviceHeartbeat() {
-  if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY) return; // ✅ ONLY IF ACTIVE
+  if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/rpc/register_device_heartbeat`, {
       method: "POST",
@@ -167,7 +151,7 @@ const securityPatterns = [
 ];
 
 async function fetchCompanySecrets() {
-  if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY) return; // ✅ ONLY IF ACTIVE
+  if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY) return;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/company_secrets?company_id=eq.${COMPANY_ID}&select=*`, {
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
@@ -178,7 +162,7 @@ async function fetchCompanySecrets() {
 
 // --- LOGGING ---
 async function reportLeak(type, detail, blockedText = "") {
-  if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY) return; // ✅ ONLY IF ACTIVE
+  if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/security_logs`, {
       method: "POST",
@@ -205,18 +189,13 @@ async function reportLeak(type, detail, blockedText = "") {
 
 // --- SCAN & BLOCK ---
 function scanAndBlock() {
-  // ✅ CRITICAL: DO NOTHING IF NO VALID LICENCE
-  if (!LICENCE_VALID) {
-    isScanning = false;
-    return;
-  }
-
+  if (!LICENCE_VALID) { isScanning = false; return; }
   if (isScanning) return;
   isScanning = true;
 
   let leakFound = false;
-
   const inputs = document.querySelectorAll(`textarea, [contenteditable="true"], input[type="text"], div[role="textbox"]`);
+
   inputs.forEach(input => {
     const original = input.value || input.innerText || "";
     if (original.length < 3) return;
@@ -269,14 +248,12 @@ function scanAndBlock() {
   isScanning = false;
 }
 
-// --- START PROTECTION ---
+// --- START ---
 function initProtection() {
-  console.log("🟢 Shadow AI: Protection system initialised — waiting for valid licence");
   loadConfig();
   setInterval(scanAndBlock, 300);
   setInterval(fetchCompanySecrets, 120000);
 
-  // Watch for page changes
   const obs = new MutationObserver(() => scanAndBlock());
   obs.observe(document.documentElement, { childList: true, subtree: true, attributes: false, characterData: false });
 
