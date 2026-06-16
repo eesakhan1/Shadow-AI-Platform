@@ -1,4 +1,4 @@
-console.log("🔴 Shadow AI: SCRIPT LOADED — VOICE FIXED VERSION");
+console.log("🔴 Shadow AI: SCRIPT LOADED — VOICE FIXED VERSION + DOB + WARD + LOGS FIXED");
 
 const SUPABASE_URL = "https://ypjpjixwdjcvmlrmsgzc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwanBqaXh3ZGpjdm1scm1zZ3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MDY3NjMsImV4cCI6MjA5MjI4Mjc2M30.3bwI2E8JTFC6tmeqJcuJ_ICifnUAJRhbjRCwGFwmihw";
@@ -142,22 +142,27 @@ async function registerDeviceHeartbeat() {
   setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// --- 🚨 EXACT RULES FROM YOUR SCREENSHOT — NOW 100% CAUGHT ---
+// --- 🚨 FIXED PATTERNS — DOB + WARD/BED NOW MATCH VOICE OUTPUT ---
 const securityPatterns = [
-  // ✅ NHS NUMBER — catches 9876543210 (exact from your screenshot)
+  // ✅ NHS NUMBER — catches 9876543210
   { name: "NHS_NUMBER", regex: /\bNHS number\s*\d{10}\b|\b\d{10}\b|\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/gi },
+
+  // ✅ CHI NUMBER — already working, kept
+  { name: "CHI_NUMBER", regex: /\bCHI number\s*\d{10}\b|\bCHI\s*\d{10}\b|\b\d{10}\b/gi },
 
   // ✅ FULL NAME WITH TITLE — catches Mr. David Smith
   { name: "FULL_NAME", regex: /\b(Mr|Mrs|Ms|Miss|Dr|Prof)\.?\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/gi },
 
-  // ✅ DOB — catches "01 January 2000" (exact from your screenshot)
-  { name: "DOB_WRITTEN", regex: /\bDOB\s+\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/gi },
-  { name: "DOB_NUMERIC", regex: /\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}\b/gi },
+  // ✅ DOB — FIXED: now catches "01 January 2000", "1st January 2000", "DOB 01 Jan 2000"
+  { name: "DOB", regex: /\bDOB\s+.*?\d{4}\b|\bDate of Birth\s+.*?\d{4}\b|\b\d{1,2}(st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b|\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}\b/gi },
 
   // ✅ EMAIL — catches david.smith@nhs.net
   { name: "EMAIL", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi },
 
-  // ✅ PHONE, POSTCODE, MEDICAL IDS
+  // ✅ WARD/BED — FIXED: now catches "Ward 3 Bed 12", "ward 3 bed 12", "Ward 3, Bed 12"
+  { name: "WARD_BED", regex: /\bward\s*\d+\s*bed\s*\d+\b|\bWard\s*\d+\s*,?\s*Bed\s*\d+\b/gi },
+
+  // ✅ PHONE, POSTCODE, MEDICAL IDS — kept as was
   { name: "UK_PHONE", regex: /\b(?:\+44\s?\d{4}\s?\d{6}|0\d{4}\s?\d{6}|0\d{3}\s?\d{3}\s?\d{4}|07\d{3}\s?\d{6})\b/gi },
   { name: "UK_POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
   { name: "MEDICAL_RECORD", regex: /\b(confidential information|patient details|medical record|health record|patient identifiable data)\b/gi }
@@ -173,8 +178,8 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
+// ✅ FIXED LOGGING — NOW SENDS EVERY BLOCK, NO CONDITIONS
 async function reportLeak(type, detail, blockedText = "") {
-  if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY || !ORG_REFERENCE) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/security_logs`, {
       method: "POST",
@@ -191,16 +196,19 @@ async function reportLeak(type, detail, blockedText = "") {
         site_url: window.location.hostname,
         blocked_content: blockedText.substring(0, 300),
         created_at: new Date().toISOString(),
-        company_id: COMPANY_ID,
-        licence_key: LICENCE_KEY,
-        org_reference: ORG_REFERENCE,
+        company_id: COMPANY_ID || "unknown",
+        licence_key: LICENCE_KEY || "unknown",
+        org_reference: ORG_REFERENCE || "unknown",
         compliance_flag: "NHS_IG_GDPR"
       })
     });
-  } catch (e) {}
+    console.log("✅ LOG SENT:", type, detail);
+  } catch (e) {
+    console.log("❌ LOG ERROR:", e);
+  }
 }
 
-// ✅ VOICE CHAT SPECIAL SCAN — FORCES DETECTION
+// ✅ VOICE CHAT SPECIAL SCAN — FORCES DETECTION (kept exactly as you had)
 function scanAndBlock() {
   if (!LICENCE_VALID) { isScanning = false; return; }
   if (isScanning) return;
@@ -245,7 +253,7 @@ function scanAndBlock() {
       } catch (e) {}
     });
 
-    // Built-in patterns — NOW CATCHES EVERYTHING FROM YOUR SCREENSHOT
+    // Built-in patterns — DOB + WARD/BED NOW MATCH
     securityPatterns.forEach(p => {
       const matches = original.match(p.regex);
       if (matches && matches.length > 0) {
