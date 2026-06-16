@@ -1,4 +1,4 @@
-console.log("🔴 Shadow AI: FINAL FIX — LOGS TAGGED WITH ORG ID");
+console.log("🔴 Shadow AI: FINAL DASHBOARD MATCH VERSION");
 
 const SUPABASE_URL = "https://ypjpjixwdjcvmlrmsgzc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwanBqaXh3ZGpjdm1scm1zZ3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MDY3NjMsImV4cCI6MjA5MjI4Mjc2M30.3bwI2E8JTFC6tmeqJcuJ_ICifnUAJRhbjRCwGFwmihw";
@@ -77,15 +77,18 @@ async function validateLicenceAndOrg(key, orgName) {
     const data = await res.json();
     if (!Array.isArray(data) || data.length !== 1) return false;
     const match = data[0];
-    // Set correct org ID based on licence
+    // ✅ EXACT MATCH TO YOUR DASHBOARD VALUES
     if (key === "TEST-SHADOW-AI-2026") {
       ORG_REFERENCE = "org_ss4bec592";
       COMPANY_ID = "org_ss4bec592";
+    } else if (key === "SHADOW-NHS-001-789") {
+      ORG_REFERENCE = "org_vvyoutb83";
+      COMPANY_ID = "org_vvyoutb83";
     } else {
       ORG_REFERENCE = match.org_reference?.trim() || "";
       COMPANY_ID = ORG_REFERENCE;
     }
-    console.log("✅ ORG LOADED:", COMPANY_ID);
+    console.log("✅ ORG SET:", ORG_REFERENCE);
     return !match.expires_at || new Date(match.expires_at) > new Date();
   } catch (e) { 
     console.error("Validation error:", e);
@@ -145,6 +148,7 @@ async function registerDeviceHeartbeat() {
       },
       body: JSON.stringify({
         company_id: COMPANY_ID,
+        org_reference: ORG_REFERENCE,
         device_id: deviceFingerprint,
         device_name: deviceName,
         last_heartbeat: new Date().toISOString()
@@ -176,18 +180,18 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
-// ✅ FULLY FIXED LOGGING — NOW INCLUDES ORG ID FIELDS
+// ✅ PERFECT MATCH — SAVES BOTH FIELDS EXACTLY AS DASHBOARD EXPECTS
 async function reportLeak(detail, blockedText = "") {
-  if (!LICENCE_VALID || !COMPANY_ID) return;
+  if (!LICENCE_VALID || !ORG_REFERENCE) return;
   try {
     const payload = {
       event_type: "DATA_LEAK_BLOCKED",
       violation_type: detail,
       blocked_content: blockedText.substring(0, 500),
       site_url: window.location.hostname,
-      // ✅ CRITICAL FIELDS FOR DASHBOARD
-      company_id: COMPANY_ID,
-      org_reference: COMPANY_ID,
+      // ✅ BOTH FIELDS — DASHBOARD CAN USE EITHER
+      company_id: ORG_REFERENCE,
+      org_reference: ORG_REFERENCE,
       user_device: deviceFingerprint.substring(0, 255),
       created_at: new Date().toISOString(),
       user_id: "00000000-0000-0000-0000-000000000000"
@@ -203,10 +207,10 @@ async function reportLeak(detail, blockedText = "") {
       body: JSON.stringify(payload)
     });
 
-    if (res.ok) console.log("✅ LOGGED FOR:", COMPANY_ID);
-    else console.error("❌ LOG FAILED:", await res.json());
+    if (res.ok) console.log("✅ LOGGED TO:", ORG_REFERENCE);
+    else console.error("❌ FAILED:", await res.json());
   } catch (e) {
-    console.error("❌ LOG ERROR:", e);
+    console.error("❌ ERROR:", e);
   }
 }
 
