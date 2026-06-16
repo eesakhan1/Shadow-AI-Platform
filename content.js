@@ -73,7 +73,7 @@ async function validateLicenceAndOrg(key, orgName) {
     const data = await res.json();
     if (!Array.isArray(data) || data.length !== 1) return false;
 
-    ORG_REFERENCE = data[0].org_reference?.trim() || orgName;
+    ORG_REFERENCE = match.org_reference?.trim() || match.organisation_name?.trim() || "";
     return !data[0].expires_at || new Date(data[0].expires_at) > new Date();
   } catch (e) { return false; }
 }
