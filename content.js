@@ -1,4 +1,3 @@
-// FORCED LOAD — NO DELAYS
 console.log("🔴 Shadow AI: SCRIPT LOADED — RUNNING");
 
 const SUPABASE_URL = "https://ypjpjixwdjcvmlrmsgzc.supabase.co";
@@ -6,11 +5,11 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let COMPANY_ID = "";
 let LICENCE_KEY = "";
+let ORG_REFERENCE = "";
 let isScanning = false;
 let customSecrets = [];
 let LICENCE_VALID = false;
 
-// ✅ BADGE
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   const badge = document.createElement('div');
@@ -32,14 +31,14 @@ function setBadgeActive() {
 addBadge();
 initProtection();
 
-// --- LOAD & VALIDATE ---
 async function loadConfig() {
   try {
-    const stored = await (chrome || browser).storage.local.get(['shadow_company_id', 'shadow_licence_key']);
+    const stored = await (chrome || browser).storage.local.get(['shadow_company_id', 'shadow_licence_key', 'shadow_org_ref']);
     COMPANY_ID = stored.shadow_company_id || "";
     LICENCE_KEY = stored.shadow_licence_key || "";
+    ORG_REFERENCE = stored.shadow_org_ref || "";
   } catch (e) {
-    COMPANY_ID = ""; LICENCE_KEY = "";
+    COMPANY_ID = LICENCE_KEY = ORG_REFERENCE = "";
     LICENCE_VALID = false;
     return;
   }
@@ -50,7 +49,6 @@ async function loadConfig() {
     return;
   }
 
-  // ✅ VALIDATE BOTH IN ONE CALL — NO companies TABLE NEEDED
   const valid = await validateLicenceAndOrg(LICENCE_KEY, COMPANY_ID);
   if (!valid) {
     LICENCE_VALID = false;
@@ -64,25 +62,22 @@ async function loadConfig() {
   await fetchCompanySecrets();
 }
 
-// ✅ SINGLE VALIDATION FUNCTION
 async function validateLicenceAndOrg(key, orgName) {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/licences?licence_key=eq.${encodeURIComponent(key)}&organisation_name=eq.${encodeURIComponent(orgName)}&is_active=eq.true&select=id,expires_at`,
+      `${SUPABASE_URL}/rest/v1/licences?licence_key=eq.${encodeURIComponent(key)}&organisation_name=eq.${encodeURIComponent(orgName)}&is_active=eq.true&select=id,expires_at,org_reference`,
       {
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
-        }
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
       }
     );
     const data = await res.json();
-    return Array.isArray(data) && data.length === 1 &&
-      (!data[0].expires_at || new Date(data[0].expires_at) > new Date());
+    if (!Array.isArray(data) || data.length !== 1) return false;
+
+    ORG_REFERENCE = data[0].org_reference?.trim() || orgName;
+    return !data[0].expires_at || new Date(data[0].expires_at) > new Date();
   } catch (e) { return false; }
 }
 
-// --- ACTIVATION UI ---
 function showActivationUI() {
   if (document.getElementById('shadow-activate')) return;
   const ui = document.createElement('div');
@@ -107,7 +102,8 @@ function showActivationUI() {
 
     await (chrome || browser).storage.local.set({ 
       "shadow_company_id": cid,
-      "shadow_licence_key": lic
+      "shadow_licence_key": lic,
+      "shadow_org_ref": ORG_REFERENCE
     });
     COMPANY_ID = cid;
     LICENCE_KEY = lic;
@@ -119,7 +115,6 @@ function showActivationUI() {
   });
 }
 
-// --- DEVICE HEARTBEAT ---
 const deviceFingerprint = btoa(navigator.userAgent + navigator.platform + screen.width + screen.height);
 const deviceName = `${navigator.platform} | ${navigator.userAgent.substring(0, 40)}...`;
 
@@ -135,6 +130,7 @@ async function registerDeviceHeartbeat() {
       },
       body: JSON.stringify({
         p_company_id: COMPANY_ID,
+        p_org_ref: ORG_REFERENCE,
         p_device_id: deviceFingerprint,
         p_device_name: deviceName
       })
@@ -143,17 +139,14 @@ async function registerDeviceHeartbeat() {
   setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// --- 🚨 FULL SECURITY RULES — ALL SENSITIVE / NHS / PATIENT DATA ---
+// ✅ FULL SECURITY RULES
 const securityPatterns = [
-  // 🔴 NHS SPECIFIC
   { name: "NHS_NUMBER", regex: /\b(?:\d{3}[-\s]?\d{3}[-\s]?\d{4})\b/gi },
   { name: "NHS_CHI_NUMBER", regex: /\b\d{10}\b/gi },
   { name: "NHS_PASSPORT", regex: /\b[Nn][Hh][SsPp]\d{6,}\b/gi },
   { name: "NHS_TRUST_CODE", regex: /\b[A-Z]{2}\d{3}\b/gi },
   { name: "GP_PRACTICE_CODE", regex: /\b\d{5}[A-Z]?\b/gi },
   { name: "ODS_CODE", regex: /\b[A-Z0-9]{3,10}\b/gi },
-
-  // 🔴 PERSONAL IDENTIFIERS
   { name: "EMAIL_ADDRESS", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/gi },
   { name: "UK_PHONE", regex: /\b(?:\+44\s?\d{4}\s?\d{6}|0\d{4}\s?\d{6}|0\d{3}\s?\d{3}\s?\d{4}|07\d{3}\s?\d{6})\b/gi },
   { name: "UK_POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
@@ -164,29 +157,25 @@ const securityPatterns = [
   { name: "DRIVING_LICENCE", regex: /\b[A-Z9]{5}\d{5}[A-Z9]{2}\d{5}\b/gi },
   { name: "BANK_ACCOUNT", regex: /\b\d{8}\b/gi },
   { name: "SORT_CODE", regex: /\b\d{2}[-\s]?\d{2}[-\s]?\d{2}\b/gi },
-
-  // 🔴 PATIENT & MEDICAL DETAILS
   { name: "MEDICAL_RECORD_NO", regex: /\bMRN[-\s]?\d{4,}\b/gi },
   { name: "HOSPITAL_NUMBER", regex: /\bHOSP[-\s]?\d{4,}\b/gi },
   { name: "WARD_BED", regex: /\bWard[-\s]?[A-Z0-9]+[-\s]?Bed[-\s]?\d+\b/gi },
   { name: "DIAGNOSIS_CODE", regex: /\b(?:ICD-10|SNOMED|CPT)[-\s:]?[A-Z0-9.]{2,}\b/gi },
   { name: "PRESCRIPTION_NO", regex: /\bRx[-\s]?\d{5,}\b/gi },
-
-  // 🔴 SENSITIVE KEYWORDS — FIXED SYNTAX
   { name: "SENSITIVE_TERMS", regex: /\b(confidential|private|restricted|official-sensitive|protected|personal|patient|nhs|chi|gp|hospital|clinic|surgery|practice|medical|health|healthcare|clinical|treatment|diagnosis|prescription|medication|dosage|condition|symptom|history|record|consultation|referral|discharge|appointment|ward|bed|nurse|doctor|consultant|specialist|disability|impairment|mental health|psychiatric|substance|abuse|pregnancy|fertility|gender|sexuality|ethnicity|religion|consent|opt-out|data subject|gdpr|ig|information governance|patient identifiable|pii|special category data)\b/gi }
 ];
 
 async function fetchCompanySecrets() {
   if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY) return;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/company_secrets?company_id=eq.${COMPANY_ID}&select=*`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/company_secrets?company_id=eq.${encodeURIComponent(COMPANY_ID)}&select=*`, {
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
     });
     customSecrets = await res.json();
   } catch (e) { customSecrets = []; }
 }
 
-// --- LOGGING ---
+// ✅ LOGS NOW INCLUDE YOUR DASHBOARD REFERENCE
 async function reportLeak(type, detail, blockedText = "") {
   if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY) return;
   try {
@@ -207,13 +196,13 @@ async function reportLeak(type, detail, blockedText = "") {
         created_at: new Date().toISOString(),
         company_id: COMPANY_ID,
         licence_key: LICENCE_KEY,
+        org_reference: ORG_REFERENCE, // ✅ MATCHES YOUR DASHBOARD
         compliance_flag: "NHS_IG_GDPR"
       })
     });
   } catch (e) {}
 }
 
-// --- SCAN & BLOCK ---
 function scanAndBlock() {
   if (!LICENCE_VALID) { isScanning = false; return; }
   if (isScanning) return;
@@ -229,7 +218,6 @@ function scanAndBlock() {
     let redacted = original;
     let matched = false;
 
-    // ✅ CUSTOM SECRETS (from your Supabase company_secrets table)
     customSecrets.forEach(rule => {
       try {
         const escaped = rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -243,7 +231,6 @@ function scanAndBlock() {
       } catch (e) {}
     });
 
-    // ✅ BUILT-IN FULL RULE SET
     securityPatterns.forEach(p => {
       const matches = original.match(p.regex);
       if (matches && matches.length > 0) {
@@ -263,7 +250,6 @@ function scanAndBlock() {
     }
   });
 
-  // ✅ BLOCK SEND BUTTON IF ANY SENSITIVE DATA FOUND
   const sendBtn = document.querySelector(`[data-testid="send-button"], button[type="submit"], .send-button, button[aria-label*="Send"]`);
   if (sendBtn) {
     sendBtn.disabled = leakFound;
@@ -274,7 +260,6 @@ function scanAndBlock() {
   isScanning = false;
 }
 
-// --- START ---
 function initProtection() {
   loadConfig();
   setInterval(scanAndBlock, 300);
