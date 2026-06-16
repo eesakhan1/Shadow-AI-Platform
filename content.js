@@ -1,4 +1,4 @@
-console.log("🔴 Shadow AI: FINAL VERSION — LOGIN + WORKING LOGGING");
+console.log("🔴 Shadow AI: FINAL FIX — LOGS TAGGED WITH ORG ID");
 
 const SUPABASE_URL = "https://ypjpjixwdjcvmlrmsgzc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwanBqaXh3ZGpjdm1scm1zZ3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MDY3NjMsImV4cCI6MjA5MjI4Mjc2M30.3bwI2E8JTFC6tmeqJcuJ_ICifnUAJRhbjRCwGFwmihw";
@@ -77,21 +77,19 @@ async function validateLicenceAndOrg(key, orgName) {
     const data = await res.json();
     if (!Array.isArray(data) || data.length !== 1) return false;
     const match = data[0];
-    // ✅ Set correct org for your test licence
+    // Set correct org ID based on licence
     if (key === "TEST-SHADOW-AI-2026") {
       ORG_REFERENCE = "org_ss4bec592";
       COMPANY_ID = "org_ss4bec592";
     } else {
-      ORG_REFERENCE = match.org_reference?.trim() || "org_vvyoutb83";
+      ORG_REFERENCE = match.org_reference?.trim() || "";
       COMPANY_ID = ORG_REFERENCE;
     }
-    console.log("✅ LOADED COMPANY_ID:", COMPANY_ID);
+    console.log("✅ ORG LOADED:", COMPANY_ID);
     return !match.expires_at || new Date(match.expires_at) > new Date();
   } catch (e) { 
     console.error("Validation error:", e);
-    ORG_REFERENCE = "org_ss4bec592";
-    COMPANY_ID = "org_ss4bec592";
-    return true;
+    return false;
   }
 }
 
@@ -152,7 +150,6 @@ async function registerDeviceHeartbeat() {
         last_heartbeat: new Date().toISOString()
       })
     });
-    console.log("✅ Heartbeat updated for:", COMPANY_ID);
   } catch (e) { console.error("❌ Heartbeat error:", e); }
   setTimeout(registerDeviceHeartbeat, 60000);
 }
@@ -179,7 +176,7 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
-// ✅ LOGGING — EXACT SAME WORKING VERSION AS THE TEST CODE
+// ✅ FULLY FIXED LOGGING — NOW INCLUDES ORG ID FIELDS
 async function reportLeak(detail, blockedText = "") {
   if (!LICENCE_VALID || !COMPANY_ID) return;
   try {
@@ -188,11 +185,12 @@ async function reportLeak(detail, blockedText = "") {
       violation_type: detail,
       blocked_content: blockedText.substring(0, 500),
       site_url: window.location.hostname,
+      // ✅ CRITICAL FIELDS FOR DASHBOARD
       company_id: COMPANY_ID,
       org_reference: COMPANY_ID,
       user_device: deviceFingerprint.substring(0, 255),
       created_at: new Date().toISOString(),
-      user_id: "00000000-0000-0000-0000-000000000000" // ✅ REQUIRED FIELD
+      user_id: "00000000-0000-0000-0000-000000000000"
     };
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/security_logs`, {
@@ -200,19 +198,15 @@ async function reportLeak(detail, blockedText = "") {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
     });
 
-    if (res.ok) {
-      console.log("✅ LOG SAVED SUCCESSFULLY | company_id:", payload.company_id, "| type:", detail);
-    } else {
-      console.error("❌ LOG ERROR");
-    }
+    if (res.ok) console.log("✅ LOGGED FOR:", COMPANY_ID);
+    else console.error("❌ LOG FAILED:", await res.json());
   } catch (e) {
-    console.error("❌ LOG FAILED:", e);
+    console.error("❌ LOG ERROR:", e);
   }
 }
 
