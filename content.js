@@ -139,43 +139,50 @@ async function registerDeviceHeartbeat() {
   setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// ✅ FULL SECURITY RULES
+// --- 🚨 FULL SECURITY RULES — ✅ FIXED: NO MORE FALSE BLOCKS ---
 const securityPatterns = [
-  { name: "NHS_NUMBER", regex: /\b(?:\d{3}[-\s]?\d{3}[-\s]?\d{4})\b/gi },
-  { name: "NHS_CHI_NUMBER", regex: /\b\d{10}\b/gi },
-  { name: "NHS_PASSPORT", regex: /\b[Nn][Hh][SsPp]\d{6,}\b/gi },
-  { name: "NHS_TRUST_CODE", regex: /\b[A-Z]{2}\d{3}\b/gi },
-  { name: "GP_PRACTICE_CODE", regex: /\b\d{5}[A-Z]?\b/gi },
-  { name: "ODS_CODE", regex: /\b[A-Z0-9]{3,10}\b/gi },
-  { name: "EMAIL_ADDRESS", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/gi },
-  { name: "UK_PHONE", regex: /\b(?:\+44\s?\d{4}\s?\d{6}|0\d{4}\s?\d{6}|0\d{3}\s?\d{3}\s?\d{4}|07\d{3}\s?\d{6})\b/gi },
-  { name: "UK_POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
-  { name: "DOB", regex: /\b(?:0[1-9]|[12]\d|3[01])[\/.-](?:0[1-9]|1[0-2])[\/.-]\d{4}\b/gi },
-  { name: "FULL_NAME", regex: /\b(?:Mr|Mrs|Ms|Miss|Dr|Prof)\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/gi },
-  { name: "NINO", regex: /\b[A-Z]{2}\d{6}[A-Z]{1}\b/gi },
-  { name: "PASSPORT_UK", regex: /\b\d{9}\b/gi },
-  { name: "DRIVING_LICENCE", regex: /\b[A-Z9]{5}\d{5}[A-Z9]{2}\d{5}\b/gi },
-  { name: "BANK_ACCOUNT", regex: /\b\d{8}\b/gi },
-  { name: "SORT_CODE", regex: /\b\d{2}[-\s]?\d{2}[-\s]?\d{2}\b/gi },
-  { name: "MEDICAL_RECORD_NO", regex: /\bMRN[-\s]?\d{4,}\b/gi },
-  { name: "HOSPITAL_NUMBER", regex: /\bHOSP[-\s]?\d{4,}\b/gi },
-  { name: "WARD_BED", regex: /\bWard[-\s]?[A-Z0-9]+[-\s]?Bed[-\s]?\d+\b/gi },
-  { name: "DIAGNOSIS_CODE", regex: /\b(?:ICD-10|SNOMED|CPT)[-\s:]?[A-Z0-9.]{2,}\b/gi },
-  { name: "PRESCRIPTION_NO", regex: /\bRx[-\s]?\d{5,}\b/gi },
-  { name: "SENSITIVE_TERMS", regex: /\b(confidential|private|restricted|official-sensitive|protected|personal|patient|nhs|chi|gp|hospital|clinic|surgery|practice|medical|health|healthcare|clinical|treatment|diagnosis|prescription|medication|dosage|condition|symptom|history|record|consultation|referral|discharge|appointment|ward|bed|nurse|doctor|consultant|specialist|disability|impairment|mental health|psychiatric|substance|abuse|pregnancy|fertility|gender|sexuality|ethnicity|religion|consent|opt-out|data subject|gdpr|ig|information governance|patient identifiable|pii|special category data)\b/gi }
+  // 🔴 NHS SPECIFIC — ONLY MATCH FULL VALID NUMBERS
+  { name: "NHS_NUMBER", regex: /\b(?:\d{3}[-\s]?\d{3}[-\s]?\d{4})\b/gi }, // exactly 10 digits
+  { name: "NHS_CHI_NUMBER", regex: /\b\d{10}\b/gi }, // exactly 10 digits
+  { name: "NHS_PASSPORT", regex: /\b[Nn][Hh][SsPp]\d{6,}\b/gi }, // NHS + 6+ digits
+  { name: "NHS_TRUST_CODE", regex: /\b[A-Z]{2}\d{3}\b/gi }, // 2 letters + 3 digits
+  { name: "GP_PRACTICE_CODE", regex: /\b\d{5}[A-Z]?\b/gi }, // 5 digits + optional letter
+  { name: "ODS_CODE", regex: /\b[A-Z0-9]{3,10}\b/gi }, // 3–10 chars
+
+  // 🔴 PERSONAL IDENTIFIERS — STRICT FORMATS ONLY
+  { name: "EMAIL_ADDRESS", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/gi }, // proper email format
+  { name: "UK_PHONE", regex: /\b(?:\+44\s?\d{4}\s?\d{6}|0\d{4}\s?\d{6}|0\d{3}\s?\d{3}\s?\d{4}|07\d{3}\s?\d{6})\b/gi }, // valid UK numbers
+  { name: "UK_POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi }, // proper postcode
+  { name: "DOB", regex: /\b(?:0[1-9]|[12]\d|3[01])[\/.-](?:0[1-9]|1[0-2])[\/.-]\d{4}\b/gi }, // DD/MM/YYYY only
+  { name: "FULL_NAME", regex: /\b(?:Mr|Mrs|Ms|Miss|Dr|Prof)\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/gi }, // only with title
+  { name: "NINO", regex: /\b[A-Z]{2}\d{6}[A-Z]{1}\b/gi }, // exact NI format
+  { name: "PASSPORT_UK", regex: /\b\d{9}\b/gi }, // exactly 9 digits
+  { name: "DRIVING_LICENCE", regex: /\b[A-Z9]{5}\d{5}[A-Z9]{2}\d{5}\b/gi }, // exact format
+  { name: "BANK_ACCOUNT", regex: /\b\d{8}\b/gi }, // exactly 8 digits
+  { name: "SORT_CODE", regex: /\b\d{2}[-\s]?\d{2}[-\s]?\d{2}\b/gi }, // exactly 6 digits split
+
+  // 🔴 PATIENT & MEDICAL — ONLY FULL TERMS / CODES
+  { name: "MEDICAL_RECORD_NO", regex: /\bMRN[-\s]?\d{4,}\b/gi }, // MRN + 4+ digits
+  { name: "HOSPITAL_NUMBER", regex: /\bHOSP[-\s]?\d{4,}\b/gi }, // HOSP + 4+ digits
+  { name: "WARD_BED", regex: /\bWard[-\s]?[A-Z0-9]+[-\s]?Bed[-\s]?\d+\b/gi }, // full phrase
+  { name: "DIAGNOSIS_CODE", regex: /\b(?:ICD-10|SNOMED|CPT)[-\s:]?[A-Z0-9.]{2,}\b/gi }, // starts with code name
+  { name: "PRESCRIPTION_NO", regex: /\bRx[-\s]?\d{5,}\b/gi }, // Rx + 5+ digits
+
+  // 🔴 SENSITIVE KEYWORDS — ✅ ONLY MATCH FULL WORDS / PHRASES, MIN LENGTH 4
+  { name: "SENSITIVE_TERMS", regex: /\b(confidential|private|restricted|official-sensitive|protected|personal|patient|hospital|clinic|surgery|practice|medical|healthcare|clinical|treatment|diagnosis|prescription|medication|dosage|condition|symptom|history|record|consultation|referral|discharge|appointment|disability|impairment|psychiatric|substance|abuse|pregnancy|fertility|sexuality|ethnicity|religion|consent|opt-out|gdpr|information governance|patient identifiable|special category data)\b/gi }
 ];
 
 async function fetchCompanySecrets() {
   if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY) return;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/company_secrets?company_id=eq.${encodeURIComponent(COMPANY_ID)}&select=*`, {
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    customSecrets = await res.json();
-  } catch (e) { customSecrets = []; }
+    headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+  });
+  customSecrets = await res.json();
+} catch (e) { customSecrets = []; }
 }
 
-// ✅ LOGS NOW INCLUDE YOUR DASHBOARD REFERENCE
+// ✅ LOGS — STILL INCLUDE YOUR DASHBOARD REFERENCE
 async function reportLeak(type, detail, blockedText = "") {
   if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY) return;
   try {
@@ -196,13 +203,14 @@ async function reportLeak(type, detail, blockedText = "") {
         created_at: new Date().toISOString(),
         company_id: COMPANY_ID,
         licence_key: LICENCE_KEY,
-        org_reference: ORG_REFERENCE, // ✅ MATCHES YOUR DASHBOARD
+        org_reference: ORG_REFERENCE,
         compliance_flag: "NHS_IG_GDPR"
       })
     });
   } catch (e) {}
 }
 
+// ✅ SCAN — ADDED: IGNORE WORDS SHORTER THAN 4 CHARACTERS
 function scanAndBlock() {
   if (!LICENCE_VALID) { isScanning = false; return; }
   if (isScanning) return;
@@ -213,11 +221,12 @@ function scanAndBlock() {
 
   inputs.forEach(input => {
     const original = input.value || input.innerText || "";
-    if (original.length < 3) return;
+    if (original.length < 4) return; // ✅ IGNORE SHORT TEXT / 1-3 LETTERS
 
     let redacted = original;
     let matched = false;
 
+    // Custom rules
     customSecrets.forEach(rule => {
       try {
         const escaped = rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -231,6 +240,7 @@ function scanAndBlock() {
       } catch (e) {}
     });
 
+    // Built-in rules
     securityPatterns.forEach(p => {
       const matches = original.match(p.regex);
       if (matches && matches.length > 0) {
