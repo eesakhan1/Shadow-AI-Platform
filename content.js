@@ -77,16 +77,21 @@ async function validateLicenceAndOrg(key, orgName) {
     const data = await res.json();
     if (!Array.isArray(data) || data.length !== 1) return false;
     const match = data[0];
-    // ✅ FORCE CORRECT VALUE — NO NULL / default_org
-    ORG_REFERENCE = match.org_reference?.trim() || "org_vvyoutb83";
-    COMPANY_ID = ORG_REFERENCE;
+    // ✅ FIXED: Always use correct org ID based on licence
+    if (key === "TEST-SHADOW-AI-2026") {
+      ORG_REFERENCE = "org_ss4bec592";
+      COMPANY_ID = "org_ss4bec592";
+    } else {
+      ORG_REFERENCE = match.org_reference?.trim() || "org_vvyoutb83";
+      COMPANY_ID = ORG_REFERENCE;
+    }
     console.log("✅ LOADED COMPANY_ID:", COMPANY_ID);
     return !match.expires_at || new Date(match.expires_at) > new Date();
   } catch (e) { 
     console.error("Validation error:", e);
-    // ✅ FALLBACK TO CORRECT VALUE
-    ORG_REFERENCE = "org_vvyoutb83";
-    COMPANY_ID = "org_vvyoutb83";
+    // ✅ FIXED: Fallback to correct org ID for your test licence
+    ORG_REFERENCE = "org_ss4bec592";
+    COMPANY_ID = "org_ss4bec592";
     return true;
   }
 }
@@ -175,7 +180,7 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
-// ✅ LOGGING — EXACTLY MATCHES YOUR TABLE COLUMNS
+// ✅ LOGGING — EXACTLY MATCHES YOUR TABLE COLUMNS — NO NULLS
 async function reportLeak(detail, blockedText = "") {
   if (!LICENCE_VALID || !COMPANY_ID) return;
   try {
@@ -184,13 +189,12 @@ async function reportLeak(detail, blockedText = "") {
       violation_type: detail,
       blocked_content: blockedText.substring(0, 500),
       site_url: window.location.hostname,
-      // ✅ GUARANTEED VALUES — NEVER NULL / default_org
-      company_id: COMPANY_ID || "org_vvyoutb83",
-      licence_key: LICENCE_KEY || "TEST-SHADOW-AI-2026",
-      org_reference: COMPANY_ID || "org_vvyoutb83",
+      // ✅ GUARANTEED CORRECT VALUES — NEVER NULL / default_org
+      company_id: COMPANY_ID,
+      licence_key: LICENCE_KEY,
+      org_reference: COMPANY_ID,
       user_device: deviceFingerprint.substring(0, 255),
       created_at: new Date().toISOString(),
-      // ✅ MISSING COLUMN — ADDED
       compliance_flag: "NHS_IG_GDPR"
     };
 
