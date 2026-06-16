@@ -143,11 +143,37 @@ async function registerDeviceHeartbeat() {
   setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// --- SECURITY RULES ---
+// --- 🚨 FULL SECURITY RULES — ALL SENSITIVE / NHS / PATIENT DATA ---
 const securityPatterns = [
+  // 🔴 NHS SPECIFIC
   { name: "NHS_NUMBER", regex: /\b(?:\d{3}[-\s]?\d{3}[-\s]?\d{4})\b/gi },
+  { name: "NHS_CHI_NUMBER", regex: /\b\d{10}\b/gi },
+  { name: "NHS_PASSPORT", regex: /\b[Nn][Hh][SsPp]\d{6,}\b/gi },
+  { name: "NHS_TRUST_CODE", regex: /\b[A-Z]{2}\d{3}\b/gi },
+  { name: "GP_PRACTICE_CODE", regex: /\b\d{5}[A-Z]?\b/gi },
+  { name: "ODS_CODE", regex: /\b[A-Z0-9]{3,10}\b/gi },
+
+  // 🔴 PERSONAL IDENTIFIERS
+  { name: "EMAIL_ADDRESS", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/gi },
+  { name: "UK_PHONE", regex: /\b(?:\+44\s?\d{4}\s?\d{6}|0\d{4}\s?\d{6}|0\d{3}\s?\d{3}\s?\d{4}|07\d{3}\s?\d{6})\b/gi },
+  { name: "UK_POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
   { name: "DOB", regex: /\b(?:0[1-9]|[12]\d|3[01])[\/.-](?:0[1-9]|1[0-2])[\/.-]\d{4}\b/gi },
-  { name: "SENSITIVE", regex: /\b(confidential|patient|nhs|gp|hospital|clinic)\b/gi }
+  { name: "FULL_NAME", regex: /\b(?:Mr|Mrs|Ms|Miss|Dr|Prof)\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/gi },
+  { name: "NINO", regex: /\b[A-Z]{2}\d{6}[A-Z]{1}\b/gi },
+  { name: "PASSPORT_UK", regex: /\b\d{9}\b/gi },
+  { name: "DRIVING_LICENCE", regex: /\b[A-Z9]{5}\d{5}[A-Z9]{2}\d{5}\b/gi },
+  { name: "BANK_ACCOUNT", regex: /\b\d{8}\b/gi },
+  { name: "SORT_CODE", regex: /\b\d{2}[-\s]?\d{2}[-\s]?\d{2}\b/gi },
+
+  // 🔴 PATIENT & MEDICAL DETAILS
+  { name: "MEDICAL_RECORD_NO", regex: /\bMRN[-\s]?\d{4,}\b/gi },
+  { name: "HOSPITAL_NUMBER", regex: /\bHOSP[-\s]?\d{4,}\b/gi },
+  { name: "WARD_BED", regex: /\bWard[-\s]?[A-Z0-9]+[-\s]?Bed[-\s]?\d+\b/gi },
+  { name: "DIAGNOSIS_CODE", regex: /\b(?:ICD-10|SNOMED|CPT)[-\s:]?[A-Z0-9.]{2,}\b/gi },
+  { name: "PRESCRIPTION_NO", regex: /\bRx[-\s]?\d{5,}\b/gi },
+
+  // 🔴 SENSITIVE KEYWORDS — FIXED SYNTAX
+  { name: "SENSITIVE_TERMS", regex: /\b(confidential|private|restricted|official-sensitive|protected|personal|patient|nhs|chi|gp|hospital|clinic|surgery|practice|medical|health|healthcare|clinical|treatment|diagnosis|prescription|medication|dosage|condition|symptom|history|record|consultation|referral|discharge|appointment|ward|bed|nurse|doctor|consultant|specialist|disability|impairment|mental health|psychiatric|substance|abuse|pregnancy|fertility|gender|sexuality|ethnicity|religion|consent|opt-out|data subject|gdpr|ig|information governance|patient identifiable|pii|special category data)\b/gi }
 ];
 
 async function fetchCompanySecrets() {
@@ -203,7 +229,7 @@ function scanAndBlock() {
     let redacted = original;
     let matched = false;
 
-    // Custom rules
+    // ✅ CUSTOM SECRETS (from your Supabase company_secrets table)
     customSecrets.forEach(rule => {
       try {
         const escaped = rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -212,12 +238,12 @@ function scanAndBlock() {
           redacted = redacted.replace(rx, '██████████');
           matched = true;
           leakFound = true;
-          reportLeak("BLOCKED", `Custom: ${rule.secret_word}`, original);
+          reportLeak("BLOCKED", `Custom Rule: ${rule.secret_word}`, original);
         }
       } catch (e) {}
     });
 
-    // Built-in rules
+    // ✅ BUILT-IN FULL RULE SET
     securityPatterns.forEach(p => {
       const matches = original.match(p.regex);
       if (matches && matches.length > 0) {
@@ -237,7 +263,7 @@ function scanAndBlock() {
     }
   });
 
-  // Block send buttons
+  // ✅ BLOCK SEND BUTTON IF ANY SENSITIVE DATA FOUND
   const sendBtn = document.querySelector(`[data-testid="send-button"], button[type="submit"], .send-button, button[aria-label*="Send"]`);
   if (sendBtn) {
     sendBtn.disabled = leakFound;
