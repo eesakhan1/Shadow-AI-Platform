@@ -1,4 +1,4 @@
-console.log("🔴 Shadow AI: FINAL FIX — BLOCK + LOG 100%");
+console.log("🔴 Shadow AI: FINAL FULL WORKING VERSION");
 
 const SUPABASE_URL = "https://ypjpjixwdjcvmlrmsgzc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwanBqaXh3ZGpjdm1scm1zZ3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MDY3NjMsImV4cCI6MjA5MjI4Mjc2M30.3bwI2E8JTFC6tmeqJcuJ_ICifnUAJRhbjRCwGFwmihw";
@@ -10,6 +10,7 @@ let isScanning = false;
 let customSecrets = [];
 let LICENCE_VALID = false;
 
+// --- UI BADGE ---
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   const badge = document.createElement('div');
@@ -31,29 +32,101 @@ function setBadgeActive() {
 addBadge();
 initProtection();
 
+// --- LOAD CONFIG & LICENCE ---
 async function loadConfig() {
   try {
     const stored = await (chrome || browser).storage.local.get(['shadow_company_id', 'shadow_licence_key', 'shadow_org_ref']);
-    COMPANY_ID = stored.shadow_company_id || "default_org";
-    LICENCE_KEY = stored.shadow_licence_key || "no_key";
-    ORG_REFERENCE = stored.shadow_org_ref || "default_org";
+    COMPANY_ID = stored.shadow_company_id || "";
+    LICENCE_KEY = stored.shadow_licence_key || "";
+    ORG_REFERENCE = stored.shadow_org_ref || "";
   } catch (e) {
-    COMPANY_ID = "default_org";
-    LICENCE_KEY = "no_key";
-    ORG_REFERENCE = "default_org";
+    COMPANY_ID = LICENCE_KEY = ORG_REFERENCE = "";
+    LICENCE_VALID = false;
+    showActivationUI();
+    return;
   }
+
+  if (!COMPANY_ID || !LICENCE_KEY) {
+    LICENCE_VALID = false;
+    showActivationUI();
+    return;
+  }
+
+  const valid = await validateLicenceAndOrg(LICENCE_KEY, COMPANY_ID);
+  if (!valid) {
+    LICENCE_VALID = false;
+    showActivationUI();
+    return;
+  }
+
   LICENCE_VALID = true;
   setBadgeActive();
+  await registerDeviceHeartbeat();
   await fetchCompanySecrets();
 }
 
-async function validateLicenceAndOrg(key, orgName) { return true; }
-function showActivationUI() {}
+async function validateLicenceAndOrg(key, orgName) {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/licences?licence_key=eq.${encodeURIComponent(key)}&organisation_name=eq.${encodeURIComponent(orgName)}&is_active=eq.true&select=id,expires_at,org_reference,organisation_name`,
+      {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      }
+    );
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length !== 1) return false;
+    const match = data[0];
+    ORG_REFERENCE = match.org_reference?.trim() || match.organisation_name?.trim() || "";
+    return !match.expires_at || new Date(match.expires_at) > new Date();
+  } catch (e) { 
+    console.error("Validation error:", e);
+    return false; 
+  }
+}
+
+// --- ACTIVATION PROMPT ---
+function showActivationUI() {
+  if (document.getElementById('shadow-activate')) return;
+  const ui = document.createElement('div');
+  ui.id = 'shadow-activate';
+  ui.style = `position:fixed;top:60px;right:20px;z-index:99999999;background:#003087;color:white;padding:20px;border-radius:8px;border:2px solid #005EB8;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:Arial,sans-serif;`;
+  ui.innerHTML = `
+    <h3 style="margin-top:0;">🛡️ Activate Shadow AI</h3>
+    <p style="font-size:14px;margin:10px 0;">Enter your details:</p>
+    <input type="text" id="cidInput" placeholder="Organisation Name" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
+    <input type="text" id="licenceInput" placeholder="Licence Key" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
+    <button id="activateBtn" style="width:100%;padding:8px;background:#00A499;color:white;border:none;border-radius:4px;font-weight:bold;">Activate</button>
+  `;
+  document.documentElement.appendChild(ui);
+
+  document.getElementById('activateBtn').addEventListener('click', async () => {
+    const cid = document.getElementById('cidInput').value.trim();
+    const lic = document.getElementById('licenceInput').value.trim();
+    if (!cid || !lic) return alert("Enter both values");
+
+    const ok = await validateLicenceAndOrg(lic, cid);
+    if (!ok) return alert("❌ Invalid — check your details");
+
+    await (chrome || browser).storage.local.set({ 
+      "shadow_company_id": cid,
+      "shadow_licence_key": lic,
+      "shadow_org_ref": ORG_REFERENCE
+    });
+    COMPANY_ID = cid;
+    LICENCE_KEY = lic;
+    LICENCE_VALID = true;
+    setBadgeActive();
+    ui.remove();
+    await registerDeviceHeartbeat();
+    await fetchCompanySecrets();
+  });
+}
 
 const deviceFingerprint = btoa(navigator.userAgent + navigator.platform + screen.width + screen.height);
 const deviceName = `${navigator.platform} | ${navigator.userAgent.substring(0, 40)}...`;
 
 async function registerDeviceHeartbeat() {
+  if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY || !ORG_REFERENCE) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/rpc/register_device_heartbeat`, {
       method: "POST",
@@ -64,24 +137,19 @@ async function registerDeviceHeartbeat() {
   setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// --- 🚨 FIXED PATTERNS — NOW MATCH VOICE OUTPUT EXACTLY ---
+// --- ✅ EXACT PATTERNS MATCHING YOUR SCREEN ---
 const securityPatterns = [
-  // Names
-  { name: "FULL_NAME", regex: /\b(Mr|Mrs|Ms|Miss|Dr|Prof)\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/gi },
-  // NHS / CHI numbers
-  { name: "NHS_NUMBER", regex: /\bNHS number\s*\d{10}\b|\b\d{10}\b|\b\d{3} \d{3} \d{4}\b/gi },
-  { name: "CHI_NUMBER", regex: /\bCHI number\s*\d{10}\b/gi },
-  // ✅ DOB — matches ALL formats: numeric, written, with/without suffix
-  { name: "DOB", regex: /\bDOB\s+.*?\d{4}\b|\b\d{1,2}(st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b|\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}\b/gi },
-  // Email
+  { name: "FULL_NAME", regex: /\b(Mr|Mrs|Ms|Miss|Dr|Prof)\.?\s+[A-Z][a-z'-]+\s+[A-Z][a-z'-]+\b/gi },
+  { name: "NHS_NUMBER", regex: /\bNHS number\s*\d{10}\b|\bNHS\s*\d{10}\b|\b\d{10}\b/gi },
+  { name: "CHI_NUMBER", regex: /\bCHI number\s*\d{10}\b|\bCHI\s*\d{10}\b/gi },
+  { name: "DOB", regex: /\bDOB\s+.*?\d{4}\b|\bDate of Birth\s+.*?\d{4}\b|\b\d{1,2}(st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b|\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}\b/gi },
   { name: "EMAIL", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi },
-  // ✅ Ward/Bed — matches any case, any spacing
-  { name: "WARD_BED", regex: /\bWard\s*[A-Z0-9]+\s*Bed\s*\d+\b|\bward\s*[a-z0-9]+\s*bed\s*\d+\b/gi },
-  // Sensitive phrases
-  { name: "SENSITIVE_PHRASE", regex: /\b(confidential information|patient details|medical record|health record|patient identifiable data)\b/gi }
+  { name: "WARD_BED", regex: /\bward\s*\d+\s*bed\s*\d+\b|\bWard\s*\d+\s*,?\s*Bed\s*\d+\b/gi },
+  { name: "SENSITIVE_PHRASE", regex: /\b(confidential information|medical record|private medical|health record|patient details)\b/gi }
 ];
 
 async function fetchCompanySecrets() {
+  if (!LICENCE_VALID) return;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/company_secrets?company_id=eq.${encodeURIComponent(COMPANY_ID)}&select=*`, {
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
@@ -90,8 +158,9 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
-// ✅ FORCED LOGGING — NO CONDITIONS, ALWAYS SENDS
+// --- ✅ LOGGING ---
 async function reportLeak(patternName, matchedText) {
+  if (!LICENCE_VALID) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/security_logs`, {
       method: "POST",
@@ -109,22 +178,29 @@ async function reportLeak(patternName, matchedText) {
         user_device: deviceFingerprint.substring(0, 100),
         created_at: new Date().toISOString(),
         company_id: COMPANY_ID,
+        licence_key: LICENCE_KEY,
         org_reference: ORG_REFERENCE
       })
     });
-    console.log("✅ LOG SENT:", patternName, matchedText);
-  } catch (e) {
-    console.log("❌ LOG ERROR:", e);
-  }
+    console.log("✅ Logged:", patternName, matchedText);
+  } catch (e) { console.log("❌ Log failed:", e); }
 }
 
-// ✅ SCAN — RUNS EVERY 30ms, CATCHES EVERYTHING
+// --- ✅ SCAN & REDACT ---
 function scanAndBlock() {
-  if (isScanning) return;
+  if (!LICENCE_VALID || isScanning) return;
   isScanning = true;
 
   let leakFound = false;
-  const inputs = document.querySelectorAll(`div[contenteditable="true"], textarea, input[type="text"], div[role="textbox"]`);
+  const inputs = document.querySelectorAll(`
+    div[contenteditable="true"], 
+    textarea, 
+    input[type="text"], 
+    div[role="textbox"],
+    div[data-testid="chat-input"],
+    div[class*="prose"],
+    div[class*="message"]
+  `);
 
   inputs.forEach(input => {
     const original = input.value || input.innerText || "";
@@ -133,9 +209,9 @@ function scanAndBlock() {
     let redacted = original;
     let matched = false;
 
-    // ✅ SAFE CODES — NEVER BLOCK
-    if (/Trust code is RYH01|ODS Code: A1B2C|GP Code: 12345/i.test(original)) {
-      // keep
+    // ✅ NEVER BLOCK SAFE CODES
+    if (/Trust code RYH01|ODS code A1B2C|GP code 12345/i.test(original)) {
+      // leave unchanged
     }
 
     // Custom secrets
@@ -150,7 +226,7 @@ function scanAndBlock() {
       }
     });
 
-    // Built-in patterns — NOW MATCHES DOB + WARD
+    // Built-in patterns
     securityPatterns.forEach(p => {
       const m = original.match(p.regex);
       if (m) {
@@ -162,11 +238,14 @@ function scanAndBlock() {
     });
 
     if (matched) {
-      input.innerText = redacted;
+      if (input.value !== undefined) input.value = redacted;
+      else input.innerText = redacted;
       input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
     }
   });
 
+  // Disable send button
   const sendBtn = document.querySelector(`button[data-testid="send-button"], button[aria-label*="Send"]`);
   if (sendBtn) {
     sendBtn.disabled = leakFound;
@@ -179,15 +258,14 @@ function scanAndBlock() {
 
 function initProtection() {
   loadConfig();
-  setInterval(scanAndBlock, 30); // ⚡️ ULTRA FAST
+  setInterval(scanAndBlock, 30);
   setInterval(fetchCompanySecrets, 120000);
 
   const obs = new MutationObserver(() => scanAndBlock());
-  obs.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
 
   document.addEventListener('input', () => scanAndBlock(), true);
   document.addEventListener('click', () => scanAndBlock(), true);
 
-  // Scan repeatedly on load
   for (let i = 1; i <= 200; i++) setTimeout(scanAndBlock, i * 30);
 }
