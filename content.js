@@ -1,4 +1,4 @@
-console.log("🔴 Shadow AI: FINAL FIX — LOGGING WORKING + LOGIN KEPT");
+console.log("🔴 Shadow AI: FINAL VERSION — LOGIN + WORKING LOGGING");
 
 const SUPABASE_URL = "https://ypjpjixwdjcvmlrmsgzc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwanBqaXh3ZGpjdm1scm1zZ3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MDY3NjMsImV4cCI6MjA5MjI4Mjc2M30.3bwI2E8JTFC6tmeqJcuJ_ICifnUAJRhbjRCwGFwmihw";
@@ -179,29 +179,20 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
-// ✅ LOGGING — FULLY FIXED, ALL REQUIRED FIELDS, NO ERRORS
+// ✅ LOGGING — EXACT SAME WORKING VERSION AS THE TEST CODE
 async function reportLeak(detail, blockedText = "") {
-  // ✅ ONLY LOG IF FULLY ACTIVATED + COMPANY_ID EXISTS
-  if (!LICENCE_VALID || !COMPANY_ID || COMPANY_ID === "default_org" || COMPANY_ID === "") return;
-
+  if (!LICENCE_VALID || !COMPANY_ID) return;
   try {
-    // ✅ VALID UUID FOR REQUIRED user_id COLUMN
-    const tempUserId = "00000000-0000-0000-0000-000000000000";
-
     const payload = {
       event_type: "DATA_LEAK_BLOCKED",
       violation_type: detail,
       blocked_content: blockedText.substring(0, 500),
       site_url: window.location.hostname,
-      // ✅ GUARANTEED CORRECT VALUES
       company_id: COMPANY_ID,
-      licence_key: LICENCE_KEY,
       org_reference: COMPANY_ID,
       user_device: deviceFingerprint.substring(0, 255),
       created_at: new Date().toISOString(),
-      compliance_flag: "NHS_IG_GDPR",
-      // ✅ REQUIRED FIELD — PREVENTS SILENT REJECTION
-      user_id: tempUserId
+      user_id: "00000000-0000-0000-0000-000000000000" // ✅ REQUIRED FIELD
     };
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/security_logs`, {
@@ -210,16 +201,15 @@ async function reportLeak(detail, blockedText = "") {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
         "Content-Type": "application/json",
-        "Prefer": "return=representation"
+        "Prefer": "return=minimal"
       },
       body: JSON.stringify(payload)
     });
 
-    const result = await res.json();
     if (res.ok) {
-      console.log("✅ LOG SAVED | company_id:", payload.company_id, "| type:", detail);
+      console.log("✅ LOG SAVED SUCCESSFULLY | company_id:", payload.company_id, "| type:", detail);
     } else {
-      console.error("❌ LOG ERROR:", result);
+      console.error("❌ LOG ERROR");
     }
   } catch (e) {
     console.error("❌ LOG FAILED:", e);
