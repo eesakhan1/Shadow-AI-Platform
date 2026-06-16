@@ -144,25 +144,12 @@ async function registerDeviceHeartbeat() {
 
 // --- 🚨 FIXED PATTERNS — DOB + WARD/BED NOW MATCH VOICE OUTPUT ---
 const securityPatterns = [
-  // ✅ NHS NUMBER — catches 9876543210
   { name: "NHS_NUMBER", regex: /\bNHS number\s*\d{10}\b|\b\d{10}\b|\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/gi },
-
-  // ✅ CHI NUMBER — already working, kept
   { name: "CHI_NUMBER", regex: /\bCHI number\s*\d{10}\b|\bCHI\s*\d{10}\b|\b\d{10}\b/gi },
-
-  // ✅ FULL NAME WITH TITLE — catches Mr. David Smith
   { name: "FULL_NAME", regex: /\b(Mr|Mrs|Ms|Miss|Dr|Prof)\.?\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/gi },
-
-  // ✅ DOB — FIXED: now catches "01 January 2000", "1st January 2000", "DOB 01 Jan 2000"
   { name: "DOB", regex: /\bDOB\s+.*?\d{4}\b|\bDate of Birth\s+.*?\d{4}\b|\b\d{1,2}(st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b|\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}\b/gi },
-
-  // ✅ EMAIL — catches david.smith@nhs.net
   { name: "EMAIL", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi },
-
-  // ✅ WARD/BED — FIXED: now catches "Ward 3 Bed 12", "ward 3 bed 12", "Ward 3, Bed 12"
   { name: "WARD_BED", regex: /\bward\s*\d+\s*bed\s*\d+\b|\bWard\s*\d+\s*,?\s*Bed\s*\d+\b/gi },
-
-  // ✅ PHONE, POSTCODE, MEDICAL IDS — kept as was
   { name: "UK_PHONE", regex: /\b(?:\+44\s?\d{4}\s?\d{6}|0\d{4}\s?\d{6}|0\d{3}\s?\d{3}\s?\d{4}|07\d{3}\s?\d{6})\b/gi },
   { name: "UK_POSTCODE", regex: /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi },
   { name: "MEDICAL_RECORD", regex: /\b(confidential information|patient details|medical record|health record|patient identifiable data)\b/gi }
