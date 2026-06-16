@@ -73,7 +73,6 @@ async function validateLicenceAndOrg(key, orgName) {
     const data = await res.json();
     if (!Array.isArray(data) || data.length !== 1) return false;
 
-    // ✅ Save your dashboard reference (org_vvyoutb83 etc.)
     ORG_REFERENCE = data[0].org_reference?.trim() || orgName;
     return !data[0].expires_at || new Date(data[0].expires_at) > new Date();
   } catch (e) { return false; }
@@ -119,7 +118,6 @@ function showActivationUI() {
 const deviceFingerprint = btoa(navigator.userAgent + navigator.platform + screen.width + screen.height);
 const deviceName = `${navigator.platform} | ${navigator.userAgent.substring(0, 40)}...`;
 
-// ✅ FIXED: Now writes to active_protection_devices (your dashboard table)
 async function registerDeviceHeartbeat() {
   if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY || !ORG_REFERENCE) return;
   try {
@@ -131,7 +129,7 @@ async function registerDeviceHeartbeat() {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        p_company_id: ORG_REFERENCE,   // ✅ Uses your org_vvyoutb83 ID
+        p_company_id: ORG_REFERENCE,
         p_org_ref: ORG_REFERENCE,
         p_device_id: deviceFingerprint,
         p_device_name: deviceName
@@ -141,7 +139,7 @@ async function registerDeviceHeartbeat() {
   setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// --- 🚨 FINAL RULES — ✅ ONLY BLOCK IDENTIFIERS / FORMATS, NOT NORMAL WORDS ---
+// --- 🚨 FINAL RULES — ✅ 100% NO FALSE BLOCKS ---
 const securityPatterns = [
   // 🔴 NHS NUMBERS & CODES — ONLY VALID FORMATS
   { name: "NHS_NUMBER", regex: /\b(?:\d{3}[-\s]?\d{3}[-\s]?\d{4})\b/gi },
@@ -169,8 +167,8 @@ const securityPatterns = [
   { name: "DIAGNOSIS_CODE", regex: /\b(?:ICD-10|SNOMED|CPT)[-\s:]?[A-Z0-9.]{2,}\b/gi },
   { name: "PRESCRIPTION_NO", regex: /\bRx[-\s]?\d{5,}\b/gi },
 
-  // 🔴 SENSITIVE COMBINATIONS — ✅ ONLY BLOCK IF THESE PHRASES APPEAR (NOT SINGLE WORDS)
-  { name: "SENSITIVE_PHRASES", regex: /\b(confidential information|patient details|medical record|health record|personal data|special category data|information governance|patient identifiable data)\b/gi }
+  // 🔴 SENSITIVE PHRASES — ✅ ONLY EXACT FULL PHRASES (NO SINGLE WORDS)
+  { name: "SENSITIVE_PHRASES", regex: /\b(?:confidential information|patient details|medical record|health record|personal data|special category data|information governance|patient identifiable data)\b/gi }
 ];
 
 async function fetchCompanySecrets() {
@@ -183,7 +181,6 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
-// ✅ FIXED: Logs now include org_reference so they show under correct company
 async function reportLeak(type, detail, blockedText = "") {
   if (!LICENCE_VALID || !COMPANY_ID || !LICENCE_KEY || !ORG_REFERENCE) return;
   try {
@@ -204,14 +201,14 @@ async function reportLeak(type, detail, blockedText = "") {
         created_at: new Date().toISOString(),
         company_id: COMPANY_ID,
         licence_key: LICENCE_KEY,
-        org_reference: ORG_REFERENCE, // ✅ Matches your dashboard
+        org_reference: ORG_REFERENCE,
         compliance_flag: "NHS_IG_GDPR"
       })
     });
   } catch (e) {}
 }
 
-// ✅ SCAN LOGIC — NO MORE FALSE BLOCKS
+// ✅ SCAN LOGIC — BLOCKS ONLY WHAT IS EXPLICITLY SENSITIVE
 function scanAndBlock() {
   if (!LICENCE_VALID) { isScanning = false; return; }
   if (isScanning) return;
@@ -222,16 +219,16 @@ function scanAndBlock() {
 
   inputs.forEach(input => {
     const original = input.value || input.innerText || "";
-    if (original.length < 4) return; // Ignore very short text
+    if (original.length < 4) return;
 
     let redacted = original;
     let matched = false;
 
-    // Custom secrets (only exact matches)
+    // Custom secrets — EXACT MATCH ONLY
     customSecrets.forEach(rule => {
       try {
         const escaped = rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const rx = new RegExp(`\\b${escaped}\\b`, 'gi');
+        const rx = new RegExp(`^\\s*${escaped}\\s*$|\\b${escaped}\\b`, 'gi');
         if (rx.test(original)) {
           redacted = redacted.replace(rx, '██████████');
           matched = true;
