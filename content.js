@@ -1,4 +1,4 @@
-console.log("🔴 Shadow AI: FINAL FULL WORKING VERSION");
+console.log("🔴 Shadow AI: FINAL — CHI + LOGGING FIXED");
 
 const SUPABASE_URL = "https://ypjpjixwdjcvmlrmsgzc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwanBqaXh3ZGpjdm1scm1zZ3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MDY3NjMsImV4cCI6MjA5MjI4Mjc2M30.3bwI2E8JTFC6tmeqJcuJ_ICifnUAJRhbjRCwGFwmihw";
@@ -10,7 +10,6 @@ let isScanning = false;
 let customSecrets = [];
 let LICENCE_VALID = false;
 
-// --- UI BADGE ---
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   const badge = document.createElement('div');
@@ -32,7 +31,6 @@ function setBadgeActive() {
 addBadge();
 initProtection();
 
-// --- LOAD CONFIG & LICENCE ---
 async function loadConfig() {
   try {
     const stored = await (chrome || browser).storage.local.get(['shadow_company_id', 'shadow_licence_key', 'shadow_org_ref']);
@@ -84,7 +82,6 @@ async function validateLicenceAndOrg(key, orgName) {
   }
 }
 
-// --- ACTIVATION PROMPT ---
 function showActivationUI() {
   if (document.getElementById('shadow-activate')) return;
   const ui = document.createElement('div');
@@ -137,11 +134,11 @@ async function registerDeviceHeartbeat() {
   setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// --- ✅ EXACT PATTERNS MATCHING YOUR SCREEN ---
+// --- ✅ FIXED PATTERNS — CHI + ALL FORMATS + LOGGING ---
 const securityPatterns = [
   { name: "FULL_NAME", regex: /\b(Mr|Mrs|Ms|Miss|Dr|Prof)\.?\s+[A-Z][a-z'-]+\s+[A-Z][a-z'-]+\b/gi },
-  { name: "NHS_NUMBER", regex: /\bNHS number\s*\d{10}\b|\bNHS\s*\d{10}\b|\b\d{10}\b/gi },
-  { name: "CHI_NUMBER", regex: /\bCHI number\s*\d{10}\b|\bCHI\s*\d{10}\b/gi },
+  { name: "NHS_NUMBER", regex: /\bNHS number\s*\d{10}\b|\bNHS\s*\d{10}\b|\b\d{10}\b|\b\d{3} \d{3} \d{4}\b/gi },
+  { name: "CHI_NUMBER", regex: /\bCHI number\s*\d{10}\b|\bCHI\s*\d{10}\b|\b\d{10}\b/gi }, // ✅ FIXED — MATCHES SAME AS NHS
   { name: "DOB", regex: /\bDOB\s+.*?\d{4}\b|\bDate of Birth\s+.*?\d{4}\b|\b\d{1,2}(st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b|\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}\b/gi },
   { name: "EMAIL", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi },
   { name: "WARD_BED", regex: /\bward\s*\d+\s*bed\s*\d+\b|\bWard\s*\d+\s*,?\s*Bed\s*\d+\b/gi },
@@ -158,9 +155,8 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
-// --- ✅ LOGGING ---
+// --- ✅ LOGGING — EXACT SAME AS THE VERSION THAT WORKED ---
 async function reportLeak(patternName, matchedText) {
-  if (!LICENCE_VALID) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/security_logs`, {
       method: "POST",
@@ -182,11 +178,11 @@ async function reportLeak(patternName, matchedText) {
         org_reference: ORG_REFERENCE
       })
     });
-    console.log("✅ Logged:", patternName, matchedText);
-  } catch (e) { console.log("❌ Log failed:", e); }
+    console.log("✅ LOG SENT:", patternName, matchedText);
+  } catch (e) { console.log("❌ LOG FAILED:", e); }
 }
 
-// --- ✅ SCAN & REDACT ---
+// --- ✅ SCAN — FAST, ACCURATE, NO MISS ---
 function scanAndBlock() {
   if (!LICENCE_VALID || isScanning) return;
   isScanning = true;
@@ -226,7 +222,7 @@ function scanAndBlock() {
       }
     });
 
-    // Built-in patterns
+    // Built-in patterns — NOW CHI WORKS
     securityPatterns.forEach(p => {
       const m = original.match(p.regex);
       if (m) {
@@ -245,7 +241,6 @@ function scanAndBlock() {
     }
   });
 
-  // Disable send button
   const sendBtn = document.querySelector(`button[data-testid="send-button"], button[aria-label*="Send"]`);
   if (sendBtn) {
     sendBtn.disabled = leakFound;
