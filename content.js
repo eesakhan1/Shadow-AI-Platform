@@ -62,10 +62,11 @@ async function loadConfig() {
   await fetchCompanySecrets();
 }
 
+// ✅ FIXED: Defined match variable, no more errors
 async function validateLicenceAndOrg(key, orgName) {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/licences?licence_key=eq.${encodeURIComponent(key)}&organisation_name=eq.${encodeURIComponent(orgName)}&is_active=eq.true&select=id,expires_at,org_reference`,
+      `${SUPABASE_URL}/rest/v1/licences?licence_key=eq.${encodeURIComponent(key)}&organisation_name=eq.${encodeURIComponent(orgName)}&is_active=eq.true&select=id,expires_at,org_reference,organisation_name`,
       {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
       }
@@ -73,9 +74,15 @@ async function validateLicenceAndOrg(key, orgName) {
     const data = await res.json();
     if (!Array.isArray(data) || data.length !== 1) return false;
 
+    // ✅ This was missing before!
+    const match = data[0];
+
     ORG_REFERENCE = match.org_reference?.trim() || match.organisation_name?.trim() || "";
-    return !data[0].expires_at || new Date(data[0].expires_at) > new Date();
-  } catch (e) { return false; }
+    return !match.expires_at || new Date(match.expires_at) > new Date();
+  } catch (e) { 
+    console.error("Validation error:", e);
+    return false; 
+  }
 }
 
 function showActivationUI() {
