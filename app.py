@@ -657,19 +657,6 @@ def show_dashboard():
         st.title("📋 Security Audit Logs")
         st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
         st.markdown("---")
-
-        # ✅ ADDED: Refresh Button + Auto-Refresh every 30s
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            if st.button("🔄 Refresh Now"):
-                st.rerun()
-        with col2:
-            st.info("⏱️ Auto-refreshing every 30 seconds...")
-
-        # Auto-refresh timer
-        import time
-        time.sleep(30)
-        st.rerun()
         
         try:
             # ✅ FIXED: Only filter by company_id (master ID) — NO OR MISMATCHES
