@@ -21,7 +21,7 @@ try:
     RESEND_API_KEY = os.getenv("RESEND_API_KEY") or st.secrets["RESEND_API_KEY"]
     RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL") or "security@shadowaisecurity.co.uk"
 except Exception as e:
-    st.error(f"❌ Missing Secrets: {e}")
+    st.error(f"Missing Secrets: {e}")
     st.stop()
 
 ADMIN_EMAIL = "security.shadowai@gmail.com"
@@ -66,112 +66,104 @@ def generate_licence_key() -> str:
 # --- PAGE SETUP ---
 st.set_page_config(
     page_title="Shadow AI | NHS Compliant Data Protection",
-    page_icon="🛡️",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- CUSTOM CSS — NHS STANDARD DARK THEME ---
+# --- CUSTOM CSS — CLEAN PROFESSIONAL THEME ---
 st.markdown("""
     <style>
     .main {
-        background: #0A0F1F;
-        color: #FFFFFF;
+        background: #FFFFFF;
+        color: #000000;
         font-family: Arial, Helvetica, sans-serif;
     }
     .stButton>button {
         width: 100%;
         border-radius: 4px;
-        height: 55px;
-        font-size: 18px;
-        font-weight: bold;
-        border: none;
-        transition: all 0.3s ease;
+        height: 45px;
+        font-size: 16px;
+        font-weight: normal;
+        border: 1px solid #005EB8;
+        transition: all 0.2s ease;
         background: #005EB8;
         color: #FFFFFF !important;
-        box-shadow: 0 2px 8px rgba(0,94,184,0.3);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
     .stButton>button:hover {
         background: #003087;
-        box-shadow: 0 4px 12px rgba(0,48,135,0.5);
-        transform: translateY(-1px);
+        border-color: #003087;
     }
     .login-card {
-        background-color: rgba(20, 30, 60, 0.85);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        padding: 40px;
-        border-radius: 8px;
-        border: 2px solid #005EB8;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        max-width: 550px;
+        background-color: #F8F9FA;
+        padding: 30px;
+        border-radius: 4px;
+        border: 1px solid #E0E0E0;
+        max-width: 500px;
         margin: 2rem auto;
     }
     h1, h2, h3, h4, h5, h6 {
-        color: #FFFFFF !important;
+        color: #000000 !important;
         font-family: Arial, Helvetica, sans-serif;
-        font-weight: bold;
+        font-weight: 600;
     }
     .stMarkdown p {
-        color: #E0E0E0 !important;
-        font-size: 16px;
+        color: #333333 !important;
+        font-size: 15px;
     }
     .stTextInput input, .stTextInput label {
-        color: #FFFFFF !important;
+        color: #000000 !important;
     }
     .stTextInput>div>div>input {
-        background-color: rgba(255,255,255,0.05);
-        border: 1px solid #005EB8;
+        background-color: #FFFFFF;
+        border: 1px solid #CCCCCC;
         border-radius: 4px;
-        color: #FFFFFF !important;
+        color: #000000 !important;
     }
     .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
+        gap: 5px;
     }
     .stTabs [data-baseweb="tab"] {
-        background-color: transparent;
+        background-color: #F0F2F6;
         border-radius: 4px 4px 0 0;
-        color: #B0C4DE !important;
-        border: 1px solid #003087;
+        color: #333333 !important;
+        border: 1px solid #E0E0E0;
     }
     .stTabs [aria-selected="true"] {
         background: #005EB8;
         color: #FFFFFF !important;
-        font-weight: bold;
     }
     .stSuccess {
-        background-color: rgba(0, 164, 153, 0.15) !important;
-        color: #00A499 !important;
-        border: 1px solid #00A499 !important;
+        background-color: #E6F4EA !important;
+        color: #006633 !important;
+        border: 1px solid #006633 !important;
     }
     .stError {
-        background-color: rgba(218, 41, 28, 0.15) !important;
-        color: #DA291C !important;
-        border: 1px solid #DA291C !important;
+        background-color: #FCE8E6 !important;
+        color: #990000 !important;
+        border: 1px solid #990000 !important;
     }
     .stInfo {
-        background-color: rgba(0, 94, 184, 0.15) !important;
-        color: #00A499 !important;
-        border: 1px solid #005EB8 !important;
+        background-color: #E8F0FE !important;
+        color: #003366 !important;
+        border: 1px solid #003366 !important;
     }
     .compliance-badge {
-        background: #00A499;
-        color: white;
-        padding: 6px 12px;
+        background: #E8F0FE;
+        color: #003366;
+        padding: 4px 10px;
         border-radius: 4px;
-        font-weight: bold;
-        font-size: 14px;
+        font-weight: 500;
+        font-size: 13px;
         display: inline-block;
         margin: 8px 0;
     }
     .delete-btn {
-        background-color: #DA291C !important;
+        background-color: #990000 !important;
         color: white !important;
     }
     .delete-btn:hover {
-        background-color: #9E1A12 !important;
+        background-color: #770000 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -253,18 +245,18 @@ def send_verification_email(to_email, code):
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": to_email,
-                "subject": "🔐 Shadow AI | Security Verification Code",
+                "subject": "Shadow AI | Security Verification Code",
                 "html": f"""
-                <div style="font-family: Arial, sans-serif; background:#0A0F1F; padding:30px; color:white; max-width:600px;">
-                    <div style="background:#003087; padding:15px; border-radius:4px;">
-                        <h1 style="color:white; margin:0;">🛡️ Shadow AI</h1>
-                        <p style="color:#B0C4DE; margin:5px 0 0 0;">NHS Compliant Data Protection</p>
+                <div style="font-family: Arial, sans-serif; background:#FFFFFF; padding:30px; color:#000000; max-width:600px;">
+                    <div style="background:#005EB8; padding:15px; border-radius:4px;">
+                        <h1 style="color:white; margin:0;">Shadow AI</h1>
+                        <p style="color:#E0E0E0; margin:5px 0 0 0;">NHS Compliant Data Protection</p>
                     </div>
-                    <div style="padding:20px; background:#141E3C; border-radius:4px; margin-top:15px;">
+                    <div style="padding:20px; background:#F8F9FA; border-radius:4px; margin-top:15px;">
                         <p>Your verification code is:</p>
-                        <h2 style="font-size:50px; letter-spacing:10px; color:#00A499; margin:20px 0;">{code}</h2>
+                        <h2 style="font-size:40px; letter-spacing:8px; color:#005EB8; margin:20px 0;">{code}</h2>
                         <p>Enter this code in your dashboard to continue.</p>
-                        <p style="margin-top:30px; font-size:14px; color:#888;">Shadow AI is registered on the NHS Evergreen Supplier Assessment | Ref: a0BPz0000GzZ65MAF20260528125015</p>
+                        <p style="margin-top:30px; font-size:14px; color:#666;">Shadow AI is registered on the NHS Evergreen Supplier Assessment | Ref: a0BPz0000GzZ65MAF20260528125015</p>
                     </div>
                 </div>
                 """
@@ -272,7 +264,7 @@ def send_verification_email(to_email, code):
         )
         return response.status_code == 200
     except Exception as e:
-        st.error(f"❌ Email Error: {e}")
+        st.error(f"Email Error: {e}")
         return False
 
 def send_reset_email(to_email, reset_link):
@@ -286,22 +278,22 @@ def send_reset_email(to_email, reset_link):
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": to_email,
-                "subject": "🔐 Shadow AI | Reset Your Password",
+                "subject": "Shadow AI | Reset Your Password",
                 "html": f"""
-                <div style="font-family: Arial, sans-serif; background:#0A0F1F; padding:30px; color:white; max-width:600px;">
-                    <div style="background:#003087; padding:15px; border-radius:4px;">
-                        <h1 style="color:white; margin:0; font-size:24px; font-weight:bold;">🛡️ Shadow AI</h1>
-                        <p style="color:#B0C4DE; margin:5px 0 0 0; font-size:14px;">NHS Compliant Data Protection</p>
+                <div style="font-family: Arial, sans-serif; background:#FFFFFF; padding:30px; color:#000000; max-width:600px;">
+                    <div style="background:#005EB8; padding:15px; border-radius:4px;">
+                        <h1 style="color:white; margin:0; font-size:20px; font-weight:normal;">Shadow AI</h1>
+                        <p style="color:#E0E0E0; margin:5px 0 0 0; font-size:14px;">NHS Compliant Data Protection</p>
                     </div>
-                    <div style="padding:20px; background:#141E3C; border-radius:4px; margin-top:15px;">
+                    <div style="padding:20px; background:#F8F9FA; border-radius:4px; margin-top:15px;">
                         <p style="font-size:16px; line-height:1.5;">You requested to reset your password for your Shadow AI account.</p>
                         <p style="font-size:16px; line-height:1.5; margin:20px 0;">Click the button below to create a new password:</p>
                         <div style="text-align:center; margin:30px 0;">
-                            <a href="{reset_link}" style="background:#00A499; color:#ffffff; padding:14px 28px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:16px; display:inline-block;">
+                            <a href="{reset_link}" style="background:#005EB8; color:#ffffff; padding:12px 24px; border-radius:4px; text-decoration:none; font-weight:normal; font-size:16px; display:inline-block;">
                                 Reset My Password
                             </a>
                         </div>
-                        <p style="font-size:14px; color:#B0C4DE; margin-top:30px;">This link is valid for <strong>60 minutes</strong>. If you did not request this change, please ignore this email or contact support immediately.</p>
+                        <p style="font-size:14px; color:#666; margin-top:30px;">This link is valid for <strong>60 minutes</strong>. If you did not request this change, please ignore this email or contact support immediately.</p>
                     </div>
                 </div>
                 """
@@ -309,7 +301,7 @@ def send_reset_email(to_email, reset_link):
         )
         return response.status_code == 200
     except Exception as e:
-        st.error(f"❌ Email Error: {e}")
+        st.error(f"Email Error: {e}")
         return False
 
 # --- ✅ NEW: SEND LICENCE KEY EMAIL ---
@@ -324,24 +316,24 @@ def send_licence_email(to_email, licence_key, org_name):
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": to_email,
-                "subject": "🔑 Shadow AI | Your Licence Key & Setup Instructions",
+                "subject": "Shadow AI | Your Licence Key & Setup Instructions",
                 "html": f"""
-                <div style="font-family: Arial, sans-serif; background:#0A0F1F; padding:30px; color:white; max-width:600px;">
-                    <div style="background:#003087; padding:15px; border-radius:4px;">
-                        <h1 style="color:white; margin:0;">🛡️ Shadow AI</h1>
-                        <p style="color:#B0C4DE; margin:5px 0 0 0;">NHS Compliant Data Protection</p>
+                <div style="font-family: Arial, sans-serif; background:#FFFFFF; padding:30px; color:#000000; max-width:600px;">
+                    <div style="background:#005EB8; padding:15px; border-radius:4px;">
+                        <h1 style="color:white; margin:0;">Shadow AI</h1>
+                        <p style="color:#E0E0E0; margin:5px 0 0 0;">NHS Compliant Data Protection</p>
                     </div>
-                    <div style="padding:20px; background:#141E3C; border-radius:4px; margin-top:15px;">
+                    <div style="padding:20px; background:#F8F9FA; border-radius:4px; margin-top:15px;">
                         <p>Thank you for choosing Shadow AI for <strong>{org_name}</strong>.</p>
                         <p>Your licence key to activate the extension is:</p>
-                        <h2 style="font-size:32px; letter-spacing:5px; color:#00A499; margin:20px 0; text-align:center;">{licence_key}</h2>
+                        <h2 style="font-size:24px; letter-spacing:4px; color:#005EB8; margin:20px 0; text-align:center;">{licence_key}</h2>
                         <p><strong>Setup Steps:</strong></p>
                         <ol>
-                            <li>Install the extension: <a href="https://chrome.google.com/webstore/detail/your-extension-id" style="color:#00A499;">Chrome Web Store</a></li>
+                            <li>Install the extension: <a href="https://chrome.google.com/webstore/detail/your-extension-id" style="color:#005EB8;">Chrome Web Store</a></li>
                             <li>Click the Shadow AI icon in your toolbar</li>
                             <li>Enter the key above and click Activate</li>
                         </ol>
-                        <p style="margin-top:30px; font-size:14px; color:#888;">Valid for 12 months | Support: security@shadowaisecurity.co.uk</p>
+                        <p style="margin-top:30px; font-size:14px; color:#666;">Valid for 12 months | Support: security@shadowaisecurity.co.uk</p>
                     </div>
                 </div>
                 """
@@ -349,85 +341,85 @@ def send_licence_email(to_email, licence_key, org_name):
         )
         return response.status_code == 200
     except Exception as e:
-        st.error(f"❌ Email Error: {e}")
+        st.error(f"Email Error: {e}")
         return False
 
 # --- FORGOT PASSWORD ---
 def show_forgot_password():
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
-    st.subheader("🔑 Reset Your Password")
-    st.markdown("Enter your registered work email — we’ll send you a secure reset link.")
+    st.subheader("Reset Your Password")
+    st.markdown("Enter your registered work email — we will send you a secure reset link.")
 
-    email = st.text_input("📧 Official Work Email Address")
+    email = st.text_input("Official Work Email Address")
 
-    if st.button("📩 Send Reset Link"):
+    if st.button("Send Reset Link"):
         if not email:
-            st.warning("⚠️ Please enter your email address")
+            st.warning("Please enter your email address")
         else:
             try:
                 encoded_email = urllib.parse.quote(email.strip())
                 reset_link = f"https://shadow-ai-platform.onrender.com/?mode=reset&email={encoded_email}"
 
                 if send_reset_email(email, reset_link):
-                    st.success("✅ Reset link sent successfully!")
-                    st.info("📧 Email sent — check your inbox/spam")
+                    st.success("Reset link sent successfully!")
+                    st.info("Email sent — check your inbox/spam")
                 else:
-                    st.error("❌ Failed to send email — please try again")
+                    st.error("Failed to send email — please try again")
 
             except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+                st.error(f"Error: {str(e)}")
 
-    st.markdown("<br><p style='text-align:center;'><a href='/' style='color:#4da6ff;'>← Back to Login</a></p>", unsafe_allow_html=True)
+    st.markdown("<br><p style='text-align:center;'><a href='/' style='color:#005EB8;'>← Back to Login</a></p>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 def show_reset_password(email):
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
-    st.subheader("🔑 Create New Password")
+    st.subheader("Create New Password")
     st.markdown(f"Setting new password for: **{email}**")
 
-    new_password = st.text_input("🔒 New Password", type="password")
-    confirm_password = st.text_input("🔒 Confirm New Password", type="password")
+    new_password = st.text_input("New Password", type="password")
+    confirm_password = st.text_input("Confirm New Password", type="password")
 
-    if st.button("✅ Update Password"):
+    if st.button("Update Password"):
         if new_password != confirm_password:
-            st.error("❌ Passwords do not match")
+            st.error("Passwords do not match")
         elif len(new_password) < 8:
-            st.warning("⚠️ Password must be at least 8 characters")
+            st.warning("Password must be at least 8 characters")
         else:
             try:
                 users = supabase.auth.admin.list_users()
                 target_user = next((u for u in users if u.email == email), None)
                 if not target_user:
-                    st.error("❌ Account not found")
+                    st.error("Account not found")
                 else:
                     supabase.auth.admin.update_user_by_id(target_user.id, {"password": new_password})
-                    st.success("✅ Password updated successfully! You can now log in.")
-                    st.markdown("<p style='text-align:center; margin-top:20px;'><a href='/' style='color:#4da6ff; font-weight:bold;'>← Go to Login</a></p>", unsafe_allow_html=True)
+                    st.success("Password updated successfully! You can now log in.")
+                    st.markdown("<p style='text-align:center; margin-top:20px;'><a href='/' style='color:#005EB8; font-weight:normal;'>← Go to Login</a></p>", unsafe_allow_html=True)
             except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+                st.error(f"Error: {str(e)}")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --- LOGIN SCREEN ---
 def show_login():
-    st.title("🛡️ Shadow AI")
-    st.markdown("#### *NHS Compliant Data Protection & AI Security*")
-    st.markdown('<div class="compliance-badge">✅ Evergreen Assessment Registered | Ref: a0BPz0000GzZ65MAF20260528125015</div>', unsafe_allow_html=True)
+    st.title("Shadow AI")
+    st.markdown("#### NHS Compliant Data Protection & AI Security")
+    st.markdown('<div class="compliance-badge">Evergreen Assessment Registered | Ref: a0BPz0000GzZ65MAF20260528125015</div>', unsafe_allow_html=True)
     st.markdown("---")
     
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        st.subheader("🔐 Secure Access")
+        st.subheader("Secure Access")
 
-        tab1, tab2 = st.tabs(["🔑 Sign In", "🆕 Register"])
+        tab1, tab2 = st.tabs(["Sign In", "Register"])
         
         with tab1:
             if st.session_state.auth_stage == "login":
-                email = st.text_input("📧 Official Work Email Address", key="login_email")
-                password = st.text_input("🔒 Password", type="password", key="login_pass")
+                email = st.text_input("Official Work Email Address", key="login_email")
+                password = st.text_input("Password", type="password", key="login_pass")
                 
-                if st.button("🚀 Login", type="primary"):
+                if st.button("Login", type="primary"):
                     try:
                         res = auth_client.auth.sign_in_with_password({"email": email, "password": password})
                         st.session_state.temp_user_obj = res.user
@@ -443,19 +435,19 @@ def show_login():
                                 st.session_state.auth_stage = "verify"
                                 st.rerun()
                         else:
-                            st.error("❌ Account not found — please register first")
+                            st.error("Account not found — please register first")
                             
                     except Exception as e:
-                        st.error(f"❌ Access Denied: {str(e)}")
+                        st.error(f"Access Denied: {str(e)}")
 
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown('<p style="text-align:center;"><a href="/?page=forgot-password" style="color:#4da6ff;">🔑 Forgot your password?</a></p>', unsafe_allow_html=True)
+                st.markdown('<p style="text-align:center;"><a href="/?page=forgot-password" style="color:#005EB8;">Forgot your password?</a></p>', unsafe_allow_html=True)
 
             elif st.session_state.auth_stage == "verify":
-                st.info(f"🔢 Verification code sent to: **{st.session_state.temp_user_obj.email}**")
+                st.info(f"Verification code sent to: **{st.session_state.temp_user_obj.email}**")
                 user_code = st.text_input("Enter 6-Digit Security Code", max_chars=6)
                 
-                if st.button("✅ Verify & Access Dashboard"):
+                if st.button("Verify & Access Dashboard"):
                     if user_code == st.session_state.verification_code:
                         save_auth(
                             st.session_state.temp_user_obj.id,
@@ -465,23 +457,23 @@ def show_login():
                         st.session_state.user = st.session_state.temp_user_obj
                         st.session_state.user_id = st.session_state.temp_user_obj.id
                         st.session_state.auth_stage = "dashboard"
-                        st.success("✅ Login Successful — Protection Active")
+                        st.success("Login Successful — Protection Active")
                         st.rerun()
                     else:
-                        st.error("❌ Invalid or expired code")
+                        st.error("Invalid or expired code")
                 
-                if st.button("🔙 Back to Login"):
+                if st.button("Back to Login"):
                     st.session_state.auth_stage = "login"
                     st.rerun()
 
         with tab2:
-            st.warning("⚠️ For paying customers only — access is granted after registration & verification")
-            new_email = st.text_input("📧 Official Work Email", key="reg_email")
-            new_pass = st.text_input("🔒 Create Password", type="password", key="reg_pass")
-            company_name = st.text_input("🏢 Organisation Name / Trust Name")
-            max_devices = st.number_input("📱 Number of Devices Licensed", min_value=1, max_value=10000, value=100, step=1)
+            st.warning("For paying customers only — access is granted after registration & verification")
+            new_email = st.text_input("Official Work Email", key="reg_email")
+            new_pass = st.text_input("Create Password", type="password", key="reg_pass")
+            company_name = st.text_input("Organisation Name / Trust Name")
+            max_devices = st.number_input("Number of Devices Licensed", min_value=1, max_value=10000, value=100, step=1)
             
-            if st.button("✅ Create Account"):
+            if st.button("Create Account"):
                 try:
                     res = auth_client.auth.sign_up({"email": new_email, "password": new_pass})
                     company_id = "org_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
@@ -509,13 +501,13 @@ def show_login():
                     
                     # ✅ NEW: Send licence key to customer
                     if send_licence_email(new_email, licence_key, company_name):
-                        st.success("✅ ACCOUNT CREATED SUCCESSFULLY")
-                        st.info("📧 Licence key and setup instructions have been emailed to you")
+                        st.success("ACCOUNT CREATED SUCCESSFULLY")
+                        st.info("Licence key and setup instructions have been emailed to you")
                     else:
-                        st.warning("⚠️ Account created, but email failed — key: " + licence_key)
+                        st.warning("Account created, but email failed — key: " + licence_key)
                     
                 except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
+                    st.error(f"Error: {str(e)}")
         
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -539,53 +531,52 @@ def show_dashboard():
     except:
         active_devices = 0
 
-    st.sidebar.image("https://cdn-icons-png.flaticon.com/512/809/809934.png", width=80)
-    st.sidebar.title("🛡️ Shadow AI")
-    st.sidebar.markdown(f"**🏢 {org_name}**")
+    st.sidebar.title("Shadow AI")
+    st.sidebar.markdown(f"**{org_name}**")
     st.sidebar.markdown(f"**Reference: `{st.session_state.company_id}`**")
-    st.sidebar.markdown(f"📊 Devices: {active_devices} / {max_devices}")
+    st.sidebar.markdown(f"Devices: {active_devices} / {max_devices}")
     
     if is_active:
-        st.sidebar.success("✅ License: ACTIVE | COMPLIANT")
+        st.sidebar.success("License: ACTIVE | COMPLIANT")
     else:
-        st.sidebar.error("❌ License: PENDING")
+        st.sidebar.error("License: PENDING")
 
-    if st.sidebar.button("🚪 Logout"):
+    if st.sidebar.button("Logout"):
         clear_auth()
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
 
     if user_email == ADMIN_EMAIL:
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📦 Deployment", "🔑 Licence Keys", "📋 Security Logs", "📱 Active Devices", "👤 Admin Users"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Deployment", "Licence Keys", "Security Logs", "Active Devices", "Admin Users"])
     else:
-        tab1, tab2, tab3, tab4 = st.tabs(["📦 Deployment", "🔑 Your Licence Key", "📋 Security Logs", "📱 Active Devices"])
+        tab1, tab2, tab3, tab4 = st.tabs(["Deployment", "Your Licence Key", "Security Logs", "Active Devices"])
 
     with tab1:
-        st.title("🛡️ Security Command Center")
-        st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
+        st.title("Security Command Center")
+        st.markdown('<div class="compliance-badge">NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
         st.markdown("---")
 
-        st.subheader("📦 Deploy Protection Software")
+        st.subheader("Deploy Protection Software")
         st.markdown("""
-        **✅ Official Chrome Web Store Extension**  
+        **Official Chrome Web Store Extension**  
         No developer mode required — safe, verified, and automatically updated.
         
-        👉 **[Install from Chrome Web Store](https://chrome.google.com/webstore/detail/your-extension-id)**  
+        **[Install from Chrome Web Store](https://chrome.google.com/webstore/detail/your-extension-id)**  
         *Works on Chrome, Edge, and Brave — fully compliant and secure*
         """, unsafe_allow_html=True)
 
         st.markdown("---")
         
-        st.subheader("🎛️ Custom Security Rules")
+        st.subheader("Custom Security Rules")
         st.markdown("*Add words, codes, or identifiers specific to your organisation (e.g. local patient codes, project names)*")
         col1, col2 = st.columns(2)
         with col1:
-            secret_word = st.text_input("🔒 Sensitive Term / Phrase")
+            secret_word = st.text_input("Sensitive Term / Phrase")
         with col2:
-            replacement_label = st.text_input("🏷️ Redaction Label", value="[ORGANISATION RESTRICTED]")
+            replacement_label = st.text_input("Redaction Label", value="[ORGANISATION RESTRICTED]")
 
-        if st.button("✅ Deploy Rule Immediately"):
+        if st.button("Deploy Rule Immediately"):
             if secret_word:
                 try:
                     supabase.table("company_secrets").insert({
@@ -593,14 +584,14 @@ def show_dashboard():
                         "label": replacement_label,
                         "company_id": st.session_state.company_id
                     }).execute()
-                    st.success("✅ Rule added — protection updated across all devices")
+                    st.success("Rule added — protection updated across all devices")
                 except Exception as e:
                     st.error(f"Error saving rule: {str(e)}")
 
     # --- ✅ NEW: LICENCE KEY TAB FOR ALL USERS ---
     with tab2:
-        st.title("🔑 Your Licence Key")
-        st.markdown('<div class="compliance-badge">✅ Required to activate the extension</div>', unsafe_allow_html=True)
+        st.title("Your Licence Key")
+        st.markdown('<div class="compliance-badge">Required to activate the extension</div>', unsafe_allow_html=True)
         st.markdown("---")
 
         try:
@@ -615,37 +606,37 @@ def show_dashboard():
                 lic = licence_data.data[0]
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    st.subheader("🔑 Licence Key")
+                    st.subheader("Licence Key")
                     st.code(lic['licence_key'], language="text")
                 with col_b:
                     if lic['is_active']:
-                        st.success("✅ STATUS: ACTIVE")
+                        st.success("STATUS: ACTIVE")
                     else:
-                        st.error("❌ STATUS: INACTIVE / EXPIRED")
+                        st.error("STATUS: INACTIVE / EXPIRED")
                     exp_date = lic['expires_at'][:10] if lic['expires_at'] else "Lifetime"
-                    st.info(f"📅 Expires: {exp_date}")
+                    st.info(f"Expires: {exp_date}")
 
                 st.markdown("---")
-                st.subheader("📋 How to Activate")
+                st.subheader("How to Activate")
                 st.markdown("""
                 1. Install the extension from the Chrome Web Store
                 2. Click the Shadow AI icon in your browser toolbar
                 3. Paste this key into the activation box
-                4. Click **Activate** — protection starts immediately
+                4. Click Activate — protection starts immediately
                 """)
 
                 # ✅ NEW: Admin can revoke/renew
                 if user_email == ADMIN_EMAIL:
                     st.markdown("---")
-                    st.subheader("⚙️ Admin Actions")
-                    if st.button("❌ Revoke This Key"):
+                    st.subheader("Admin Actions")
+                    if st.button("Revoke This Key"):
                         supabase.table("licences").update({"is_active": False}).eq("licence_key", lic['licence_key']).execute()
-                        st.warning("✅ Key revoked — extension will stop working immediately")
+                        st.warning("Key revoked — extension will stop working immediately")
                         st.rerun()
-                    if st.button("✅ Renew for 12 Months"):
+                    if st.button("Renew for 12 Months"):
                         new_expiry = (datetime.datetime.now() + datetime.timedelta(days=365)).isoformat()
                         supabase.table("licences").update({"is_active": True, "expires_at": new_expiry}).eq("licence_key", lic['licence_key']).execute()
-                        st.success("✅ Licence renewed — 12 months added")
+                        st.success("Licence renewed — 12 months added")
                         st.rerun()
             else:
                 st.info("No licence key found — please contact support")
@@ -654,9 +645,22 @@ def show_dashboard():
             st.error(f"Error loading licence: {str(e)}")
 
     with tab3:
-        st.title("📋 Security Audit Logs")
-        st.markdown('<div class="compliance-badge">✅ NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
+        st.title("Security Audit Logs")
+        st.markdown('<div class="compliance-badge">NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
         st.markdown("---")
+
+        # ✅ FIXED: No freeze — working refresh + auto-refresh
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button("Refresh Now"):
+                st.rerun()
+        with col2:
+            st.info("Auto-refreshing every 30 seconds...")
+
+        # Safe auto-refresh (no freeze)
+        if 'last_refresh' not in st.session_state or (datetime.datetime.now() - st.session_state.last_refresh).seconds > 30:
+            st.session_state.last_refresh = datetime.datetime.now()
+            st.rerun()
         
         try:
             # ✅ FIXED: Only filter by company_id (master ID) — NO OR MISMATCHES
@@ -674,8 +678,8 @@ def show_dashboard():
             st.error(f"Error loading logs: {str(e)}")
 
     with tab4:
-        st.title("📱 Active Protected Devices")
-        st.markdown('<div class="compliance-badge">✅ Only devices with extension installed & running</div>', unsafe_allow_html=True)
+        st.title("Active Protected Devices")
+        st.markdown('<div class="compliance-badge">Only devices with extension installed & running</div>', unsafe_allow_html=True)
         st.markdown("---")
 
         try:
@@ -690,9 +694,9 @@ def show_dashboard():
                     with cols[1]:
                         st.caption(f"Last seen: {dev['last_heartbeat'][:16]}")
                     with cols[2]:
-                        if st.button("❌ Remove", key=dev['id'], help="Revoke protection from this device"):
+                        if st.button("Remove", key=dev['id'], help="Revoke protection from this device"):
                             supabase.table("active_protection_devices").delete().eq("id", dev['id']).execute()
-                            st.success("✅ Device removed — protection stopped")
+                            st.success("Device removed — protection stopped")
                             st.rerun()
             else:
                 st.info("No active protected devices — install from Chrome Web Store to start.")
@@ -702,8 +706,8 @@ def show_dashboard():
 
     if user_email == ADMIN_EMAIL:
         with tab5:
-            st.title("👤 Registered Companies & Users")
-            st.markdown('<div class="compliance-badge">🔐 Admin Access — View and manage all accounts</div>', unsafe_allow_html=True)
+            st.title("Registered Companies & Users")
+            st.markdown('<div class="compliance-badge">Admin Access — View and manage all accounts</div>', unsafe_allow_html=True)
             st.markdown("---")
 
             try:
@@ -722,22 +726,22 @@ def show_dashboard():
                     })
 
                     st.markdown("---")
-                    st.subheader("⚙️ Update License Limit")
+                    st.subheader("Update License Limit")
                     company_options = {f"{row['name']} ({row['email']})": row['id'] for row in all_companies.data}
                     selected_label = st.selectbox("Select company:", list(company_options.keys()))
                     new_limit = st.number_input("New Device Limit", min_value=1, max_value=50000, value=100)
                     
-                    if st.button("✅ UPDATE LIMIT"):
+                    if st.button("UPDATE LIMIT"):
                         selected_id = company_options[selected_label]
                         supabase.table("companies").update({"max_devices": new_limit}).eq("id", selected_id).execute()
-                        st.success("✅ Limit updated — applies instantly to all devices")
+                        st.success("Limit updated — applies instantly to all devices")
                         st.rerun()
 
                     st.markdown("---")
-                    st.subheader("🗑️ Remove Unwanted Account")
+                    st.subheader("Remove Unwanted Account")
                     selected_label_del = st.selectbox("Select account to remove:", list(company_options.keys()), key="del")
                     
-                    if st.button("❌ DELETE ACCOUNT", type="primary", help="This will permanently remove the company and all its data"):
+                    if st.button("DELETE ACCOUNT", type="primary", help="This will permanently remove the company and all its data"):
                         selected_id = company_options[selected_label_del]
                         
                         try:
@@ -753,17 +757,17 @@ def show_dashboard():
                             except:
                                 pass
                             
-                            st.success("✅ Account and all associated data have been removed successfully")
+                            st.success("Account and all associated data have been removed successfully")
                             st.rerun()
                             
                         except Exception as e:
-                            st.error(f"❌ Error deleting account: {str(e)}")
+                            st.error(f"Error deleting account: {str(e)}")
                 
                 else:
                     st.info("No companies have registered yet.")
 
             except Exception as e:
-                st.error(f"❌ Error loading registered users: {str(e)}")
+                st.error(f"Error loading registered users: {str(e)}")
 
 # --- ROUTING ---
 def main():
