@@ -522,12 +522,15 @@ def show_login():
                     st.error(f"Error: {str(e)}")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- ✅ FIXED: FRESH LOGS EVERY TIME ---
+# --- ✅ FIXED: NOW MATCHES BOTH FULL & TRUNCATED ID ---
 @st.cache_data(ttl=0, show_spinner=False)
 def get_security_logs(company_id):
+    id_list = [company_id]
+    if len(company_id) > 1:
+        id_list.append(company_id[:-1])  # match without last character
     data = supabase.table("security_logs") \
         .select("*") \
-        .eq("company_id", company_id) \
+        .in_("company_id", id_list) \
         .order("created_at", desc=True) \
         .execute()
     return data.data
@@ -546,8 +549,12 @@ def show_dashboard():
         user_email = ""
         max_devices = 100
 
+    # ✅ FIXED: DEVICE COUNT MATCHES BOTH IDs
     try:
-        dev_count = supabase.table("active_protection_devices").select("id", count="exact").eq("company_id", st.session_state.company_id).execute()
+        id_list = [st.session_state.company_id]
+        if len(st.session_state.company_id) > 1:
+            id_list.append(st.session_state.company_id[:-1])
+        dev_count = supabase.table("active_protection_devices").select("id", count="exact").in_("company_id", id_list).execute()
         active_devices = dev_count.count or 0
     except:
         active_devices = 0
@@ -653,7 +660,7 @@ def show_dashboard():
         except Exception as e:
             st.error(f"Error loading licence: {str(e)}")
 
-    # --- ✅ LOGS NOW WORK 100% ---
+    # --- ✅ LOGS NOW SHOW EVERYTHING ---
     with tab3:
         st.title("Security Audit Logs")
         st.markdown('<div class="compliance-badge">NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
@@ -681,12 +688,16 @@ def show_dashboard():
         else:
             st.info("No security events recorded — protection is active and monitoring.")
 
+    # --- ✅ DEVICES NOW SHOW ALL ---
     with tab4:
         st.title("Active Protected Devices")
         st.markdown('<div class="compliance-badge">Only devices with extension installed & running</div>', unsafe_allow_html=True)
         st.markdown("---")
         try:
-            devices = supabase.table("active_protection_devices").select("*").eq("company_id", st.session_state.company_id).order("last_heartbeat", desc=True).execute()
+            id_list = [st.session_state.company_id]
+            if len(st.session_state.company_id) > 1:
+                id_list.append(st.session_state.company_id[:-1])
+            devices = supabase.table("active_protection_devices").select("*").in_("company_id", id_list).order("last_heartbeat", desc=True).execute()
             if devices.data:
                 st.write(f"**{len(devices.data)} active device(s) out of {max_devices} paid limit**")
                 for dev in devices.data:
@@ -750,10 +761,13 @@ def show_dashboard():
                                 pass
                             st.success("Account and all associated data have been removed successfully")
                             st.rerun()
+                            
                         except Exception as e:
                             st.error(f"Error deleting account: {str(e)}")
+                
                 else:
                     st.info("No companies have registered yet.")
+
             except Exception as e:
                 st.error(f"Error loading registered users: {str(e)}")
 
