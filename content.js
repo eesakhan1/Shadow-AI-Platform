@@ -1,4 +1,4 @@
-console.log("🔴 Shadow AI: FINAL DASHBOARD MATCH VERSION");
+console.log("🔴 Shadow AI: FULL AUTO ORG DETECTION");
 
 const SUPABASE_URL = "https://ypjpjixwdjcvmlrmsgzc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwanBqaXh3ZGpjdm1scm1zZ3pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MDY3NjMsImV4cCI6MjA5MjI4Mjc2M30.3bwI2E8JTFC6tmeqJcuJ_ICifnUAJRhbjRCwGFwmihw";
@@ -66,6 +66,7 @@ async function loadConfig() {
   await fetchCompanySecrets();
 }
 
+// ✅ AUTOMATICALLY PULLS org_reference FROM YOUR LICENCES TABLE
 async function validateLicenceAndOrg(key, orgName) {
   try {
     const res = await fetch(
@@ -76,21 +77,15 @@ async function validateLicenceAndOrg(key, orgName) {
     );
     const data = await res.json();
     if (!Array.isArray(data) || data.length !== 1) return false;
+
     const match = data[0];
-    // ✅ EXACT MATCH TO YOUR DASHBOARD VALUES
-    if (key === "TEST-SHADOW-AI-2026") {
-      ORG_REFERENCE = "org_ss4bec592";
-      COMPANY_ID = "org_ss4bec592";
-    } else if (key === "SHADOW-NHS-001-789") {
-      ORG_REFERENCE = "org_vvyoutb83";
-      COMPANY_ID = "org_vvyoutb83";
-    } else {
-      ORG_REFERENCE = match.org_reference?.trim() || "";
-      COMPANY_ID = ORG_REFERENCE;
-    }
-    console.log("✅ ORG SET:", ORG_REFERENCE);
+    // Use the value DIRECTLY from the database — NO HARDCODING
+    ORG_REFERENCE = match.org_reference?.trim() || "";
+    COMPANY_ID = ORG_REFERENCE;
+
+    console.log("✅ Auto-detected org:", ORG_REFERENCE);
     return !match.expires_at || new Date(match.expires_at) > new Date();
-  } catch (e) { 
+  } catch (e) {
     console.error("Validation error:", e);
     return false;
   }
@@ -104,8 +99,8 @@ function showActivationUI() {
   ui.innerHTML = `
     <h3 style="margin-top:0;">🛡️ Activate Shadow AI</h3>
     <p style="font-size:14px;margin:10px 0;">Enter your details:</p>
-    <input type="text" id="orgNameInput" placeholder="Organisation Name" value="MICROSOFT-REVIEW" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
-    <input type="text" id="licenceInput" placeholder="Licence Key" value="TEST-SHADOW-AI-2026" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
+    <input type="text" id="orgNameInput" placeholder="Organisation Name" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
+    <input type="text" id="licenceInput" placeholder="Licence Key" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
     <button id="activateBtn" style="width:100%;padding:8px;background:#00A499;color:white;border:none;border-radius:4px;font-weight:bold;">Activate</button>
   `;
   document.documentElement.appendChild(ui);
@@ -116,9 +111,9 @@ function showActivationUI() {
     if (!org || !lic) return alert("Enter both values");
 
     const ok = await validateLicenceAndOrg(lic, org);
-    if (!ok) return alert("❌ Invalid — check your details");
+    if (!ok) return alert("❌ Invalid licence or organisation");
 
-    await (chrome || browser).storage.local.set({ 
+    await (chrome || browser).storage.local.set({
       "shadow_org_name": org,
       "shadow_licence_key": lic,
       "shadow_org_ref": ORG_REFERENCE
@@ -180,7 +175,7 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
-// ✅ PERFECT MATCH — SAVES BOTH FIELDS EXACTLY AS DASHBOARD EXPECTS
+// ✅ LOGS SAVE BOTH FIELDS AUTOMATICALLY
 async function reportLeak(detail, blockedText = "") {
   if (!LICENCE_VALID || !ORG_REFERENCE) return;
   try {
@@ -189,7 +184,6 @@ async function reportLeak(detail, blockedText = "") {
       violation_type: detail,
       blocked_content: blockedText.substring(0, 500),
       site_url: window.location.hostname,
-      // ✅ BOTH FIELDS — DASHBOARD CAN USE EITHER
       company_id: ORG_REFERENCE,
       org_reference: ORG_REFERENCE,
       user_device: deviceFingerprint.substring(0, 255),
@@ -207,10 +201,10 @@ async function reportLeak(detail, blockedText = "") {
       body: JSON.stringify(payload)
     });
 
-    if (res.ok) console.log("✅ LOGGED TO:", ORG_REFERENCE);
-    else console.error("❌ FAILED:", await res.json());
+    if (res.ok) console.log("✅ Log saved for org:", ORG_REFERENCE);
+    else console.error("❌ Log failed:", await res.json());
   } catch (e) {
-    console.error("❌ ERROR:", e);
+    console.error("❌ Log error:", e);
   }
 }
 

@@ -659,7 +659,13 @@ def show_dashboard():
         st.markdown("---")
         
         try:
-            data = supabase.table("security_logs").select("*").eq("company_id", st.session_state.company_id).order("created_at", desc=True).execute()
+            # ✅ FIXED: Filter by BOTH company_id AND org_reference so logs show up no matter which one is used
+            data = supabase.table("security_logs") \
+                .select("*") \
+                .or_(f"company_id.eq.{st.session_state.company_id},org_reference.eq.{st.session_state.company_id}") \
+                .order("created_at", desc=True) \
+                .execute()
+                
             if data.data:
                 st.dataframe(pd.DataFrame(data.data), use_container_width=True)
             else:
