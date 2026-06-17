@@ -659,10 +659,10 @@ def show_dashboard():
         st.markdown("---")
         
         try:
-            # ✅ FIXED: Filter by BOTH company_id AND org_reference so logs show up no matter which one is used
+            # ✅ FIXED: Only filter by company_id (master ID) — NO OR MISMATCHES
             data = supabase.table("security_logs") \
                 .select("*") \
-                .or_(f"company_id.eq.{st.session_state.company_id},org_reference.eq.{st.session_state.company_id}") \
+                .eq("company_id", st.session_state.company_id) \
                 .order("created_at", desc=True) \
                 .execute()
                 
