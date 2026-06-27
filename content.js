@@ -157,26 +157,26 @@ async function registerDeviceHeartbeat() {
   setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// ✅ FIXED: BLOCKS EVERY FIELD YOU WANT — NOTHING ELSE CHANGED
+// ✅ UPDATED: NOW WORKS WITH OR WITHOUT LABELS
 const securityPatterns = [
-  { name: "PATIENT_NAME", regex: /\bPatient Name\b.*?$/gim },
-  { name: "NHS_NUMBER", regex: /\bNHS Number\b.*?$|\bNHS No\b.*?$|\bNHS\s*\d{3}[-\s]?\d{3}[-\s]?\d{4}\b|\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/gim },
-  { name: "DOB", regex: /\bDate of Birth\b.*?$|\bDOB\b.*?$|\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}\b/gim },
-  { name: "ADDRESS", regex: /\bAddress\b.*?$|\bHome Address\b.*?$|\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gim },
-  { name: "GP_PRACTICE", regex: /\bGP Practice\b.*?$|\bSurgery\b.*?$/gim },
-  { name: "HOSPITAL", regex: /\bHospital\b.*?$/gim },
-  { name: "DEPARTMENT", regex: /\bDepartment\b.*?$/gim },
-  { name: "DIAGNOSIS", regex: /\bDiagnosis\b.*?$|\bCondition\b.*?$/gim },
-  { name: "MEDICATION", regex: /\bMedication\b.*?$|\bPrescription\b.*?$/gim },
-  { name: "NOTES", regex: /\bRecent Notes\b.*?$|\bNotes\b.*?$|\bConsultation\b.*?$/gim },
+  { name: "PATIENT_NAME", regex: /\b[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?\b/gim },
+  { name: "NHS_NUMBER", regex: /\b(?:\d{3}[-\s]?\d{3}[-\s]?\d{4}|\d{10})\b/gim },
+  { name: "DOB", regex: /\b(?:0[1-9]|[12]\d|3[01])[\/.-](?:0[1-9]|1[0-2])[\/.-](?:19|20)\d{2}\b|\b\d{2}[\/.-]\d{2}[\/.-]\d{2}\b/gim },
+  { name: "ADDRESS", regex: /\b[A-Za-z0-9,'\s-]+(?:Road|Rd|Street|St|Avenue|Ave|Lane|Ln|Drive|Dr|Close|Cl|Crescent|Cres|Way)\b.*?\b[A-Z]{1,2}\d{1,2}\s?\d[A-Z]{2}\b|\b[A-Z]{1,2}\d{1,2}\s?\d[A-Z]{2}\b/gim },
+  { name: "GP_PRACTICE", regex: /\b(?:Medical Centre|Surgery|Health Centre|GP Practice|Clinic)\b.*?$|\b(?:Medical Centre|Surgery|Health Centre|GP Practice|Clinic)\b/gim },
+  { name: "HOSPITAL", regex: /\b(?:Hospital|NHS Trust|Medical School)\b.*?$|\b(?:Hospital|NHS Trust|Medical School)\b/gim },
+  { name: "DEPARTMENT", regex: /\b(?:Department|Ward|Unit|Service)\b.*?$|\b(?:Department|Ward|Unit|Service)\b/gim },
+  { name: "DIAGNOSIS", regex: /\b(?:Cerebral palsy|Epilepsy|Scoliosis|Hypertension|Diabetes|Asthma|Cancer|HIV|Mental health|Depression|Anxiety|Seizure|Diagnosis|Condition)\b.*?$|\b(?:Cerebral palsy|Epilepsy|Scoliosis|Hypertension|Diabetes|Asthma|Cancer|HIV|Mental health|Depression|Anxiety|Seizure|Diagnosis|Condition)\b/gim },
+  { name: "MEDICATION", regex: /\b(?:Sodium Valproate|Baclofen|Losartan|Metformin|Furosemide|mg|tablet|capsule|injection)\b.*?$|\b(?:Sodium Valproate|Baclofen|Losartan|Metformin|Furosemide)\b/gim },
+  { name: "NOTES", regex: /\b(?:Consultation|Assessment|Review|Follow-up|Notes)\b.*?$|\b(?:Consultation|Assessment|Review|Follow-up|Notes)\b/gim },
 
   // Keep all your original patterns exactly as they were
-  { name: "CHI_NUMBER", regex: /\bCHI number\s*\d{10}\b|\bCHI\s*\d{10}\b|\b\d{10}\b/gi },
-  { name: "FULL_NAME", regex: /\b(Mr|Mrs|Ms|Miss|Dr|Prof)\.?\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/gi },
-  { name: "WARD_BED", regex: /\bward\b.*?\bbed\b.*?\d+|\bWard\s*\d+\s*,?\s*Bed\s*\d+/gi },
-  { name: "EMAIL", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi },
-  { name: "UK_PHONE", regex: /\b(?:\+44\s?\d{4}\s?\d{6}|0\d{4}\s?\d{6}|07\d{3}\s?\d{6})\b/gi },
-  { name: "MEDICAL_RECORD", regex: /\b(confidential information|patient details|medical record|health record|patient identifiable data)\b/gi }
+  { name: "CHI_NUMBER", regex: /\b\d{10}\b/gim },
+  { name: "FULL_NAME", regex: /\b(Mr|Mrs|Ms|Miss|Dr|Prof)\.?\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/gim },
+  { name: "WARD_BED", regex: /\bWard\s*\d+\s*,?\s*Bed\s*\d+|\bward\b.*?\bbed\b.*?\d+/gim },
+  { name: "EMAIL", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gim },
+  { name: "UK_PHONE", regex: /\b(?:\+44\s?|0)7\d{3}\s?\d{6}\b|\b(?:\+44\s?|0)[123]\d{3}\s?\d{6}\b/gim },
+  { name: "MEDICAL_RECORD", regex: /\b(confidential information|patient details|medical record|health record|patient identifiable data)\b/gim }
 ];
 
 async function fetchCompanySecrets() {
