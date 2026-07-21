@@ -13,6 +13,23 @@ import json
 import urllib.parse
 import base64
 
+# Fix embedding in Claude / Copilot security sandboxes
+from streamlit.web.server import server
+
+def add_security_headers():
+    try:
+        if hasattr(server, "server") and server.server:
+            server.server.default_headers = [
+                ("X-Frame-Options", "ALLOWALL"),
+                ("Content-Security-Policy", "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; frame-ancestors *;"),
+                ("X-Content-Type-Options", "nosniff"),
+                ("Referrer-Policy", "strict-origin-when-cross-origin")
+            ]
+    except Exception:
+        pass
+
+add_security_headers()
+
 # --- FUNCTION TO LOAD IMAGE ---
 def get_base64_image(file_path):
     try:
