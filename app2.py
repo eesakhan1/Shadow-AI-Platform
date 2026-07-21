@@ -11,6 +11,16 @@ from io import BytesIO
 import string
 import json
 import urllib.parse
+import base64
+
+# --- FUNCTION TO LOAD IMAGE ---
+def get_base64_image(file_path):
+    try:
+        with open(file_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except Exception as e:
+        st.warning(f"Could not load logo: {e}")
+        return ""
 
 # --- CONFIGURATION ---
 try:
@@ -69,7 +79,6 @@ st.set_page_config(
 # --- BLACK & GOLD THEME ---
 st.markdown("""
     <style>
-    /* Base theme */
     html, body, [class*="css"] {
         font-family: 'Segoe UI', Roboto, Arial, sans-serif !important;
     }
@@ -77,41 +86,20 @@ st.markdown("""
         background-color: #000000 !important;
         color: #FFD700 !important;
     }
-
-    /* Color scheme - Black & Gold */
     :root {
         --primary: #FFD700;
         --primary-dark: #CCAC00;
-        --primary-light: #222200;
-        --success: #85BB65;
-        --danger: #E63946;
         --neutral-100: #111111;
         --neutral-200: #222222;
         --neutral-300: #333333;
         --neutral-500: #999999;
         --neutral-800: #EEEEEE;
         --border: #444444;
-        --shadow: 0 2px 10px rgba(255, 215, 0, 0.15);
     }
-
-    /* Headings */
     h1, h2, h3, h4, h5, h6 {
         color: #FFD700 !important;
         font-weight: 600;
-        margin-top: 1rem;
-        margin-bottom: 0.8rem;
     }
-    h1 {
-        font-size: 2.2rem;
-    }
-    h2 {
-        font-size: 1.6rem;
-    }
-    h3 {
-        font-size: 1.3rem;
-    }
-
-    /* Buttons */
     .stButton>button {
         width: 100%;
         border-radius: 4px;
@@ -121,110 +109,19 @@ st.markdown("""
         border: 1px solid #FFD700;
         background: #FFD700;
         color: #000000 !important;
-        transition: all 0.2s ease;
     }
     .stButton>button:hover {
         background: #CCAC00;
         border-color: #CCAC00;
-        color: #000000 !important;
     }
-    .stButton>button.delete-btn {
-        background: #E63946;
-        border-color: #E63946;
-        color: #FFFFFF !important;
-    }
-    .stButton>button.delete-btn:hover {
-        background: #C22B37;
-        border-color: #C22B37;
-    }
-
-    /* Cards & Containers */
     .login-card {
         background: #111111;
         padding: 2.5rem;
         border-radius: 6px;
         border: 1px solid #FFD700;
-        box-shadow: var(--shadow);
         max-width: 480px;
         margin: 3rem auto;
     }
-    .card {
-        background: #111111;
-        padding: 1.5rem;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-        box-shadow: var(--shadow);
-        margin-bottom: 1.2rem;
-    }
-
-    /* Inputs */
-    .stTextInput>div>div>input,
-    .stPasswordInput>div>div>input {
-        border: 1px solid #555555 !important;
-        border-radius: 4px !important;
-        background: #000000 !important;
-        color: #FFD700 !important;
-        padding: 0.6rem 0.8rem !important;
-        font-size: 15px !important;
-    }
-    .stTextInput>div>div>input:focus,
-    .stPasswordInput>div>div>input:focus {
-        border-color: #FFD700 !important;
-        box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2) !important;
-    }
-    .stTextInput label,
-    .stPasswordInput label {
-        color: #FFD700 !important;
-        font-weight: 500 !important;
-    }
-
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 0.5rem;
-        border-bottom: 1px solid var(--border);
-    }
-    .stTabs [data-baseweb="tab"] {
-        background: #111111;
-        border: 1px solid var(--border);
-        border-radius: 4px 4px 0 0;
-        color: #CCCCCC !important;
-        padding: 0.6rem 1.2rem;
-        font-weight: 500;
-    }
-    .stTabs [aria-selected="true"] {
-        background: #222222;
-        color: #FFD700 !important;
-        border-color: #FFD700;
-        border-bottom: 2px solid #FFD700;
-    }
-
-    /* Status messages */
-    .stSuccess {
-        background: #1A2A1E !important;
-        color: #85BB65 !important;
-        border: 1px solid #40604A !important;
-        border-radius: 4px !important;
-    }
-    .stError {
-        background: #2A1A1E !important;
-        color: #E63946 !important;
-        border: 1px solid #60404A !important;
-        border-radius: 4px !important;
-    }
-    .stInfo {
-        background: #222200 !important;
-        color: #FFD700 !important;
-        border: 1px solid #555500 !important;
-        border-radius: 4px !important;
-    }
-    .stWarning {
-        background: #2A2500 !important;
-        color: #FFD700 !important;
-        border: 1px solid #605500 !important;
-        border-radius: 4px !important;
-    }
-
-    /* Info badge */
     .info-badge {
         background: #222200;
         color: #FFD700;
@@ -236,57 +133,6 @@ st.markdown("""
         margin: 0.5rem 0 1.2rem 0;
         border: 1px solid #444400;
     }
-
-    /* Tables / Dataframes */
-    .stDataFrame {
-        border: 1px solid #444444;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    .stDataFrame table {
-        border-collapse: collapse;
-        width: 100%;
-    }
-    .stDataFrame th {
-        background: #111111 !important;
-        color: #FFD700 !important;
-        font-weight: 600 !important;
-        border-bottom: 1px solid #444444 !important;
-        padding: 0.8rem !important;
-    }
-    .stDataFrame td {
-        color: #EEEEEE !important;
-        border-bottom: 1px solid #333333 !important;
-        padding: 0.7rem !important;
-    }
-
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background: #111111 !important;
-        border-right: 1px solid #444444;
-        padding-top: 1rem;
-    }
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 {
-        color: #FFD700 !important;
-    }
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] span {
-        color: #EEEEEE !important;
-    }
-
-    /* Links */
-    a {
-        color: #FFD700 !important;
-        text-decoration: none;
-        font-weight: 500;
-    }
-    a:hover {
-        text-decoration: underline;
-        color: #CCAC00 !important;
-    }
-
-    /* Logo container */
     .logo-container {
         text-align: center;
         margin-bottom: 1.5rem;
@@ -295,6 +141,10 @@ st.markdown("""
         max-width: 220px;
         height: auto;
         margin-bottom: 0.8rem;
+    }
+    section[data-testid="stSidebar"] {
+        background: #111111 !important;
+        border-right: 1px solid #444444;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -369,10 +219,7 @@ def send_verification_email(to_email, code):
     try:
         response = requests.post(
             "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json"
-            },
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": to_email,
@@ -402,10 +249,7 @@ def send_reset_email(to_email, reset_link):
     try:
         response = requests.post(
             "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json"
-            },
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": to_email,
@@ -420,9 +264,7 @@ def send_reset_email(to_email, reset_link):
                         <p style="font-size:16px; line-height:1.5;">You requested to reset your password for your Shadow AI Security Limited account.</p>
                         <p style="font-size:16px; line-height:1.5; margin:20px 0;">Click the button below to create a new password:</p>
                         <div style="text-align:center; margin:30px 0;">
-                            <a href="{reset_link}" style="background:#FFD700; color:#000000; padding:12px 24px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:16px; display:inline-block;">
-                                Reset My Password
-                            </a>
+                            <a href="{reset_link}" style="background:#FFD700; color:#000000; padding:12px 24px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:16px; display:inline-block;">Reset My Password</a>
                         </div>
                         <p style="font-size:14px; color:#999; margin-top:30px;">This link is valid for <strong>60 minutes</strong>. If you did not request this change, please ignore this email or contact support immediately.</p>
                     </div>
@@ -439,10 +281,7 @@ def send_licence_email(to_email, licence_key, org_name):
     try:
         response = requests.post(
             "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json"
-            },
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": to_email,
@@ -478,10 +317,7 @@ def send_licence_email(to_email, licence_key, org_name):
 def show_forgot_password():
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.subheader("Reset Your Password")
-    st.markdown("Enter your registered work email — we will send you a secure reset link.")
-
     email = st.text_input("Official Work Email Address")
-
     if st.button("Send Reset Link"):
         if not email:
             st.warning("Please enter your email address")
@@ -492,11 +328,8 @@ def show_forgot_password():
                 if send_reset_email(email, reset_link):
                     st.success("Reset link sent successfully!")
                     st.info("Email sent — check your inbox/spam")
-                else:
-                    st.error("Failed to send email — please try again")
             except Exception as e:
                 st.error(f"Error: {str(e)}")
-
     st.markdown("<br><p style='text-align:center;'><a href='/' style='color:#FFD700;'>← Back to Login</a></p>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -504,10 +337,8 @@ def show_reset_password(email):
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.subheader("Create New Password")
     st.markdown(f"Setting new password for: **{email}**")
-
     new_password = st.text_input("New Password", type="password")
     confirm_password = st.text_input("Confirm New Password", type="password")
-
     if st.button("Update Password"):
         if new_password != confirm_password:
             st.error("Passwords do not match")
@@ -522,17 +353,17 @@ def show_reset_password(email):
                 else:
                     supabase.auth.admin.update_user_by_id(target_user.id, {"password": new_password})
                     st.success("Password updated successfully! You can now log in.")
-                    st.markdown("<p style='text-align:center; margin-top:20px;'><a href='/' style='color:#FFD700; font-weight:normal;'>← Go to Login</a></p>", unsafe_allow_html=True)
+                    st.markdown("<p style='text-align:center; margin-top:20px;'><a href='/' style='color:#FFD700;'>← Go to Login</a></p>", unsafe_allow_html=True)
             except Exception as e:
                 st.error(f"Error: {str(e)}")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --- LOGIN SCREEN ---
 def show_login():
-    # ✅ Local Logo + No NHS/Trust
-    st.markdown("""
+    logo_base64 = get_base64_image("Logo.png")
+    st.markdown(f"""
     <div class="logo-container">
-        <img src="Logo.png" alt="Shadow AI Security Limited Logo">
+        <img src="data:image/png;base64,{logo_base64}" alt="Shadow AI Security Limited Logo">
         <h1>Shadow AI Security Limited</h1>
         <p style="font-size: 18px; color: #CCCCCC;">Data Protection & AI Security Solutions</p>
         <div class="info-badge">Evergreen Assessment Registered | Ref: a0BPz0000GzZ65MAF20260528125015</div>
@@ -656,10 +487,10 @@ def show_dashboard():
     except:
         active_devices = 0
 
-    # ✅ Local Logo in Sidebar
-    st.sidebar.markdown("""
+    logo_base64 = get_base64_image("Logo.png")
+    st.sidebar.markdown(f"""
     <div style="text-align:center; margin-bottom:1rem;">
-        <img src="Logo.png" alt="Shadow AI Security Limited Logo" style="max-width:140px; margin-bottom:0.5rem;">
+        <img src="data:image/png;base64,{logo_base64}" alt="Shadow AI Security Limited Logo" style="max-width:140px; margin-bottom:0.5rem;">
         <h3>Shadow AI Security Limited</h3>
         <p style="font-size:13px; color:#CCCCCC;">Data Protection & AI Security</p>
     </div>
@@ -769,7 +600,6 @@ def show_dashboard():
         st.title("Security Audit Logs")
         st.markdown('<div class="info-badge">Full activity logging and compliance tracking</div>', unsafe_allow_html=True)
         st.markdown("---")
-
         col1, col2 = st.columns([1, 3])
         with col1:
             if st.button("Refresh Now"):
@@ -777,14 +607,11 @@ def show_dashboard():
                 st.rerun()
         with col2:
             st.info("Auto-refreshing every 30 seconds...")
-
         if 'last_refresh' not in st.session_state or (datetime.datetime.now() - st.session_state.last_refresh).seconds > 30:
             st.session_state.last_refresh = datetime.datetime.now()
             st.cache_data.clear()
             st.rerun()
-
         logs = get_security_logs(st.session_state.company_id)
-        
         if logs:
             st.dataframe(pd.DataFrame(logs), use_container_width=True)
         else:
@@ -862,13 +689,10 @@ def show_dashboard():
                                 pass
                             st.success("Account and all associated data have been removed successfully")
                             st.rerun()
-                            
                         except Exception as e:
                             st.error(f"Error deleting account: {str(e)}")
-                
                 else:
                     st.info("No companies have registered yet.")
-
             except Exception as e:
                 st.error(f"Error loading registered users: {str(e)}")
 
@@ -878,7 +702,6 @@ def main():
     page = params.get("page", "")
     mode = params.get("mode", "")
     reset_email = params.get("email", "")
-
     if page == "forgot-password":
         show_forgot_password()
         return
