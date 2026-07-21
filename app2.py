@@ -60,13 +60,13 @@ def generate_licence_key() -> str:
 
 # --- PAGE SETUP ---
 st.set_page_config(
-    page_title="Shadow AI | NHS Compliant Data Protection",
-    page_icon="🛡️",
+    page_title="Shadow AI Security Limited | Data Protection & AI Security",
+    page_icon="🔒",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- ✅ UPDATED DESIGN: BLACK & GOLD ONLY — MATCHES TOOLBAR ---
+# --- BLACK & GOLD THEME ---
 st.markdown("""
     <style>
     /* Base theme */
@@ -224,8 +224,8 @@ st.markdown("""
         border-radius: 4px !important;
     }
 
-    /* Compliance badge */
-    .compliance-badge {
+    /* Compliance / Info badge */
+    .info-badge {
         background: #222200;
         color: #FFD700;
         padding: 6px 12px;
@@ -299,6 +299,12 @@ st.markdown("""
         background: #111111 !important;
         border: 1px solid #555555 !important;
         color: #FFD700 !important;
+    }
+
+    /* Logo container */
+    .logo-container {
+        text-align: center;
+        margin-bottom: 1.5rem;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -380,18 +386,18 @@ def send_verification_email(to_email, code):
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": to_email,
-                "subject": "Shadow AI | Security Verification Code",
+                "subject": "Shadow AI Security Limited | Security Verification Code",
                 "html": f"""
                 <div style="font-family: Arial, sans-serif; background:#000000; padding:30px; color:#FFD700; max-width:600px; border:1px solid #FFD700;">
                     <div style="background:#000000; padding:15px; border-bottom:1px solid #FFD700;">
-                        <h1 style="color:#FFD700; margin:0;">Shadow AI</h1>
-                        <p style="color:#CCCCCC; margin:5px 0 0 0;">NHS Compliant Data Protection</p>
+                        <h1 style="color:#FFD700; margin:0;">Shadow AI Security Limited</h1>
+                        <p style="color:#CCCCCC; margin:5px 0 0 0;">Data Protection & AI Security Solutions</p>
                     </div>
                     <div style="padding:20px; background:#111111; border-radius:4px; margin-top:15px;">
                         <p>Your verification code is:</p>
                         <h2 style="font-size:40px; letter-spacing:8px; color:#FFD700; margin:20px 0; text-align:center;">{code}</h2>
                         <p>Enter this code in your dashboard to continue.</p>
-                        <p style="margin-top:30px; font-size:14px; color:#999;">Shadow AI is registered on the NHS Evergreen Supplier Assessment | Ref: a0BPz0000GzZ65MAF20260528125015</p>
+                        <p style="margin-top:30px; font-size:14px; color:#999;">Shadow AI Security Limited | Evergreen Assessment Registered | Ref: a0BPz0000GzZ65MAF20260528125015</p>
                     </div>
                 </div>
                 """
@@ -413,15 +419,15 @@ def send_reset_email(to_email, reset_link):
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": to_email,
-                "subject": "Shadow AI | Reset Your Password",
+                "subject": "Shadow AI Security Limited | Reset Your Password",
                 "html": f"""
                 <div style="font-family: Arial, sans-serif; background:#000000; padding:30px; color:#FFD700; max-width:600px; border:1px solid #FFD700;">
                     <div style="background:#000000; padding:15px; border-bottom:1px solid #FFD700;">
-                        <h1 style="color:#FFD700; margin:0; font-size:20px; font-weight:normal;">Shadow AI</h1>
-                        <p style="color:#CCCCCC; margin:5px 0 0 0; font-size:14px;">NHS Compliant Data Protection</p>
+                        <h1 style="color:#FFD700; margin:0; font-size:20px; font-weight:normal;">Shadow AI Security Limited</h1>
+                        <p style="color:#CCCCCC; margin:5px 0 0 0; font-size:14px;">Data Protection & AI Security Solutions</p>
                     </div>
                     <div style="padding:20px; background:#111111; border-radius:4px; margin-top:15px;">
-                        <p style="font-size:16px; line-height:1.5;">You requested to reset your password for your Shadow AI account.</p>
+                        <p style="font-size:16px; line-height:1.5;">You requested to reset your password for your Shadow AI Security Limited account.</p>
                         <p style="font-size:16px; line-height:1.5; margin:20px 0;">Click the button below to create a new password:</p>
                         <div style="text-align:center; margin:30px 0;">
                             <a href="{reset_link}" style="background:#FFD700; color:#000000; padding:12px 24px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:16px; display:inline-block;">
@@ -450,21 +456,21 @@ def send_licence_email(to_email, licence_key, org_name):
             json={
                 "from": RESEND_FROM_EMAIL,
                 "to": to_email,
-                "subject": "Shadow AI | Your Licence Key & Setup Instructions",
+                "subject": "Shadow AI Security Limited | Your Licence Key & Setup Instructions",
                 "html": f"""
                 <div style="font-family: Arial, sans-serif; background:#000000; padding:30px; color:#FFD700; max-width:600px; border:1px solid #FFD700;">
                     <div style="background:#000000; padding:15px; border-bottom:1px solid #FFD700;">
-                        <h1 style="color:#FFD700; margin:0;">Shadow AI</h1>
-                        <p style="color:#CCCCCC; margin:5px 0 0 0;">NHS Compliant Data Protection</p>
+                        <h1 style="color:#FFD700; margin:0;">Shadow AI Security Limited</h1>
+                        <p style="color:#CCCCCC; margin:5px 0 0 0;">Data Protection & AI Security Solutions</p>
                     </div>
                     <div style="padding:20px; background:#111111; border-radius:4px; margin-top:15px;">
-                        <p>Thank you for choosing Shadow AI for <strong>{org_name}</strong>.</p>
+                        <p>Thank you for choosing Shadow AI Security Limited for <strong>{org_name}</strong>.</p>
                         <p>Your licence key to activate the extension is:</p>
                         <h2 style="font-size:24px; letter-spacing:4px; color:#FFD700; margin:20px 0; text-align:center; background:#000; padding:10px; border:1px solid #FFD700; border-radius:4px;">{licence_key}</h2>
                         <p><strong>Setup Steps:</strong></p>
                         <ol style="color:#EEEEEE;">
                             <li>Install the extension: <a href="https://chrome.google.com/webstore/detail/your-extension-id" style="color:#FFD700;">Chrome Web Store</a></li>
-                            <li>Click the Shadow AI icon in your toolbar</li>
+                            <li>Click the Shadow AI Security Limited icon in your toolbar</li>
                             <li>Enter the key above and click Activate</li>
                         </ol>
                         <p style="margin-top:30px; font-size:14px; color:#999;">Valid for 12 months | Support: security@shadowaisecurity.co.uk</p>
@@ -533,9 +539,14 @@ def show_reset_password(email):
 
 # --- LOGIN SCREEN ---
 def show_login():
-    st.title("Shadow AI")
-    st.markdown("#### NHS Compliant Data Protection & AI Security")
-    st.markdown('<div class="compliance-badge">Evergreen Assessment Registered | Ref: a0BPz0000GzZ65MAF20260528125015</div>', unsafe_allow_html=True)
+    # Logo + Header
+    st.markdown("""
+    <div class="logo-container">
+        <h1>Shadow AI Security Limited</h1>
+        <p style="font-size: 18px; color: #CCCCCC;">Data Protection & AI Security Solutions</p>
+        <div class="info-badge">Evergreen Assessment Registered | Ref: a0BPz0000GzZ65MAF20260528125015</div>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("---")
     
     col1, col2, col3 = st.columns([1,2,1])
@@ -618,12 +629,12 @@ def show_login():
                     st.error(f"Error: {str(e)}")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- ✅ FIXED: NOW MATCHES BOTH FULL & TRUNCATED ID ---
+# --- GET SECURITY LOGS ---
 @st.cache_data(ttl=0, show_spinner=False)
 def get_security_logs(company_id):
     id_list = [company_id]
     if len(company_id) > 1:
-        id_list.append(company_id[:-1])  # match without last character
+        id_list.append(company_id[:-1])
     data = supabase.table("security_logs") \
         .select("*") \
         .in_("company_id", id_list) \
@@ -645,7 +656,6 @@ def show_dashboard():
         user_email = ""
         max_devices = 100
 
-    # ✅ FIXED: DEVICE COUNT MATCHES BOTH IDs
     try:
         id_list = [st.session_state.company_id]
         if len(st.session_state.company_id) > 1:
@@ -655,15 +665,21 @@ def show_dashboard():
     except:
         active_devices = 0
 
-    st.sidebar.title("🛡️ Shadow AI")
+    # Sidebar
+    st.sidebar.markdown("""
+    <div style="text-align:center; margin-bottom:1rem;">
+        <h2>Shadow AI Security Limited</h2>
+        <p style="font-size:13px; color:#CCCCCC;">Data Protection & AI Security</p>
+    </div>
+    """, unsafe_allow_html=True)
     st.sidebar.markdown(f"**{org_name}**")
     st.sidebar.markdown(f"**Reference: `{st.session_state.company_id}`**")
     st.sidebar.markdown(f"Devices: {active_devices} / {max_devices}")
     
     if is_active:
-        st.sidebar.success("License: ACTIVE | COMPLIANT")
+        st.sidebar.success("License: ACTIVE")
     else:
-        st.sidebar.error("License: PENDING")
+        st.sidebar.error("License: INACTIVE")
 
     if st.sidebar.button("Logout"):
         clear_auth()
@@ -678,18 +694,18 @@ def show_dashboard():
 
     with tab1:
         st.title("Security Command Center")
-        st.markdown('<div class="compliance-badge">NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-badge">Secure Data Protection & Auditing Enabled</div>', unsafe_allow_html=True)
         st.markdown("---")
         st.subheader("Deploy Protection Software")
         st.markdown("""
         **Official Chrome Web Store Extension**  
         No developer mode required — safe, verified, and automatically updated.
         **[Install from Chrome Web Store](https://chrome.google.com/webstore/detail/your-extension-id)**  
-        *Works on Chrome, Edge, and Brave — fully compliant and secure*
+        *Works on Chrome, Edge, and Brave — fully secure and compliant*
         """, unsafe_allow_html=True)
         st.markdown("---")
         st.subheader("Custom Security Rules")
-        st.markdown("*Add words, codes, or identifiers specific to your organisation (e.g. local patient codes, project names)*")
+        st.markdown("*Add words, codes, or identifiers specific to your organisation*")
         col1, col2 = st.columns(2)
         with col1:
             secret_word = st.text_input("Sensitive Term / Phrase")
@@ -709,7 +725,7 @@ def show_dashboard():
 
     with tab2:
         st.title("Your Licence Key")
-        st.markdown('<div class="compliance-badge">Required to activate the extension</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-badge">Required to activate the extension</div>', unsafe_allow_html=True)
         st.markdown("---")
         try:
             licence_data = supabase.table("licences") \
@@ -735,7 +751,7 @@ def show_dashboard():
                 st.subheader("How to Activate")
                 st.markdown("""
                 1. Install the extension from the Chrome Web Store
-                2. Click the Shadow AI icon in your browser toolbar
+                2. Click the Shadow AI Security Limited icon in your browser toolbar
                 3. Paste this key into the activation box
                 4. Click Activate — protection starts immediately
                 """)
@@ -756,10 +772,9 @@ def show_dashboard():
         except Exception as e:
             st.error(f"Error loading licence: {str(e)}")
 
-    # --- ✅ LOGS NOW SHOW EVERYTHING ---
     with tab3:
         st.title("Security Audit Logs")
-        st.markdown('<div class="compliance-badge">NHS Information Governance Compliant | Audit Logging Enabled</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-badge">Full activity logging and compliance tracking</div>', unsafe_allow_html=True)
         st.markdown("---")
 
         col1, col2 = st.columns([1, 3])
@@ -770,13 +785,11 @@ def show_dashboard():
         with col2:
             st.info("Auto-refreshing every 30 seconds...")
 
-        # Auto-refresh
         if 'last_refresh' not in st.session_state or (datetime.datetime.now() - st.session_state.last_refresh).seconds > 30:
             st.session_state.last_refresh = datetime.datetime.now()
             st.cache_data.clear()
             st.rerun()
 
-        # Load fresh data
         logs = get_security_logs(st.session_state.company_id)
         
         if logs:
@@ -784,10 +797,9 @@ def show_dashboard():
         else:
             st.info("No security events recorded — protection is active and monitoring.")
 
-    # --- ✅ DEVICES NOW SHOW ALL ---
     with tab4:
         st.title("Active Protected Devices")
-        st.markdown('<div class="compliance-badge">Only devices with extension installed & running</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-badge">Only devices with extension installed & running</div>', unsafe_allow_html=True)
         st.markdown("---")
         try:
             id_list = [st.session_state.company_id]
@@ -815,7 +827,7 @@ def show_dashboard():
     if user_email == ADMIN_EMAIL:
         with tab5:
             st.title("Registered Companies & Users")
-            st.markdown('<div class="compliance-badge">Admin Access — View and manage all accounts</div>', unsafe_allow_html=True)
+            st.markdown('<div class="info-badge">Admin Access — View and manage all accounts</div>', unsafe_allow_html=True)
             st.markdown("---")
             try:
                 all_companies = supabase.table("companies").select("id, name, email, is_active, max_devices").execute()
