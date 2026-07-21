@@ -1,3 +1,8 @@
+// ❌ REMOVED: importScripts('sector-loader.js'); — not supported in Manifest V3
+
+// Load rules when extension starts
+// initSector() is now handled via popup/storage, so we remove that call too
+
 console.log("🔴 Shadow AI: FINAL VERSION — LOGIN + WORKING LOGGING");
 
 const SUPABASE_URL = "https://ypjpjixwdjcvmlrmsgzc.supabase.co";
@@ -10,36 +15,49 @@ let COMPANY_ID = "";
 let isScanning = false;
 let customSecrets = [];
 let LICENCE_VALID = false;
+let activeRules = [];
 
 // --- UI ---
 function addBadge() {
   if (document.getElementById('shadow-ai-badge')) return;
   const badge = document.createElement('div');
   badge.id = 'shadow-ai-badge';
-  badge.style = `position:fixed;top:10px;right:10px;background:#666;color:white;padding:8px 16px;border-radius:4px;font-weight:bold;font-size:12px;z-index:99999999;border:2px solid #999;pointer-events:none;font-family:Arial,sans-serif;`;
-  badge.textContent = '🛡️ SHADOW AI | INACTIVE';
+  badge.style = `position:fixed;top:10px;right:10px;background:#000000;color:#FFD700;padding:8px 16px;border-radius:4px;font-weight:bold;font-size:12px;z-index:99999999;border:1px solid #FFD700;pointer-events:none;font-family:Arial,sans-serif;`;
+  badge.textContent = 'SHADOW AI | INACTIVE';
   document.documentElement.appendChild(badge);
 }
 
 function setBadgeActive() {
   const b = document.getElementById('shadow-ai-badge');
   if (b) {
-    b.textContent = '🛡️ SHADOW AI | ACTIVE ✅';
-    b.style.background = '#003087';
-    b.style.borderColor = '#005EB8';
+    b.textContent = 'SHADOW AI | ACTIVE';
+    b.style.background = '#000000';
+    b.style.color = '#FFD700';
+    b.style.borderColor = '#FFD700';
   }
 }
 
 addBadge();
 initProtection();
 
+async function loadActiveRules() {
+  try {
+    const data = await chrome.storage.local.get(['active_rules']);
+    activeRules = data.active_rules || [];
+  } catch (e) {
+    activeRules = [];
+  }
+}
+
 async function loadConfig() {
   try {
-    const stored = await (chrome || browser).storage.local.get(['shadow_org_name', 'shadow_licence_key', 'shadow_org_ref']);
+    const stored = await (chrome || browser).storage.local.get(['shadow_org_name', 'shadow_licence_key', 'shadow_org_ref', 'selected_sector']);
     ORG_NAME = stored.shadow_org_name || "";
     LICENCE_KEY = stored.shadow_licence_key || "";
     ORG_REFERENCE = stored.shadow_org_ref || "";
     COMPANY_ID = ORG_REFERENCE;
+
+    await loadActiveRules();
   } catch (e) {
     ORG_NAME = LICENCE_KEY = ORG_REFERENCE = COMPANY_ID = "";
     LICENCE_VALID = false;
@@ -61,23 +79,24 @@ async function loadConfig() {
   }
 
   LICENCE_VALID = true;
-  setBadgeActive();
-  await registerDeviceHeartbeat();
-  await fetchCompanySecrets();
+  if (!stored.selected_sector) {
+    showRedactionSelectionUI();
+  } else {
+    setBadgeActive();
+    await registerDeviceHeartbeat();
+    await fetchCompanySecrets();
+  }
 }
 
 async function validateLicenceAndOrg(key, orgName) {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/licences?licence_key=eq.${encodeURIComponent(key)}&organisation_name=eq.${encodeURIComponent(orgName)}&is_active=eq.true&select=org_reference,expires_at`,
-      {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-      }
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
     );
     const data = await res.json();
     if (!Array.isArray(data) || data.length !== 1) return false;
     const match = data[0];
-    // ✅ Set correct org for your test licence
     if (key === "TEST-SHADOW-AI-2026") {
       ORG_REFERENCE = "org_ss4bec592";
       COMPANY_ID = "org_ss4bec592";
@@ -85,27 +104,25 @@ async function validateLicenceAndOrg(key, orgName) {
       ORG_REFERENCE = match.org_reference?.trim() || "org_vvyoutb83";
       COMPANY_ID = ORG_REFERENCE;
     }
-    console.log("✅ LOADED COMPANY_ID:", COMPANY_ID);
     return !match.expires_at || new Date(match.expires_at) > new Date();
-  } catch (e) { 
-    console.error("Validation error:", e);
+  } catch (e) {
     ORG_REFERENCE = "org_ss4bec592";
     COMPANY_ID = "org_ss4bec592";
     return true;
   }
 }
 
+// Step 1: Initial activation screen
 function showActivationUI() {
   if (document.getElementById('shadow-activate')) return;
   const ui = document.createElement('div');
   ui.id = 'shadow-activate';
-  ui.style = `position:fixed;top:60px;right:20px;z-index:99999999;background:#003087;color:white;padding:20px;border-radius:8px;border:2px solid #005EB8;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-family:Arial,sans-serif;`;
+  ui.style = `position:fixed;top:60px;right:20px;z-index:99999999;background:#000000;color:#FFD700;padding:20px;border-radius:8px;border:1px solid #FFD700;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,0.5);font-family:Arial,sans-serif;box-sizing:border-box;`;
   ui.innerHTML = `
-    <h3 style="margin-top:0;">🛡️ Activate Shadow AI</h3>
-    <p style="font-size:14px;margin:10px 0;">Enter your details:</p>
-    <input type="text" id="orgNameInput" placeholder="Organisation Name" value="MICROSOFT-REVIEW" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
-    <input type="text" id="licenceInput" placeholder="Licence Key" value="TEST-SHADOW-AI-2026" style="width:100%;padding:8px;border:none;border-radius:4px;margin-bottom:10px;background:#ffffff;color:#000000;font-size:14px;">
-    <button id="activateBtn" style="width:100%;padding:8px;background:#00A499;color:white;border:none;border-radius:4px;font-weight:bold;">Activate</button>
+    <h3 style="margin-top:0; margin-bottom:15px;">Activate Shadow AI</h3>
+    <input type="text" id="orgNameInput" placeholder="Organisation Name" value="MICROSOFT-REVIEW" style="width:100%;padding:8px;border:1px solid #FFD700;border-radius:4px;margin-bottom:10px;background:#111111;color:#FFD700;font-size:14px;box-sizing:border-box;">
+    <input type="text" id="licenceInput" placeholder="Licence Key" value="TEST-SHADOW-AI-2026" style="width:100%;padding:8px;border:1px solid #FFD700;border-radius:4px;margin-bottom:15px;background:#111111;color:#FFD700;font-size:14px;box-sizing:border-box;">
+    <button id="activateBtn" style="width:100%;padding:9px;background:#FFD700;color:#000000;border:none;border-radius:4px;font-weight:bold;font-size:14px;cursor:pointer;">Activate</button>
   `;
   document.documentElement.appendChild(ui);
 
@@ -115,7 +132,7 @@ function showActivationUI() {
     if (!org || !lic) return alert("Enter both values");
 
     const ok = await validateLicenceAndOrg(lic, org);
-    if (!ok) return alert("❌ Invalid — check your details");
+    if (!ok) return alert("Invalid — check your details");
 
     await (chrome || browser).storage.local.set({ 
       "shadow_org_name": org,
@@ -124,11 +141,93 @@ function showActivationUI() {
     });
     LICENCE_KEY = lic;
     LICENCE_VALID = true;
-    setBadgeActive();
     ui.remove();
+    showRedactionSelectionUI();
+  });
+}
+
+// Step 2: After activation, show selection dropdown
+function showRedactionSelectionUI() {
+  if (document.getElementById('shadow-select')) return;
+  const ui = document.createElement('div');
+  ui.id = 'shadow-select';
+  ui.style = `position:fixed;top:60px;right:20px;z-index:99999999;background:#000000;color:#FFD700;padding:20px;border-radius:8px;border:1px solid #FFD700;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,0.5);font-family:Arial,sans-serif;box-sizing:border-box;`;
+  ui.innerHTML = `
+    <h3 style="margin-top:0; margin-bottom:15px;">Select Redaction Type</h3>
+    <select id="redactionType" style="width:100%;padding:9px;border:1px solid #FFD700;border-radius:4px;margin-bottom:15px;background:#111111;color:#FFD700;font-size:14px;box-sizing:border-box;">
+      <option value="general">General Business</option>
+      <option value="healthcare_nhs">Healthcare / NHS</option>
+      <option value="legal">Legal / Professional</option>
+      <option value="financial">Financial Services</option>
+    </select>
+    <button id="confirmBtn" style="width:100%;padding:9px;background:#FFD700;color:#000000;border:none;border-radius:4px;font-weight:bold;font-size:14px;cursor:pointer;">Confirm Selection</button>
+  `;
+  document.documentElement.appendChild(ui);
+
+  document.getElementById('confirmBtn').addEventListener('click', async () => {
+    const selected = document.getElementById('redactionType').value;
+    await (chrome || browser).storage.local.set({ selected_sector: selected });
+    await loadRulesForSector(selected);
+    ui.remove();
+    setBadgeActive();
     await registerDeviceHeartbeat();
     await fetchCompanySecrets();
   });
+}
+
+// ✅ UPDATED RULES — only added missing patterns, rest unchanged
+async function loadRulesForSector(sectorKey) {
+  // Base rules applied to ALL sectors
+  const baseRules = [
+    { name: "Email Address", pattern: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b" },
+    { name: "UK Mobile", pattern: "\\b(?:\\+44\\s?|0)7[0-9]{3}[\\s-]?[0-9]{6}\\b" },
+    { name: "UK Landline", pattern: "\\b(?:\\+44\\s?|0)(?:1[0-9]{3}|2[0-9]|3[0-9]{2}|5[0-9]{2}|8[0-9]{2})[\\s-]?[0-9]{3,4}[\\s-]?[0-9]{4}\\b" },
+    { name: "Personal Name", pattern: "\\b(?:Mr|Mrs|Ms|Miss|Dr|Prof|Mx)\\.?\\s+[A-Z][a-z]+(?:\\s+[A-Z][a-z]+){1,2}\\b" },
+    // --- NEW ADDITIONS ---
+    { name: "Employee ID", pattern: "\\bEMP-[0-9]{5,6}\\b" },
+    { name: "Contract Reference", pattern: "\\bCNTR-[0-9]{4}-[0-9]{3}\\b" },
+    { name: "Candidate Reference", pattern: "\\bAPP-[0-9]{2}-[A-Z]{3}-[0-9]{4}\\b" },
+    { name: "HR Case Reference", pattern: "\\bD-[0-9]{4}-[0-9]{2}\\b" },
+    { name: "Claim Reference", pattern: "\\bCL-[0-9]{4}-[0-9]{4}\\b" },
+    { name: "Tribunal Reference", pattern: "\\bEAT/[0-9]{1,3}/[0-9]{2}/[A-Z]{3}\\b" },
+    { name: "VAT Registration", pattern: "\\bGB[0-9]{9,12}\\b" },
+    { name: "Payslip Reference", pattern: "\\bPAY-[0-9]{4}-[0-9]{4}-[0-9]{3}\\b" },
+    { name: "Invoice Number", pattern: "\\bINV-[0-9]{5,6}\\b" },
+    { name: "BIC/SWIFT Code", pattern: "\\b[A-Z]{4}GB[A-Z0-9]{5,8}\\b" },
+    { name: "Card CVV", pattern: "\\bCVV:?\\s*[0-9]{3}\\b" },
+    { name: "Card Expiry", pattern: "\\bExpiry:?\\s*[0-9]{2}/[0-9]{2}\\b" }
+  ];
+
+  // Sector-specific rules
+  const sectorRules = {
+    general: [],
+    healthcare_nhs: [
+      { name: "NHS Number", pattern: "\\b[0-9]{3}[-\\s]?[0-9]{3}[-\\s]?[0-9]{4}\\b|\\b[0-9]{10}\\b" },
+      { name: "CHI Number", pattern: "\\b[0-9]{10}\\b" },
+      { name: "Date of Birth", pattern: "\\b(?:0[1-9]|[12][0-9]|3[01])[\\/.-](?:0[1-9]|1[0-2])[\\/.-](?:19|20)?[0-9]{2}\\b|\\b(?:0[1-9]|[12][0-9]|3[01])\\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+(?:19|20)[0-9]{2}\\b" },
+      { name: "Full Address", pattern: "\\b[A-Za-z0-9,'\\s-]+(?:Road|Rd|Street|St|Avenue|Ave|Lane|Ln|Drive|Dr|Close|Cl|Crescent|Cres|Way|Grove|Gr|Park|Pk)\\b.*?\\b[A-Z]{1,2}[0-9]{1,2}\\s?[0-9][A-Z]{2}\\b" },
+      { name: "Hospital/Ward", pattern: "\\b(?:Hospital|Medical Centre|Surgery|Health Centre|NHS Trust|Clinic)\\b.*?\\b|\\bWard\\s*[0-9A-Z]+\\s*,?\\s*Bed\\s*[0-9A-Z]+\\b" },
+      { name: "GP Details", pattern: "\\bGP\\s*(?:Practice|Ref|Reference):?\\s*[A-Z0-9\\s-]+\\b" },
+      { name: "Medical Data", pattern: "\\b(?:Diagnosis|Condition|Medication|Dose|Treatment|Referral|Test Result|Consent|Allergy)\\b.*?(?=\\n|,|\\.|$)" },
+      { name: "Restricted Label", pattern: "\\b(?:patient identifiable|confidential health|medical record|restricted care)\\b" }
+    ],
+    legal: [
+      { name: "Case Reference", pattern: "\\b(?:Case|Ref|Matter|File)\\s*(?:No|Number)?:?\\s*[A-Z0-9-]{5,15}\\b" },
+      { name: "Court/Case ID", pattern: "\\b(?:Crim|Civil|Family|Magistrates|High Court)\\s*/\\s*[A-Z0-9/]+\\b" },
+      { name: "Legal Privilege", pattern: "\\b(?:without prejudice|legal privilege|client confidential|private and confidential)\\b" }
+    ],
+    financial: [
+      { name: "Sort Code", pattern: "\\b[0-9]{2}[-]?[0-9]{2}[-]?[0-9]{2}\\b" },
+      { name: "Account Number", pattern: "\\b[0-9]{8}\\b" },
+      { name: "IBAN", pattern: "\\b[A-Z]{2}[0-9]{2}\\s?[A-Z0-9]{4}\\s?[0-9]{4}\\s?[0-9]{4}\\s?[0-9]{2}\\b" },
+      { name: "Card Number", pattern: "\\b(?:\\d{4}[- ]?){3}\\d{4}\\b" },
+      { name: "NI Number", pattern: "\\b[A-Z]{2}[0-9]{6}[A-Z]\\b" },
+      { name: "UTR/Tax Ref", pattern: "\\b[0-9]{10}|[0-9]{12}\\b" }
+    ]
+  };
+
+  activeRules = [...baseRules, ...(sectorRules[sectorKey] || [])];
+  await (chrome || browser).storage.local.set({ active_rules: activeRules });
 }
 
 const deviceFingerprint = btoa(navigator.userAgent + navigator.platform + screen.width + screen.height);
@@ -152,12 +251,11 @@ async function registerDeviceHeartbeat() {
         last_heartbeat: new Date().toISOString()
       })
     });
-    console.log("✅ Heartbeat updated for:", COMPANY_ID);
-  } catch (e) { console.error("❌ Heartbeat error:", e); }
+  } catch (e) {}
   setTimeout(registerDeviceHeartbeat, 60000);
 }
 
-// ✅ UPDATED: NOW WORKS WITH OR WITHOUT LABELS
+// Fallback patterns kept for legacy support
 const securityPatterns = [
   { name: "PATIENT_NAME", regex: /\b[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?\b/gim },
   { name: "NHS_NUMBER", regex: /\b(?:\d{3}[-\s]?\d{3}[-\s]?\d{4}|\d{10})\b/gim },
@@ -169,8 +267,6 @@ const securityPatterns = [
   { name: "DIAGNOSIS", regex: /\b(?:Cerebral palsy|Epilepsy|Scoliosis|Hypertension|Diabetes|Asthma|Cancer|HIV|Mental health|Depression|Anxiety|Seizure|Diagnosis|Condition)\b.*?$|\b(?:Cerebral palsy|Epilepsy|Scoliosis|Hypertension|Diabetes|Asthma|Cancer|HIV|Mental health|Depression|Anxiety|Seizure|Diagnosis|Condition)\b/gim },
   { name: "MEDICATION", regex: /\b(?:Sodium Valproate|Baclofen|Losartan|Metformin|Furosemide|mg|tablet|capsule|injection)\b.*?$|\b(?:Sodium Valproate|Baclofen|Losartan|Metformin|Furosemide)\b/gim },
   { name: "NOTES", regex: /\b(?:Consultation|Assessment|Review|Follow-up|Notes)\b.*?$|\b(?:Consultation|Assessment|Review|Follow-up|Notes)\b/gim },
-
-  // Keep all your original patterns exactly as they were
   { name: "CHI_NUMBER", regex: /\b\d{10}\b/gim },
   { name: "FULL_NAME", regex: /\b(Mr|Mrs|Ms|Miss|Dr|Prof)\.?\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/gim },
   { name: "WARD_BED", regex: /\bWard\s*\d+\s*,?\s*Bed\s*\d+|\bward\b.*?\bbed\b.*?\d+/gim },
@@ -189,7 +285,6 @@ async function fetchCompanySecrets() {
   } catch (e) { customSecrets = []; }
 }
 
-// ✅ LOGGING — EXACT SAME WORKING VERSION AS THE TEST CODE
 async function reportLeak(detail, blockedText = "") {
   if (!LICENCE_VALID || !COMPANY_ID) return;
   try {
@@ -202,7 +297,7 @@ async function reportLeak(detail, blockedText = "") {
       org_reference: COMPANY_ID,
       user_device: deviceFingerprint.substring(0, 255),
       created_at: new Date().toISOString(),
-      user_id: "00000000-0000-0000-0000-000000000000" // ✅ REQUIRED FIELD
+      user_id: "00000000-0000-0000-0000-000000000000"
     };
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/security_logs`, {
@@ -215,15 +310,7 @@ async function reportLeak(detail, blockedText = "") {
       },
       body: JSON.stringify(payload)
     });
-
-    if (res.ok) {
-      console.log("✅ LOG SAVED SUCCESSFULLY | company_id:", payload.company_id, "| type:", detail);
-    } else {
-      console.error("❌ LOG ERROR");
-    }
-  } catch (e) {
-    console.error("❌ LOG FAILED:", e);
-  }
+  } catch (e) {}
 }
 
 function scanAndBlock() {
@@ -241,8 +328,6 @@ function scanAndBlock() {
     let redacted = original;
     let matched = false;
 
-    if (/Trust code is RYH01|ODS Code: A1B2C|GP Code: 12345/i.test(original)) {}
-
     customSecrets.forEach(rule => {
       try {
         const escaped = rule.secret_word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -256,7 +341,11 @@ function scanAndBlock() {
       } catch (e) {}
     });
 
-    securityPatterns.forEach(p => {
+    const rulesToUse = activeRules.length > 0 
+      ? activeRules.map(r => ({ name: r.name, regex: new RegExp(r.pattern, 'gi') })) 
+      : securityPatterns;
+
+    rulesToUse.forEach(p => {
       const matches = original.match(p.regex);
       if (matches && matches.length > 0) {
         redacted = redacted.replace(p.regex, '██████████');
