@@ -224,7 +224,7 @@ st.markdown("""
         border-radius: 4px !important;
     }
 
-    /* Compliance / Info badge */
+    /* Info badge */
     .info-badge {
         background: #222200;
         color: #FFD700;
@@ -286,25 +286,15 @@ st.markdown("""
         color: #CCAC00 !important;
     }
 
-    /* Code blocks */
-    .stCodeBlock {
-        background: #111111 !important;
-        border: 1px solid #444444 !important;
-        border-radius: 4px !important;
-        color: #FFD700 !important;
-    }
-
-    /* Select boxes, dropdowns */
-    .stSelectbox>div>div {
-        background: #111111 !important;
-        border: 1px solid #555555 !important;
-        color: #FFD700 !important;
-    }
-
     /* Logo container */
     .logo-container {
         text-align: center;
         margin-bottom: 1.5rem;
+    }
+    .logo-container img {
+        max-width: 220px;
+        height: auto;
+        margin-bottom: 0.8rem;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -389,7 +379,7 @@ def send_verification_email(to_email, code):
                 "subject": "Shadow AI Security Limited | Security Verification Code",
                 "html": f"""
                 <div style="font-family: Arial, sans-serif; background:#000000; padding:30px; color:#FFD700; max-width:600px; border:1px solid #FFD700;">
-                    <div style="background:#000000; padding:15px; border-bottom:1px solid #FFD700;">
+                    <div style="text-align:center; padding:15px 0; border-bottom:1px solid #FFD700;">
                         <h1 style="color:#FFD700; margin:0;">Shadow AI Security Limited</h1>
                         <p style="color:#CCCCCC; margin:5px 0 0 0;">Data Protection & AI Security Solutions</p>
                     </div>
@@ -397,7 +387,7 @@ def send_verification_email(to_email, code):
                         <p>Your verification code is:</p>
                         <h2 style="font-size:40px; letter-spacing:8px; color:#FFD700; margin:20px 0; text-align:center;">{code}</h2>
                         <p>Enter this code in your dashboard to continue.</p>
-                        <p style="margin-top:30px; font-size:14px; color:#999;">Shadow AI Security Limited | Evergreen Assessment Registered | Ref: a0BPz0000GzZ65MAF20260528125015</p>
+                        <p style="margin-top:30px; font-size:14px; color:#999;">Evergreen Assessment Registered | Ref: a0BPz0000GzZ65MAF20260528125015</p>
                     </div>
                 </div>
                 """
@@ -422,8 +412,8 @@ def send_reset_email(to_email, reset_link):
                 "subject": "Shadow AI Security Limited | Reset Your Password",
                 "html": f"""
                 <div style="font-family: Arial, sans-serif; background:#000000; padding:30px; color:#FFD700; max-width:600px; border:1px solid #FFD700;">
-                    <div style="background:#000000; padding:15px; border-bottom:1px solid #FFD700;">
-                        <h1 style="color:#FFD700; margin:0; font-size:20px; font-weight:normal;">Shadow AI Security Limited</h1>
+                    <div style="text-align:center; padding:15px 0; border-bottom:1px solid #FFD700;">
+                        <h1 style="color:#FFD700; margin:0; font-size:24px;">Shadow AI Security Limited</h1>
                         <p style="color:#CCCCCC; margin:5px 0 0 0; font-size:14px;">Data Protection & AI Security Solutions</p>
                     </div>
                     <div style="padding:20px; background:#111111; border-radius:4px; margin-top:15px;">
@@ -459,7 +449,7 @@ def send_licence_email(to_email, licence_key, org_name):
                 "subject": "Shadow AI Security Limited | Your Licence Key & Setup Instructions",
                 "html": f"""
                 <div style="font-family: Arial, sans-serif; background:#000000; padding:30px; color:#FFD700; max-width:600px; border:1px solid #FFD700;">
-                    <div style="background:#000000; padding:15px; border-bottom:1px solid #FFD700;">
+                    <div style="text-align:center; padding:15px 0; border-bottom:1px solid #FFD700;">
                         <h1 style="color:#FFD700; margin:0;">Shadow AI Security Limited</h1>
                         <p style="color:#CCCCCC; margin:5px 0 0 0;">Data Protection & AI Security Solutions</p>
                     </div>
@@ -539,9 +529,10 @@ def show_reset_password(email):
 
 # --- LOGIN SCREEN ---
 def show_login():
-    # Logo + Header
+    # ✅ Local Logo + No NHS/Trust
     st.markdown("""
     <div class="logo-container">
+        <img src="Logo.png" alt="Shadow AI Security Limited Logo">
         <h1>Shadow AI Security Limited</h1>
         <p style="font-size: 18px; color: #CCCCCC;">Data Protection & AI Security Solutions</p>
         <div class="info-badge">Evergreen Assessment Registered | Ref: a0BPz0000GzZ65MAF20260528125015</div>
@@ -598,7 +589,7 @@ def show_login():
             st.warning("For paying customers only — access is granted after registration & verification")
             new_email = st.text_input("Official Work Email", key="reg_email")
             new_pass = st.text_input("Create Password", type="password", key="reg_pass")
-            company_name = st.text_input("Organisation Name / Trust Name")
+            company_name = st.text_input("Organisation Name")
             max_devices = st.number_input("Number of Devices Licensed", min_value=1, max_value=10000, value=100, step=1)
             if st.button("Create Account"):
                 try:
@@ -665,13 +656,15 @@ def show_dashboard():
     except:
         active_devices = 0
 
-    # Sidebar
+    # ✅ Local Logo in Sidebar
     st.sidebar.markdown("""
     <div style="text-align:center; margin-bottom:1rem;">
-        <h2>Shadow AI Security Limited</h2>
+        <img src="Logo.png" alt="Shadow AI Security Limited Logo" style="max-width:140px; margin-bottom:0.5rem;">
+        <h3>Shadow AI Security Limited</h3>
         <p style="font-size:13px; color:#CCCCCC;">Data Protection & AI Security</p>
     </div>
     """, unsafe_allow_html=True)
+
     st.sidebar.markdown(f"**{org_name}**")
     st.sidebar.markdown(f"**Reference: `{st.session_state.company_id}`**")
     st.sidebar.markdown(f"Devices: {active_devices} / {max_devices}")
